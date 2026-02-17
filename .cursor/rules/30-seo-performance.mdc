@@ -1,0 +1,6 @@
+---
+globs: ["src/app/**/page.tsx", "src/app/**/layout.tsx"]
+---
+
+Public pages must have localized metadata (BN/EN) and avoid heavy client bundles.
+Auth-only pages should be noindex.

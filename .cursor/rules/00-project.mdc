@@ -1,0 +1,7 @@
+---
+alwaysApply: true
+---
+
+You are working on Ramadan Planner (BD-first). Default language Bengali, secondary English.
+Follow AGENTS.md rules. Prefer Server Components. Use shadcn/ui + Tailwind. Strict TypeScript.
+Run npm run lint after changes.

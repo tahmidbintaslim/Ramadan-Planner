@@ -1,0 +1,187 @@
+// Ramadan Planner — Prisma Schema (Supabase Postgres)
+// https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ──────────────────────────────────────────────────────────
+// 1. Daily Content (shared Ramadan day 1-30 content)
+// ──────────────────────────────────────────────────────────
+model DailyContent {
+  id  String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  day Int    @unique
+
+  // Ayah
+  ayahAr  String @default("") @map("ayah_ar")
+  ayahBn  String @default("") @map("ayah_bn")
+  ayahEn  String? @map("ayah_en")
+  ayahRef String @default("") @map("ayah_ref")
+
+  // Hadith
+  hadithAr  String? @map("hadith_ar")
+  hadithBn  String  @default("") @map("hadith_bn")
+  hadithEn  String? @map("hadith_en")
+  hadithRef String  @default("") @map("hadith_ref")
+
+  // Dua
+  duaAr      String @default("") @map("dua_ar")
+  duaBn      String @default("") @map("dua_bn")
+  duaEn      String? @map("dua_en")
+  duaContext String? @map("dua_context")
+
+  // Day task
+  dayTaskBn String? @map("day_task_bn")
+  dayTaskEn String? @map("day_task_en")
+
+  // Checklist template (JSON array of task strings)
+  checklistTemplate Json @default("[]") @map("checklist_template")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("daily_content")
+}
+
+// ──────────────────────────────────────────────────────────
+// 2. User Profiles (linked to Supabase auth.users via id)
+// ──────────────────────────────────────────────────────────
+model UserProfile {
+  id            String @id @db.Uuid // FK to auth.users, set at signup
+  displayName   String @default("") @map("display_name")
+  locale        String @default("bn")
+  timezone      String @default("Asia/Dhaka")
+  latitude      Float  @default(23.8103)
+  longitude     Float  @default(90.4125)
+  locationLabel String @default("ঢাকা, বাংলাদেশ") @map("location_label")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  dailyLogs         DailyLog[]
+  reminderRules     ReminderRule[]
+  pushSubscriptions PushSubscription[]
+  calendarLink      CalendarLink?
+
+  @@map("user_profiles")
+}
+
+// ──────────────────────────────────────────────────────────
+// 3. Daily Logs (user-scoped Ramadan tracking)
+// ──────────────────────────────────────────────────────────
+model DailyLog {
+  id      String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId  String @map("user_id") @db.Uuid
+  day     Int
+  logDate DateTime @default(now()) @map("log_date") @db.Date
+
+  // Salah tracking (JSON: { fajr: bool, dhuhr: bool, … })
+  prayers Json @default("{}")
+
+  // Quran tracking
+  quranPara  Int    @default(0) @map("quran_para")
+  quranSurah String @default("") @map("quran_surah")
+  quranAyah  Int    @default(0) @map("quran_ayah")
+  quranPages Int    @default(0) @map("quran_pages")
+
+  // Checklist (JSON array of completed task keys)
+  checklist Json @default("[]")
+
+  // Journal
+  journalText String  @default("") @map("journal_text")
+  myDua       String  @default("") @map("my_dua")
+
+  // Day task completed
+  dayTaskDone Boolean @default(false) @map("day_task_done")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  user UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, day])
+  @@index([userId, day])
+  @@index([userId, logDate])
+  @@map("daily_logs")
+}
+
+// ──────────────────────────────────────────────────────────
+// 4. Reminder Rules
+// ──────────────────────────────────────────────────────────
+model ReminderRule {
+  id            String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId        String  @map("user_id") @db.Uuid
+  type          String  // sehri | iftar | fajr | dhuhr | asr | maghrib | isha | taraweeh | tahajjud | custom
+  label         String  @default("")
+  offsetMinutes Int     @default(-15) @map("offset_minutes")
+  channels      Json    @default("[\"push\"]") // ["push"] | ["calendar"] | ["push","calendar"]
+  enabled       Boolean @default(true)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  user UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("reminder_rules")
+}
+
+// ──────────────────────────────────────────────────────────
+// 5. Push Subscriptions
+// ──────────────────────────────────────────────────────────
+model PushSubscription {
+  id       String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId   String @map("user_id") @db.Uuid
+  endpoint String
+  keys     Json   // { p256dh, auth }
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  user UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("push_subscriptions")
+}
+
+// ──────────────────────────────────────────────────────────
+// 6. Calendar Links
+// ──────────────────────────────────────────────────────────
+model CalendarLink {
+  id           String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId       String  @unique @map("user_id") @db.Uuid
+  googleTokens Json?   @map("google_tokens")
+  icsSecret    String? @map("ics_secret")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  user UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("calendar_links")
+}
+
+// ──────────────────────────────────────────────────────────
+// 7. Announcements (admin managed)
+// ──────────────────────────────────────────────────────────
+model Announcement {
+  id      String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  titleBn String @map("title_bn")
+  titleEn String @default("") @map("title_en")
+  bodyBn  String @map("body_bn")
+  bodyEn  String @default("") @map("body_en")
+  startAt DateTime @default(now()) @map("start_at") @db.Timestamptz
+  endAt   DateTime?                @map("end_at") @db.Timestamptz
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("announcements")
+}

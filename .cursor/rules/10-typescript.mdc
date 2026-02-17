@@ -1,0 +1,7 @@
+---
+globs: ["src/**/*.ts", "src/**/*.tsx"]
+---
+
+Use TypeScript strict mode. No `any`. Validate inputs with Zod.
+Prefer type inference where possible. Export explicit types for shared interfaces.
+Use `satisfies` for type-safe object literals.

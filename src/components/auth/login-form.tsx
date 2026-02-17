@@ -1,0 +1,110 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Moon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { loginAction } from "@/actions/auth";
+
+export function LoginForm() {
+  const t = useTranslations("auth");
+  const tCommon = useTranslations("common");
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = (formData: FormData) => {
+    setError(null);
+    startTransition(async () => {
+      const result = await loginAction(formData);
+      if (result?.error) {
+        setError(result.error);
+      } else {
+        router.push("/dashboard");
+      }
+    });
+  };
+
+  return (
+    <Card>
+      <CardHeader className="text-center">
+        <div className="flex items-center justify-center gap-2 mb-2">
+          <Moon className="h-6 w-6 text-primary" />
+          <span className="text-lg font-semibold text-primary">
+            {tCommon("appName")}
+          </span>
+        </div>
+        <CardTitle className="text-xl">{t("login")}</CardTitle>
+        <CardDescription>
+          {t("noAccount")}{" "}
+          <Link href="/signup" className="text-primary hover:underline">
+            {t("signupHere")}
+          </Link>
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form action={handleSubmit} className="space-y-4">
+          {error && (
+            <div className="text-sm text-destructive text-center bg-destructive/10 rounded-md py-2">
+              {error}
+            </div>
+          )}
+          <div className="space-y-2">
+            <Label htmlFor="email">{t("email")}</Label>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              required
+              placeholder="you@example.com"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="password">{t("password")}</Label>
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              required
+              minLength={6}
+            />
+          </div>
+          <Button type="submit" className="w-full" disabled={isPending}>
+            {isPending ? tCommon("loading") : t("login")}
+          </Button>
+        </form>
+
+        <div className="relative my-4">
+          <Separator />
+        </div>
+
+        <form action="/api/auth/google" method="POST">
+          <Button variant="outline" className="w-full" type="submit">
+            {t("loginWithGoogle")}
+          </Button>
+        </form>
+      </CardContent>
+      <CardFooter className="justify-center">
+        <Link
+          href="/login"
+          className="text-xs text-muted-foreground hover:text-primary"
+        >
+          {t("forgotPassword")}
+        </Link>
+      </CardFooter>
+    </Card>
+  );
+}

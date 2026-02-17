@@ -1,0 +1,8 @@
+---
+globs: ["src/components/**/*.tsx", "src/app/**/*.tsx"]
+---
+
+Use shadcn/ui primitives. Do not build custom primitives from scratch.
+Tailwind utility classes only; no CSS modules.
+Mobile-first responsive layout. 44px minimum tap targets.
+Bengali typography and Arabic font rendering must be readable.
