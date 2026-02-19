@@ -42,9 +42,9 @@ export function SignupForm() {
       <CardHeader className="text-center">
         <div className="flex items-center justify-center gap-2 mb-2">
           <Moon className="h-6 w-6 text-primary" />
-          <span className="text-lg font-semibold text-primary">
+          <Link href="/" className="text-lg font-semibold text-primary">
             {tCommon("appName")}
-          </span>
+          </Link>
         </div>
         <CardTitle className="text-xl">{t("signup")}</CardTitle>
         <CardDescription>
@@ -68,7 +68,7 @@ export function SignupForm() {
               name="email"
               type="email"
               required
-              placeholder="you@example.com"
+              placeholder={t("emailPlaceholder")}
             />
           </div>
           <div className="space-y-2">

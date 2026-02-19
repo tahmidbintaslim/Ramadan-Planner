@@ -1,32 +1,24 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
-import { getLocale, getMessages } from "next-intl/server";
+import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/components/providers/auth-provider";
+import { ThemeProvider } from "@/components/providers/theme-provider";
+import { AccessibilitySidebar } from "@/components/shared/accessibility-sidebar";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-export const metadata: Metadata = {
-  title: "রমজান প্ল্যানার | Ramadan Planner",
-  description:
-    "আপনার রমজান যাত্রা পরিকল্পনা করুন — দৈনিক ইবাদত ট্র্যাক করুন, নামাজের সময় জানুন। Plan your Ramadan journey — track daily ibadah, get prayer times.",
-  openGraph: {
-    title: "রমজান প্ল্যানার | Ramadan Planner",
-    description:
-      "দৈনিক ইবাদত ট্র্যাক করুন, নামাজের সময় জানুন, এবং রমজানে আপনার ঈমানকে শক্তিশালী করুন",
-    type: "website",
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("common");
+  return {
+    title: t("metaTitle"),
+    description: t("metaDescription"),
+    openGraph: {
+      title: t("metaTitle"),
+      description: t("metaOgDescription"),
+      type: "website",
+    },
+  };
+}
 
 export default async function RootLayout({
   children,
@@ -38,12 +30,13 @@ export default async function RootLayout({
 
   return (
     <html lang={locale} suppressHydrationWarning>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
-      >
+      <body className="antialiased bg-background text-foreground">
         <NextIntlClientProvider messages={messages}>
-          <AuthProvider>{children}</AuthProvider>
-          <Toaster />
+          <ThemeProvider>
+            <AuthProvider>{children}</AuthProvider>
+            <AccessibilitySidebar />
+            <Toaster />
+          </ThemeProvider>
         </NextIntlClientProvider>
       </body>
     </html>

@@ -69,6 +69,32 @@ export async function signupAction(
     return undefined;
 }
 
+const forgotSchema = z.object({
+    email: z.string().email(),
+});
+
+export async function forgotPasswordAction(
+    formData: FormData
+): Promise<{ error?: string } | { ok: true }> {
+    const parsed = forgotSchema.safeParse({
+        email: formData.get("email"),
+    });
+
+    if (!parsed.success) {
+        return { error: "Invalid email" };
+    }
+
+    const supabase = await createClient();
+    const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
+        redirectTo: process.env.NEXT_PUBLIC_SITE_URL
+            ? `${process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "")}/auth/reset`
+            : undefined,
+    });
+
+    if (error) return { error: error.message };
+    return { ok: true };
+}
+
 export async function logoutAction(): Promise<void> {
     const supabase = await createClient();
     await supabase.auth.signOut();

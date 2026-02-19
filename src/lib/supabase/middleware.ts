@@ -6,9 +6,12 @@ export async function updateSession(request: NextRequest) {
         request,
     });
 
+    // Use service role key on server middleware when available to prevent permission errors.
+    const serverKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY!;
+
     const supabase = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY!,
+        serverKey,
         {
             cookies: {
                 getAll() {

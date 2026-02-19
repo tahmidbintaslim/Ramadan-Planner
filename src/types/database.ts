@@ -67,6 +67,29 @@ export interface DailyLog {
     updated_at: string;
 }
 
+export interface PrayerGoal {
+    id: string;
+    user_id: string;
+    title: string;
+    target_count: number;
+    target_unit: string;
+    is_completed: boolean;
+    sort_order: number;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface PlanTask {
+    id: string;
+    user_id: string;
+    title: string;
+    is_done: boolean;
+    due_date: string | null;
+    sort_order: number;
+    created_at: string;
+    updated_at: string;
+}
+
 export type ReminderType =
     | "sehri"
     | "iftar"
@@ -122,6 +145,42 @@ export interface Announcement {
     start_at: string;
     end_at: string | null;
     created_at: string;
+}
+
+// ── Quran data (stored in DB, sourced from quranapi.pages.dev) ──
+
+export interface QuranAudioEntry {
+    reciter: string;
+    url: string;
+    originalUrl: string;
+}
+
+export interface QuranSurahRow {
+    surah_no: number;
+    name_arabic: string;
+    name_arabic_long: string;
+    name_english: string;
+    name_translation: string;
+    name_bengali: string;
+    revelation_place: string;
+    total_ayah: number;
+    audio: Record<string, QuranAudioEntry>;
+}
+
+export interface QuranAyahRow {
+    id: number;
+    surah_no: number;
+    ayah_no: number;
+    text_arabic: string;
+    text_arabic_clean: string;
+    text_english: string;
+    text_bengali: string;
+    audio: Record<string, QuranAudioEntry>;
+}
+
+export interface QuranReciterRow {
+    reciter_id: number;
+    name: string;
 }
 
 // Prayer times from AlAdhan API

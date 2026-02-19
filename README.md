@@ -1,6 +1,6 @@
 # Ramadan Planner (BD-first)
 
-A Bengali-first Ramadan planning and tracking website built with Next.js 15, Supabase, and shadcn/ui. Secondary English support for expats.
+A Bengali-first Ramadan planning and tracking website built with Next.js 16, Supabase, and shadcn/ui. Secondary English support for expats.
 
 ## Quickstart
 

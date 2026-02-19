@@ -1,10 +1,13 @@
 "use client";
 
+import { useEffect, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useGuestData, getTodayKey } from "@/hooks/use-guest-data";
 import { SignupPrompt } from "@/components/shared/signup-prompt";
+import { useAuth } from "@/components/providers/auth-provider";
+import { getDailyLogAction, saveDailyLogAction } from "@/actions/planner";
 
 const PRAYERS = [
   "fajr",
@@ -18,22 +21,49 @@ const PRAYERS = [
 
 type PrayerName = (typeof PRAYERS)[number];
 
-export function SalahTracker() {
+export function SalahTracker({ day }: { day: number }) {
   const t = useTranslations("salah");
   const tToday = useTranslations("today");
+  const { isGuest, loading } = useAuth();
+  const [isPending, startTransition] = useTransition();
 
   const {
-    data: completed,
-    updateData: setCompleted,
+    data: guestCompleted,
+    updateData: setGuestCompleted,
     showPrompt,
     dismissPrompt,
   } = useGuestData<Record<string, boolean>>(getTodayKey("salah"), {});
 
+  const [serverCompleted, setServerCompleted] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (loading || isGuest) return;
+
+    startTransition(async () => {
+      const res = await getDailyLogAction(day);
+      if (res.ok && res.data) {
+        setServerCompleted(res.data.prayers);
+      }
+    });
+  }, [day, isGuest, loading]);
+
+  const completed = isGuest ? guestCompleted : serverCompleted;
+
   const togglePrayer = (prayer: PrayerName) => {
-    setCompleted((prev) => ({
-      ...prev,
-      [prayer]: !prev[prayer],
-    }));
+    if (isGuest) {
+      setGuestCompleted((prev) => ({
+        ...prev,
+        [prayer]: !prev[prayer],
+      }));
+      return;
+    }
+
+    const next = { ...serverCompleted, [prayer]: !serverCompleted[prayer] };
+    setServerCompleted(next);
+
+    startTransition(async () => {
+      await saveDailyLogAction({ day, prayers: next });
+    });
   };
 
   return (
@@ -50,6 +80,7 @@ export function SalahTracker() {
                 <button
                   key={prayer}
                   onClick={() => togglePrayer(prayer)}
+                  disabled={isPending}
                   className={cn(
                     "flex flex-col items-center gap-1.5 rounded-xl p-3 transition-all border",
                     isDone

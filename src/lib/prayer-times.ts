@@ -1,4 +1,6 @@
 import type { PrayerTimes, TimingData } from "@/types/database";
+import { fetchIslamicApiPrayerTimes } from "./islamic-api";
+import { getHijriAdjustmentParams, getHijriOffsetForLocation, getCountryCodeForTimezone } from "./hijri-offsets";
 
 // AlAdhan API response types
 interface AlAdhanTiming {
@@ -52,7 +54,7 @@ const HIJRI_MONTHS_BN: Record<number, string> = {
     6: "জমাদিউস সানি",
     7: "রজব",
     8: "শাবান",
-    9: "রমাদান",
+    9: "রমযান",
     10: "শাওয়াল",
     11: "জিলকদ",
     12: "জিলহজ",
@@ -103,19 +105,38 @@ export async function fetchPrayerTimes(
     const cached = getFromCache(key);
     if (cached) return cached;
 
-    const url = `${ALADHAN_BASE}/${date}?latitude=${latitude}&longitude=${longitude}&method=1&school=1&timezonestring=${encodeURIComponent(timezone)}`;
-
-    const res = await fetch(url, { next: { revalidate: 86400 } }); // ISR 24h
-    if (!res.ok) {
-        throw new Error(`AlAdhan API error: ${res.status} ${res.statusText}`);
+    // Try IslamicAPI (if key present) then fall back to AlAdhan
+    let timings: AlAdhanTiming | null = null;
+    let dateInfo: AlAdhanDate | null = null;
+    try {
+        const ia = await fetchIslamicApiPrayerTimes(latitude, longitude, date, timezone);
+        // Map IslamicAPI v1 response to our expected shape if possible
+        if (ia && ia.data && ia.data.timings) {
+            timings = ia.data.timings as unknown as AlAdhanTiming;
+            dateInfo = ia.data.date as unknown as AlAdhanDate;
+        }
+    } catch {
+        // ignore and fallback to AlAdhan
     }
 
-    const json: AlAdhanResponse = await res.json();
-    if (json.code !== 200) {
-        throw new Error(`AlAdhan API returned code ${json.code}`);
-    }
+    if (!timings || !dateInfo) {
+        const country = getCountryCodeForTimezone(timezone) ?? "DEFAULT";
+        const offset = getHijriOffsetForLocation(country);
+        const adjustmentParams = getHijriAdjustmentParams(offset);
+        const url = `${ALADHAN_BASE}/${date}?latitude=${latitude}&longitude=${longitude}&method=1&school=1&timezonestring=${encodeURIComponent(timezone)}${adjustmentParams}`;
+        const res = await fetch(url, { next: { revalidate: 86400 } }); // ISR 24h
+        if (!res.ok) {
+            throw new Error(`AlAdhan API error: ${res.status} ${res.statusText}`);
+        }
 
-    const { timings, date: dateInfo } = json.data;
+        const json: AlAdhanResponse = await res.json();
+        if (json.code !== 200) {
+            throw new Error(`AlAdhan API returned code ${json.code}`);
+        }
+
+        timings = json.data.timings;
+        dateInfo = json.data.date;
+    }
 
     // Strip " (BST)" etc. timezone suffixes from time strings
     const clean = (t: string) => t.replace(/\s*\(.*\)$/, "");
@@ -158,6 +179,15 @@ export const DHAKA_DEFAULTS = {
     timezone: "Asia/Dhaka",
     locationLabel: "ঢাকা, বাংলাদেশ",
 } as const;
+
+// ── Helper: derive location label from IANA timezone ──
+// "Asia/Bangkok" → "Bangkok", "America/New_York" → "New York"
+export function locationLabelFromTimezone(timezone: string): string {
+    const parts = timezone.split("/");
+    const city = parts[parts.length - 1];
+    // Replace underscores with spaces: "New_York" → "New York"
+    return city.replace(/_/g, " ");
+}
 
 // ── Helper: today's date as DD-MM-YYYY ────────────────
 export function todayDateString(timezone: string): string {

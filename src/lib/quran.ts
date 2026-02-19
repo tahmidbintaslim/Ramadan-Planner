@@ -1,51 +1,54 @@
-// Al-Quran Cloud API service
-// Docs: https://alquran.cloud/api
-// Provides Surah list, Arabic text, translations
+// Quran data service – reads from local Postgres (seeded from quranapi.pages.dev)
+// Falls back to external API when DB is empty (pre-seed).
 
-const QURAN_API_BASE = "https://api.alquran.cloud/v1";
+import { prisma } from "@/lib/prisma";
+
+// ── Public types ─────────────────────────────────────────
+
+export interface AudioEntry {
+    reciter: string;
+    url: string;
+    originalUrl: string;
+}
 
 export interface SurahInfo {
-    number: number;
-    name: string; // Arabic
-    englishName: string;
-    englishNameTranslation: string;
-    numberOfAyahs: number;
-    revelationType: "Meccan" | "Medinan";
+    surahNo: number;
+    nameArabic: string;
+    nameArabicLong: string;
+    nameEnglish: string;
+    nameTranslation: string;
+    nameBengali: string;
+    revelationPlace: string;
+    totalAyah: number;
 }
 
 export interface QuranAyah {
-    number: number;
-    text: string;
-    numberInSurah: number;
-    juz: number;
-    page: number;
+    ayahNo: number;
+    textArabic: string;
+    textArabicClean: string;
+    textEnglish: string;
+    textBengali: string;
+    audio: Record<string, AudioEntry>;
 }
 
-export interface SurahDetail {
-    number: number;
-    name: string;
-    englishName: string;
-    englishNameTranslation: string;
-    numberOfAyahs: number;
-    revelationType: string;
+export interface SurahDetail extends SurahInfo {
+    audio: Record<string, AudioEntry>;
     ayahs: QuranAyah[];
 }
 
-interface AlQuranListResponse {
-    code: number;
-    status: string;
-    data: SurahInfo[];
+export interface ReciterInfo {
+    id: number;
+    name: string;
 }
 
-interface AlQuranSurahResponse {
-    code: number;
-    status: string;
-    data: SurahDetail;
-}
+// ── External API base (used only by seed script & fallback) ─
 
-// ── Cache ──────────────────────────────────────────────
+export const QURAN_API_BASE = "https://quranapi.pages.dev/api";
+
+// ── In-memory cache (server-side, per-instance) ──────────
+
 const cache = new Map<string, { data: unknown; expiresAt: number }>();
-const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days (Quran doesn't change)
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 h
 
 function getFromCache<T>(key: string): T | null {
     const entry = cache.get(key);
@@ -58,88 +61,174 @@ function getFromCache<T>(key: string): T | null {
 }
 
 function setCache(key: string, data: unknown): void {
-    if (cache.size > 200) {
+    if (cache.size > 300) {
         const oldest = cache.keys().next().value;
         if (oldest) cache.delete(oldest);
     }
     cache.set(key, { data, expiresAt: Date.now() + CACHE_TTL_MS });
 }
 
+// ── DB query helpers ─────────────────────────────────────
+
 /**
- * Fetch list of all 114 Surahs
+ * Fetch list of all 114 surahs (metadata only, no ayahs).
  */
 export async function fetchSurahList(): Promise<SurahInfo[]> {
     const cacheKey = "surah-list";
     const cached = getFromCache<SurahInfo[]>(cacheKey);
     if (cached) return cached;
 
-    const res = await fetch(`${QURAN_API_BASE}/surah`, {
-        next: { revalidate: 604800 }, // 7 days ISR
+    const rows = await prisma.quranSurah.findMany({
+        orderBy: { surahNo: "asc" },
+        select: {
+            surahNo: true,
+            nameArabic: true,
+            nameArabicLong: true,
+            nameEnglish: true,
+            nameTranslation: true,
+            nameBengali: true,
+            revelationPlace: true,
+            totalAyah: true,
+        },
     });
 
-    if (!res.ok) {
-        throw new Error(`Quran API error: ${res.status}`);
+    if (rows.length === 0) {
+        // DB not seeded yet – fall back to external API
+        return fetchSurahListExternal();
     }
 
-    const json: AlQuranListResponse = await res.json();
-    if (json.code !== 200) {
-        throw new Error(`Quran API returned code ${json.code}`);
-    }
-
-    setCache(cacheKey, json.data);
-    return json.data;
+    const data: SurahInfo[] = rows;
+    setCache(cacheKey, data);
+    return data;
 }
 
 /**
- * Fetch a specific Surah in Arabic (uthmani text)
+ * Fetch a full surah with ayahs (Arabic + English + Bengali + audio).
  */
-export async function fetchSurah(
-    surahNumber: number,
-    edition: string = "quran-uthmani",
-): Promise<SurahDetail> {
-    const cacheKey = `surah-${surahNumber}-${edition}`;
+export async function fetchSurah(surahNumber: number): Promise<SurahDetail | null> {
+    const cacheKey = `surah-${surahNumber}`;
     const cached = getFromCache<SurahDetail>(cacheKey);
     if (cached) return cached;
 
-    const res = await fetch(
-        `${QURAN_API_BASE}/surah/${surahNumber}/${edition}`,
-        {
-            next: { revalidate: 604800 },
+    const row = await prisma.quranSurah.findUnique({
+        where: { surahNo: surahNumber },
+        include: {
+            ayahs: {
+                orderBy: { ayahNo: "asc" },
+            },
         },
-    );
+    });
 
-    if (!res.ok) {
-        throw new Error(`Quran API error: ${res.status}`);
-    }
+    if (!row) return null;
 
-    const json: AlQuranSurahResponse = await res.json();
-    if (json.code !== 200) {
-        throw new Error(`Quran API returned code ${json.code}`);
-    }
+    const detail: SurahDetail = {
+        surahNo: row.surahNo,
+        nameArabic: row.nameArabic,
+        nameArabicLong: row.nameArabicLong,
+        nameEnglish: row.nameEnglish,
+        nameTranslation: row.nameTranslation,
+        nameBengali: row.nameBengali,
+        revelationPlace: row.revelationPlace,
+        totalAyah: row.totalAyah,
+        audio: row.audio as unknown as Record<string, AudioEntry>,
+        ayahs: row.ayahs.map((a) => ({
+            ayahNo: a.ayahNo,
+            textArabic: a.textArabic,
+            textArabicClean: a.textArabicClean,
+            textEnglish: a.textEnglish,
+            textBengali: a.textBengali,
+            audio: a.audio as unknown as Record<string, AudioEntry>,
+        })),
+    };
 
-    setCache(cacheKey, json.data);
-    return json.data;
+    setCache(cacheKey, detail);
+    return detail;
 }
 
 /**
- * Fetch a random Ayah for "Verse of the Day" style display
+ * Fetch available reciters.
  */
-export async function fetchRandomAyah(
-    edition: string = "quran-uthmani",
-): Promise<{ surah: string; ayahNumber: number; text: string }> {
-    const surahNum = Math.floor(Math.random() * 114) + 1;
-    const surah = await fetchSurah(surahNum, edition);
-    const ayahIdx = Math.floor(Math.random() * surah.ayahs.length);
-    const ayah = surah.ayahs[ayahIdx];
+export async function fetchReciters(): Promise<ReciterInfo[]> {
+    const cacheKey = "reciters";
+    const cached = getFromCache<ReciterInfo[]>(cacheKey);
+    if (cached) return cached;
+
+    const rows = await prisma.quranReciter.findMany({
+        orderBy: { id: "asc" },
+    });
+
+    const data: ReciterInfo[] = rows.map((r) => ({ id: r.id, name: r.name }));
+    setCache(cacheKey, data);
+    return data;
+}
+
+/**
+ * Fetch a random ayah for "Verse of the Day" style display.
+ */
+export async function fetchRandomAyah(): Promise<{
+    surahNo: number;
+    surahName: string;
+    ayahNo: number;
+    textArabic: string;
+    textBengali: string;
+    textEnglish: string;
+} | null> {
+    const count = await prisma.quranAyah.count();
+    if (count === 0) return null;
+
+    const skip = Math.floor(Math.random() * count);
+    const ayah = await prisma.quranAyah.findFirst({
+        skip,
+        include: { surah: { select: { nameArabic: true } } },
+    });
+
+    if (!ayah) return null;
 
     return {
-        surah: surah.name,
-        ayahNumber: ayah.numberInSurah,
-        text: ayah.text,
+        surahNo: ayah.surahNo,
+        surahName: ayah.surah.nameArabic,
+        ayahNo: ayah.ayahNo,
+        textArabic: ayah.textArabic,
+        textBengali: ayah.textBengali,
+        textEnglish: ayah.textEnglish,
     };
 }
 
-// Bengali surah names mapping (first 10 commonly known)
+// ── External API fallback (pre-seed only) ────────────────
+
+interface ExtSurah {
+    surahName: string;
+    surahNameArabic: string;
+    surahNameArabicLong: string;
+    surahNameTranslation: string;
+    revelationPlace: string;
+    totalAyah: number;
+}
+
+async function fetchSurahListExternal(): Promise<SurahInfo[]> {
+    try {
+        const res = await fetch(`${QURAN_API_BASE}/surah.json`, {
+            next: { revalidate: 604800 },
+        });
+        if (!res.ok) return [];
+        const data: ExtSurah[] = await res.json();
+        return data.map((s, i) => ({
+            surahNo: i + 1,
+            nameArabic: s.surahNameArabic,
+            nameArabicLong: s.surahNameArabicLong,
+            nameEnglish: s.surahName,
+            nameTranslation: s.surahNameTranslation,
+            nameBengali: SURAH_NAMES_BN[i + 1] ?? s.surahName,
+            revelationPlace: s.revelationPlace,
+            totalAyah: s.totalAyah,
+        }));
+    } catch {
+        return [];
+    }
+}
+
+// ── Bengali surah names (all 114) ────────────────────────
+
 export const SURAH_NAMES_BN: Record<number, string> = {
     1: "আল-ফাতিহা",
     2: "আল-বাকারা",
@@ -161,11 +250,97 @@ export const SURAH_NAMES_BN: Record<number, string> = {
     18: "আল-কাহফ",
     19: "মারইয়াম",
     20: "ত্বা-হা",
+    21: "আল-আম্বিয়া",
+    22: "আল-হাজ্জ",
+    23: "আল-মু'মিনূন",
+    24: "আন-নূর",
+    25: "আল-ফুরকান",
+    26: "আশ-শুআরা",
+    27: "আন-নামল",
+    28: "আল-কাসাস",
+    29: "আল-আনকাবূত",
+    30: "আর-রূম",
+    31: "লুকমান",
+    32: "আস-সাজদা",
+    33: "আল-আহযাব",
+    34: "সাবা",
+    35: "ফাতির",
     36: "ইয়াসীন",
+    37: "আস-সাফফাত",
+    38: "সোয়াদ",
+    39: "আয-যুমার",
+    40: "গাফির",
+    41: "ফুসসিলাত",
+    42: "আশ-শূরা",
+    43: "আয-যুখরুফ",
+    44: "আদ-দুখান",
+    45: "আল-জাসিয়া",
+    46: "আল-আহকাফ",
+    47: "মুহাম্মাদ",
+    48: "আল-ফাতহ",
+    49: "আল-হুজুরাত",
+    50: "ক্বাফ",
+    51: "আয-যারিয়াত",
+    52: "আত-তূর",
+    53: "আন-নাজম",
+    54: "আল-কামার",
     55: "আর-রাহমান",
     56: "আল-ওয়াকিয়া",
+    57: "আল-হাদীদ",
+    58: "আল-মুজাদালা",
+    59: "আল-হাশর",
+    60: "আল-মুমতাহিনা",
+    61: "আস-সফ",
+    62: "আল-জুমু'আ",
+    63: "আল-মুনাফিকূন",
+    64: "আত-তাগাবুন",
+    65: "আত-তালাক",
+    66: "আত-তাহরীম",
     67: "আল-মুলক",
+    68: "আল-কলম",
+    69: "আল-হাক্কা",
+    70: "আল-মাআরিজ",
+    71: "নূহ",
+    72: "আল-জিন",
+    73: "আল-মুযযাম্মিল",
+    74: "আল-মুদ্দাসসির",
+    75: "আল-কিয়ামা",
+    76: "আল-ইনসান",
+    77: "আল-মুরসালাত",
     78: "আন-নাবা",
+    79: "আন-নাযিআত",
+    80: "আবাসা",
+    81: "আত-তাকবীর",
+    82: "আল-ইনফিতার",
+    83: "আল-মুতাফফিফীন",
+    84: "আল-ইনশিকাক",
+    85: "আল-বুরূজ",
+    86: "আত-তারিক",
+    87: "আল-আ'লা",
+    88: "আল-গাশিয়া",
+    89: "আল-ফাজর",
+    90: "আল-বালাদ",
+    91: "আশ-শামস",
+    92: "আল-লাইল",
+    93: "আদ-দুহা",
+    94: "আল-ইনশিরাহ",
+    95: "আত-তীন",
+    96: "আল-আলাক",
+    97: "আল-কদর",
+    98: "আল-বায়্যিনা",
+    99: "আয-যিলযাল",
+    100: "আল-আদিয়াত",
+    101: "আল-কারিআ",
+    102: "আত-তাকাসুর",
+    103: "আল-আসর",
+    104: "আল-হুমাযা",
+    105: "আল-ফীল",
+    106: "কুরাইশ",
+    107: "আল-মাঊন",
+    108: "আল-কাউসার",
+    109: "আল-কাফিরূন",
+    110: "আন-নাসর",
+    111: "আল-লাহাব",
     112: "আল-ইখলাস",
     113: "আল-ফালাক",
     114: "আন-নাস",

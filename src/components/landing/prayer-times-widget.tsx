@@ -1,17 +1,20 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useLocale } from "next-intl";
 import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { MapPin, Clock, Sunrise, Moon } from "lucide-react";
 import type { TimingData } from "@/types/database";
+import { localizeAsciiDigits, formatLocalizedNumber } from "@/lib/locale-number";
 
 export function PrayerTimesWidget() {
   const t = useTranslations("landing");
   const tSalah = useTranslations("salah");
   const tDash = useTranslations("dashboard");
+  const locale = useLocale();
 
   const [timings, setTimings] = useState<TimingData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -46,20 +49,53 @@ export function PrayerTimesWidget() {
 
   // Auto-detect location or use Dhaka defaults
   useEffect(() => {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
           fetchTimes(pos.coords.latitude, pos.coords.longitude, tz);
         },
         () => {
-          // Denied or unavailable — use defaults
-          fetchTimes();
+          // Denied or unavailable — use client timezone to get sensible defaults from the API
+          fetchTimes(undefined, undefined, tz);
         },
         { timeout: 5000 },
       );
     } else {
-      fetchTimes();
+      fetchTimes(undefined, undefined, tz);
+    }
+  }, [fetchTimes]);
+
+  // Dev helper: if a service worker is registered on localhost it may serve stale UI.
+  // In development only, unregister any service workers and refetch timings so the widget shows fresh data.
+  useEffect(() => {
+    try {
+      const isLocalhost =
+        typeof window !== "undefined" &&
+        (window.location.hostname === "localhost" ||
+          window.location.hostname === "127.0.0.1");
+      if (!isLocalhost || !("serviceWorker" in navigator)) return;
+
+      navigator.serviceWorker
+        .getRegistrations()
+        .then((regs) => {
+          if (!regs || regs.length === 0) return;
+          regs.forEach((r) => {
+            try {
+              r.unregister();
+            } catch {
+              /* ignore */
+            }
+          });
+          // after unregistering, refetch timings using client timezone
+          const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+          fetchTimes(undefined, undefined, tz);
+        })
+        .catch(() => {
+          // ignore
+        });
+    } catch {
+      // ignore
     }
   }, [fetchTimes]);
 
@@ -106,7 +142,8 @@ export function PrayerTimesWidget() {
           fetchTimes(pos.coords.latitude, pos.coords.longitude, tz);
         },
         () => {
-          fetchTimes();
+          const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+          fetchTimes(undefined, undefined, tz);
         },
       );
     }
@@ -151,7 +188,9 @@ export function PrayerTimesWidget() {
                   <Skeleton className="h-8 w-16 mx-auto bg-primary-foreground/20" />
                 ) : (
                   <p className="text-2xl font-bold">
-                    {timings?.prayerTimes.sehri ?? "--:--"}
+                    {timings
+                      ? localizeAsciiDigits(timings.prayerTimes.sehri, locale)
+                      : "--:--"}
                   </p>
                 )}
               </div>
@@ -161,7 +200,9 @@ export function PrayerTimesWidget() {
                   <Skeleton className="h-8 w-16 mx-auto bg-primary-foreground/20" />
                 ) : (
                   <p className="text-2xl font-bold">
-                    {timings?.prayerTimes.iftar ?? "--:--"}
+                    {timings
+                      ? localizeAsciiDigits(timings.prayerTimes.iftar, locale)
+                      : "--:--"}
                   </p>
                 )}
               </div>
@@ -169,7 +210,9 @@ export function PrayerTimesWidget() {
             {/* Iftar countdown */}
             <div className="mt-4 text-center border-t border-primary-foreground/20 pt-3">
               <p className="text-xs opacity-80">{tDash("iftarCountdown")}</p>
-              <p className="text-xl font-bold tracking-wider">{countdown}</p>
+              <p className="text-xl font-bold tracking-wider">
+                {localizeAsciiDigits(countdown, locale)}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -197,7 +240,9 @@ export function PrayerTimesWidget() {
                     <Skeleton className="h-4 w-14" />
                   ) : (
                     <span className="font-medium tabular-nums">
-                      {timings?.prayerTimes[key] ?? "--:--"}
+                      {timings
+                        ? localizeAsciiDigits(timings.prayerTimes[key], locale)
+                        : "--:--"}
                     </span>
                   )}
                 </div>
@@ -212,7 +257,9 @@ export function PrayerTimesWidget() {
                   <Skeleton className="h-4 w-14" />
                 ) : (
                   <span className="font-medium tabular-nums">
-                    {timings?.prayerTimes.sunrise ?? "--:--"}
+                    {timings
+                      ? localizeAsciiDigits(timings.prayerTimes.sunrise, locale)
+                      : "--:--"}
                   </span>
                 )}
               </div>
@@ -224,8 +271,12 @@ export function PrayerTimesWidget() {
       {/* Hijri date */}
       {timings && (
         <p className="text-center text-xs text-muted-foreground">
-          {timings.hijriDate.day} {timings.hijriDate.monthBn}{" "}
-          {timings.hijriDate.year} • {timings.gregorianDate}
+          {formatLocalizedNumber(Number(timings.hijriDate.day), locale)}{" "}
+          {locale === "bn"
+            ? timings.hijriDate.monthBn
+            : timings.hijriDate.month}{" "}
+          {formatLocalizedNumber(Number(timings.hijriDate.year), locale)} •{" "}
+          {localizeAsciiDigits(timings.gregorianDate, locale)}
         </p>
       )}
     </div>

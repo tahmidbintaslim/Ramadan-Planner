@@ -7,6 +7,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  schemas = ["public", "auth"]
 }
 
 // ──────────────────────────────────────────────────────────
@@ -45,6 +46,7 @@ model DailyContent {
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   @@map("daily_content")
+  @@schema("public")
 }
 
 // ──────────────────────────────────────────────────────────
@@ -66,9 +68,71 @@ model UserProfile {
   dailyLogs         DailyLog[]
   reminderRules     ReminderRule[]
   pushSubscriptions PushSubscription[]
+  pushDeliveryLogs  PushDeliveryLog[]
   calendarLink      CalendarLink?
+  prayerGoals       PrayerGoal[]
+  planTasks         PlanTask[]
+  adminUser         AdminUser?
 
   @@map("user_profiles")
+  @@schema("public")
+}
+
+// ──────────────────────────────────────────────────────────
+// 2d. Admin Users (elevated access for announcement/content tools)
+// ──────────────────────────────────────────────────────────
+model AdminUser {
+  userId String @id @map("user_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  user UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("admin_users")
+  @@schema("public")
+}
+
+// ──────────────────────────────────────────────────────────
+// 2b. Prayer Goals (user-scoped Ramadan planning goals)
+// ──────────────────────────────────────────────────────────
+model PrayerGoal {
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String  @map("user_id") @db.Uuid
+  title       String
+  targetCount Int     @default(1) @map("target_count")
+  targetUnit  String  @default("times") @map("target_unit")
+  isCompleted Boolean @default(false) @map("is_completed")
+  sortOrder   Int     @default(0) @map("sort_order")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  user UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("prayer_goals")
+  @@schema("public")
+}
+
+// ──────────────────────────────────────────────────────────
+// 2c. Plan Tasks (user-scoped pre-Ramadan checklist/tasks)
+// ──────────────────────────────────────────────────────────
+model PlanTask {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  title     String
+  isDone    Boolean  @default(false) @map("is_done")
+  dueDate   DateTime? @map("due_date") @db.Date
+  sortOrder Int      @default(0) @map("sort_order")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  user UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("plan_tasks")
+  @@schema("public")
 }
 
 // ──────────────────────────────────────────────────────────
@@ -109,6 +173,7 @@ model DailyLog {
   @@index([userId, day])
   @@index([userId, logDate])
   @@map("daily_logs")
+  @@schema("public")
 }
 
 // ──────────────────────────────────────────────────────────
@@ -128,9 +193,11 @@ model ReminderRule {
 
   // Relations
   user UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveryLogs PushDeliveryLog[]
 
   @@index([userId])
   @@map("reminder_rules")
+  @@schema("public")
 }
 
 // ──────────────────────────────────────────────────────────
@@ -146,9 +213,34 @@ model PushSubscription {
 
   // Relations
   user UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveryLogs PushDeliveryLog[]
 
   @@index([userId])
   @@map("push_subscriptions")
+  @@schema("public")
+}
+
+// ──────────────────────────────────────────────────────────
+// 5b. Push Delivery Logs (dedupe/scheduler bookkeeping)
+// ──────────────────────────────────────────────────────────
+model PushDeliveryLog {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  userId String @map("user_id") @db.Uuid
+  subscriptionId String @map("subscription_id") @db.Uuid
+  ruleId String @map("rule_id") @db.Uuid
+  triggerType String @map("trigger_type")
+  scheduledFor DateTime @map("scheduled_for") @db.Timestamptz
+  sentAt DateTime @default(now()) @map("sent_at") @db.Timestamptz
+
+  user UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscription PushSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  rule ReminderRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@unique([subscriptionId, ruleId, scheduledFor])
+  @@index([userId, scheduledFor])
+  @@map("push_delivery_logs")
+  @@schema("public")
 }
 
 // ──────────────────────────────────────────────────────────
@@ -167,10 +259,63 @@ model CalendarLink {
   user UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("calendar_links")
+  @@schema("public")
 }
 
 // ──────────────────────────────────────────────────────────
-// 7. Announcements (admin managed)
+// 7. Quran Surahs (114 rows, public read)
+// ──────────────────────────────────────────────────────────
+model QuranSurah {
+  surahNo         Int    @id @map("surah_no")
+  nameArabic      String @map("name_arabic")
+  nameArabicLong  String @default("") @map("name_arabic_long")
+  nameEnglish     String @map("name_english")
+  nameTranslation String @default("") @map("name_translation")
+  nameBengali     String @default("") @map("name_bengali")
+  revelationPlace String @default("Mecca") @map("revelation_place")
+  totalAyah       Int    @map("total_ayah")
+  audio           Json   @default("{}") // Chapter audio keyed by reciter id
+
+  ayahs QuranAyah[]
+
+  @@map("quran_surahs")
+  @@schema("public")
+}
+
+// ──────────────────────────────────────────────────────────
+// 8. Quran Ayahs (6236 rows, multi-language + audio)
+// ──────────────────────────────────────────────────────────
+model QuranAyah {
+  id              Int    @id @default(autoincrement())
+  surahNo         Int    @map("surah_no")
+  ayahNo          Int    @map("ayah_no")
+  textArabic      String @default("") @map("text_arabic") @db.Text
+  textArabicClean String @default("") @map("text_arabic_clean") @db.Text
+  textEnglish     String @default("") @map("text_english") @db.Text
+  textBengali     String @default("") @map("text_bengali") @db.Text
+  audio           Json   @default("{}") // Verse audio keyed by reciter id
+
+  surah QuranSurah @relation(fields: [surahNo], references: [surahNo], onDelete: Cascade)
+
+  @@unique([surahNo, ayahNo])
+  @@index([surahNo])
+  @@map("quran_ayahs")
+  @@schema("public")
+}
+
+// ──────────────────────────────────────────────────────────
+// 9. Quran Reciters (small lookup)
+// ──────────────────────────────────────────────────────────
+model QuranReciter {
+  id   Int    @id @map("reciter_id")
+  name String
+
+  @@map("quran_reciters")
+  @@schema("public")
+}
+
+// ──────────────────────────────────────────────────────────
+// 10. Announcements (admin managed)
 // ──────────────────────────────────────────────────────────
 model Announcement {
   id      String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -184,4 +329,47 @@ model Announcement {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   @@map("announcements")
+  @@schema("public")
+}
+
+// ──────────────────────────────────────────────────────────
+// 11. Hadith Editions + Entries (public content)
+// ──────────────────────────────────────────────────────────
+model HadithEdition {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name       String   @unique
+  title      String?  @map("title")
+  language   String?  @map("language")
+  translator String?  @map("translator")
+  totalHadith Int?    @map("total_hadith")
+  info       Json?    @map("info")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  hadiths Hadith[]
+
+  @@map("hadith_editions")
+  @@schema("public")
+}
+
+model Hadith {
+  id         Int     @id @default(autoincrement())
+  editionName String @map("edition_name")
+  hadithNo   Int?     @map("hadith_no")
+  book       String? @map("book")
+  chapter    String? @map("chapter")
+  text       String  @map("text") @db.Text
+  textArabic String? @map("text_arabic") @db.Text
+  grade      Json?   @map("grade")
+  reference  Json?   @map("reference")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  edition HadithEdition @relation(fields: [editionName], references: [name], onDelete: Cascade)
+
+  @@unique([editionName, hadithNo])
+  @@index([editionName])
+  @@map("hadith")
+  @@schema("public")
 }

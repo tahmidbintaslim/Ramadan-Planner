@@ -48,6 +48,8 @@
 }
 
 :root {
+  --font-geist-sans: "Noto Sans Bengali", "Hind Siliguri", "Noto Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-geist-mono: "Fira Code", "JetBrains Mono", "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   --radius: 0.625rem;
   --background: #fdfbf7;
   --foreground: #1a1a1a;

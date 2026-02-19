@@ -1,4 +1,4 @@
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import Link from "next/link";
 import {
   Moon,
@@ -19,11 +19,15 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { PrayerTimesWidget } from "@/components/landing/prayer-times-widget";
 import { QuranPreview } from "@/components/landing/quran-preview";
+import { RamadanStatusBanner } from "@/components/landing/ramadan-status-banner";
+import { RamadanTimetable } from "@/components/landing/ramadan-timetable";
+import { AppHeader } from "@/components/layout/app-header";
+import { formatLocalizedNumber } from "@/lib/locale-number";
 
 export default async function LandingPage() {
+  const locale = await getLocale();
   const t = await getTranslations("landing");
   const tCommon = await getTranslations("common");
-  const tAuth = await getTranslations("auth");
 
   const features = [
     {
@@ -70,17 +74,17 @@ export default async function LandingPage() {
 
   const steps = [
     {
-      num: "১",
+      num: t("step1Num"),
       title: t("step1Title"),
       desc: t("step1Desc"),
     },
     {
-      num: "২",
+      num: t("step2Num"),
       title: t("step2Title"),
       desc: t("step2Desc"),
     },
     {
-      num: "৩",
+      num: t("step3Num"),
       title: t("step3Title"),
       desc: t("step3Desc"),
     },
@@ -89,68 +93,59 @@ export default async function LandingPage() {
   return (
     <div className="min-h-screen">
       {/* ─── Header ─── */}
-      <header className="sticky top-0 z-50 border-b bg-card/95 backdrop-blur supports-backdrop-filter:bg-card/60">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <div className="flex items-center gap-2">
-            <Moon className="h-6 w-6 text-primary" />
-            <span className="text-lg font-semibold text-primary">
-              {tCommon("appName")}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/dashboard">{t("exploreApp")}</Link>
-            </Button>
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/login">{tAuth("login")}</Link>
-            </Button>
-            <Button size="sm" asChild>
-              <Link href="/signup">{tAuth("signup")}</Link>
-            </Button>
-          </div>
-        </div>
-      </header>
+      <AppHeader />
 
       {/* ─── Hero ─── */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-linear-to-b from-accent/30 to-background" />
-        <div className="container relative mx-auto px-4 py-16 sm:py-24 text-center">
-          <div className="mx-auto max-w-3xl space-y-6">
-            <div className="flex items-center justify-center gap-2">
-              <Badge variant="secondary" className="text-xs">
-                <Star className="h-3 w-3 mr-1" />
-                {t("freeForever")}
-              </Badge>
-              <Badge variant="outline" className="text-xs">
-                {t("madeForBD")}
-              </Badge>
-              <Badge variant="outline" className="text-xs">
-                🌍 {t("worldwide")}
-              </Badge>
-            </div>
+      <section className="relative overflow-hidden py-16 sm:py-24 lg:py-32">
+        <div className="absolute inset-0 bg-gradient-to-br from-accent/30 to-background opacity-70" />
+        <div className="container relative mx-auto px-4 text-center">
+          <div className="mx-auto max-w-4xl space-y-8">
+            {/* Ramadan Status Banner */}
+            <RamadanStatusBanner />
 
-            <div className="flex justify-center">
-              <div className="rounded-full bg-primary/10 p-4">
-                <Moon className="h-12 w-12 text-primary" />
-              </div>
-            </div>
-
-            <h1 className="text-3xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
+            <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl md:text-5xl lg:text-7xl">
               {t("heroTitle")}
             </h1>
-            <p className="text-base sm:text-lg text-muted-foreground leading-relaxed max-w-2xl mx-auto">
+            <p className="text-lg sm:text-xl text-muted-foreground leading-relaxed max-w-3xl mx-auto">
               {t("heroSubtitle")}
             </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-              <Button size="lg" asChild className="min-w-48">
+
+            {/* Badges and CTA */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full md:w-auto">
+              <Button
+                size="lg"
+                asChild
+                className="w-full sm:w-auto text-lg px-6 py-3"
+              >
                 <Link href="/dashboard">
                   {t("getStarted")}
-                  <ArrowRight className="h-4 w-4 ml-2" />
+                  <ArrowRight className="h-5 w-5 ml-2" />
                 </Link>
               </Button>
-              <Button size="lg" variant="outline" asChild className="min-w-48">
-                <Link href="#features">{t("learnMore")}</Link>
+              <Button
+                size="lg"
+                variant="outline"
+                asChild
+                className="w-full sm:w-auto text-lg px-6 py-3"
+              >
+                <Link href="#features">
+                  {t("learnMore")}
+                  <ArrowRight className="h-5 w-5 ml-2" />
+                </Link>
               </Button>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-4">
+              <Badge variant="secondary" className="text-sm px-3 py-1">
+                <Star className="h-3 w-3 mr-1.5" />
+                {t("freeForever")}
+              </Badge>
+              <Badge variant="outline" className="text-sm px-3 py-1">
+                {t("madeForBD")}
+              </Badge>
+              <Badge variant="outline" className="text-sm px-3 py-1">
+                🌍 {t("worldwide")}
+              </Badge>
             </div>
           </div>
         </div>
@@ -169,6 +164,21 @@ export default async function LandingPage() {
             <p className="text-muted-foreground">{t("prayerTimesDesc")}</p>
           </div>
           <PrayerTimesWidget />
+        </div>
+      </section>
+
+      {/* ─── Ramadan Timetable ─── */}
+      <section className="container mx-auto px-4 py-12 sm:py-16" id="timetable">
+        <div className="mx-auto max-w-4xl space-y-6">
+          <div className="text-center space-y-2">
+            <h2 className="text-2xl font-bold sm:text-3xl">
+              {t("ramadanTimingsTitle", {
+                year: formatLocalizedNumber(1447, locale),
+              })}
+            </h2>
+            <p className="text-muted-foreground">{t("ramadanTimingsDesc")}</p>
+          </div>
+          <RamadanTimetable />
         </div>
       </section>
 

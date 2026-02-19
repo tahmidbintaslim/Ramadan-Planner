@@ -4,9 +4,13 @@ import { cookies } from "next/headers";
 export async function createClient() {
     const cookieStore = await cookies();
 
+    // Prefer using the Supabase service role key on the server for full DB access.
+    // Fall back to the publishable key if the service role key is not set.
+    const serverKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY!;
+
     return createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY!,
+        serverKey,
         {
             cookies: {
                 getAll() {

@@ -2,11 +2,11 @@
 
 ## Project Overview: Ramadan Planner (BD-first)
 
-Goal: A high-performance Next.js 15 (App Router) website for Bangladeshi Muslims (primary language Bengali) with secondary English for expats. Users can sign up/login (social login), plan Ramadan goals, track daily Ramadan activity, and receive reminders/announcements with calendar sync and dynamic date/time by location/timezone.
+Goal: A high-performance Next.js 16 (App Router) website for Bangladeshi Muslims (primary language Bengali) with secondary English for expats. Users can sign up/login (social login), plan Ramadan goals, track daily Ramadan activity, and receive reminders/announcements with calendar sync and dynamic date/time by location/timezone.
 
 ## Tech Stack
 
-- Frontend: Next.js 15 (App Router), Tailwind CSS
+- Frontend: Next.js 16 (App Router), Tailwind CSS
 - UI Components: shadcn/ui
 - Backend: Supabase (Auth + Postgres DB)
 - Testing: Playwright (E2E), Vitest (Unit)

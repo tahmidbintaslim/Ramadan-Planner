@@ -1,11 +1,14 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useGuestData, getTodayKey } from "@/hooks/use-guest-data";
 import { SignupPrompt } from "@/components/shared/signup-prompt";
+import { useAuth } from "@/components/providers/auth-provider";
+import { getDailyLogAction, saveDailyLogAction } from "@/actions/planner";
 
 interface QuranData {
   para: string;
@@ -14,11 +17,12 @@ interface QuranData {
   pages: string;
 }
 
-export function QuranTracker() {
+export function QuranTracker({ day }: { day: number }) {
   const t = useTranslations("quran");
   const tToday = useTranslations("today");
+  const { isGuest, loading } = useAuth();
 
-  const { data, updateData, showPrompt, dismissPrompt } =
+  const { data: guestData, updateData, showPrompt, dismissPrompt } =
     useGuestData<QuranData>(getTodayKey("quran"), {
       para: "",
       surah: "",
@@ -26,8 +30,48 @@ export function QuranTracker() {
       pages: "",
     });
 
+  const [serverData, setServerData] = useState<QuranData>({
+    para: "",
+    surah: "",
+    ayah: "",
+    pages: "",
+  });
+  const [dirty, setDirty] = useState(false);
+
+  useEffect(() => {
+    if (loading || isGuest) return;
+
+    const load = async () => {
+      const res = await getDailyLogAction(day);
+      if (res.ok && res.data) {
+        setServerData(res.data.quran);
+      }
+    };
+
+    load();
+  }, [day, isGuest, loading]);
+
+  useEffect(() => {
+    if (loading || isGuest || !dirty) return;
+
+    const timeout = setTimeout(() => {
+      saveDailyLogAction({ day, quran: serverData });
+      setDirty(false);
+    }, 400);
+
+    return () => clearTimeout(timeout);
+  }, [day, dirty, isGuest, loading, serverData]);
+
+  const data = isGuest ? guestData : serverData;
+
   const updateField = (field: keyof QuranData, value: string) => {
-    updateData((prev) => ({ ...prev, [field]: value }));
+    if (isGuest) {
+      updateData((prev) => ({ ...prev, [field]: value }));
+      return;
+    }
+
+    setServerData((prev) => ({ ...prev, [field]: value }));
+    setDirty(true);
   };
 
   return (
