@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getTranslations, getLocale } from "next-intl/server";
 import { formatLocalizedNumber } from "@/lib/locale-number";
@@ -77,7 +78,8 @@ export default async function HadithPage() {
 
     for (const item of data) {
       const editionName = item.editionName || String(item.id);
-      const label = item.edition?.title || item.editionName || t("unknownEdition");
+      const label =
+        item.edition?.title || item.editionName || t("unknownEdition");
       const language = item.edition?.language ?? null;
 
       const existing = editionsMap.get(editionName) ?? {
@@ -176,12 +178,18 @@ export default async function HadithPage() {
               // Render editions as book-style cards
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {editions.map((ed) => (
-                  <Card key={ed.editionLabel}>
+                  <Card key={ed.editionName}>
                     <CardHeader>
                       <CardTitle className="flex items-center justify-between">
-                        <span>{ed.editionLabel}</span>
+                        <Link
+                          href={`/hadith/${encodeURIComponent(ed.editionName)}`}
+                          className="font-medium"
+                        >
+                          {ed.editionLabel}
+                        </Link>
                         <span className="text-xs text-muted-foreground">
-                          {ed.language ?? t("unknownLanguage")} • {formatLocalizedNumber(ed.items.length, locale)}
+                          {ed.language ?? t("unknownLanguage")} •{" "}
+                          {formatLocalizedNumber(ed.items.length, locale)}
                         </span>
                       </CardTitle>
                     </CardHeader>
@@ -192,7 +200,10 @@ export default async function HadithPage() {
                             <p className="text-sm font-medium">
                               {t("edition", {
                                 edition: ed.editionLabel,
-                                no: it.hadithNo !== null ? formatLocalizedNumber(it.hadithNo, locale) : tCommon("noValue"),
+                                no:
+                                  it.hadithNo !== null
+                                    ? formatLocalizedNumber(it.hadithNo, locale)
+                                    : tCommon("noValue"),
                               })}
                             </p>
                             {it.text && (
@@ -216,7 +227,10 @@ export default async function HadithPage() {
                         {ed.items.length > 10 && (
                           <p className="text-xs text-muted-foreground">
                             {t("moreInEdition", {
-                              count: formatLocalizedNumber(ed.items.length - 10, locale),
+                              count: formatLocalizedNumber(
+                                ed.items.length - 10,
+                                locale,
+                              ),
                             })}
                           </p>
                         )}
