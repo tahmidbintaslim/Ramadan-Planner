@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { exchangeGoogleCode } from "@/lib/google-calendar";
 import { Prisma } from "@prisma/client";
 import { encryptJson } from "@/lib/secure-json";
+import { getAppAuthUser } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -35,13 +35,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(settingsUrl);
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-
-  if (error || !user) {
+  const user = await getAppAuthUser({ ensureProfile: true });
+  if (!user) {
     settingsUrl.searchParams.set("google", "unauthorized");
     return NextResponse.redirect(settingsUrl);
   }

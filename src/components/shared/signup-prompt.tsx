@@ -30,13 +30,13 @@ export function SignupPrompt({ open, onClose }: SignupPromptProps) {
         </DialogHeader>
         <div className="flex flex-col gap-3 pt-2">
           <Button asChild size="lg">
-            <Link href="/signup" onClick={onClose}>
+            <Link href="/sign-up" onClick={onClose}>
               <UserPlus className="h-4 w-4 mr-2" />
               {tAuth("signup")}
             </Link>
           </Button>
           <Button variant="outline" asChild size="lg">
-            <Link href="/login" onClick={onClose}>
+            <Link href="/sign-in" onClick={onClose}>
               <LogIn className="h-4 w-4 mr-2" />
               {tAuth("login")}
             </Link>

@@ -9,8 +9,13 @@ import { QuranTracker } from "@/components/today/quran-tracker";
 import { DailyChecklist } from "@/components/today/daily-checklist";
 import { JournalSection } from "@/components/today/journal-section";
 import { Separator } from "@/components/ui/separator";
+import { DailyIbadahTracker } from "@/components/shared/daily-ibadah-tracker";
 import { BookOpen, Pause, PenLine, Play, Scroll, Square, Volume2, VolumeX } from "lucide-react";
 import { getRamadanDayOrdinal } from "@/lib/ramadan-ordinal";
+import { useAuth } from "@/components/providers/auth-provider";
+import { getDailyLogAction, saveDailyLogAction } from "@/actions/planner";
+import { DAILY_TRACKER_MARKERS } from "@/lib/daily-tracker-markers";
+import { getTodayKey, useGuestData } from "@/hooks/use-guest-data";
 
 type RecitationTarget = "ayah" | "dua" | null;
 
@@ -19,7 +24,8 @@ export function TodayContent() {
   const tDashboard = useTranslations("dashboard");
   const tQuranReader = useTranslations("quranReader");
   const locale = useLocale();
-  const [ramadanDay, setRamadanDay] = useState(1);
+  const { isGuest, loading: authLoading } = useAuth();
+  const [ramadanDay, setRamadanDay] = useState<number | null>(null);
   const [loadedContent, setLoadedContent] = useState<{
     day: number;
     ayah_ar: string;
@@ -41,12 +47,51 @@ export function TodayContent() {
   const [recitationTarget, setRecitationTarget] =
     useState<RecitationTarget>(null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const ayahCardRef = useRef<HTMLDivElement | null>(null);
+  const hadithCardRef = useRef<HTMLDivElement | null>(null);
+  const autoMarkedRef = useRef<{ quranRead: boolean; hadithRead: boolean }>({
+    quranRead: false,
+    hadithRead: false,
+  });
+  const {
+    updateData: updateGuestTracker,
+  } = useGuestData<{
+    quranRead: boolean;
+    hadithRead: boolean;
+  }>(getTodayKey("daily_ibadah_tracker"), {
+    quranRead: false,
+    hadithRead: false,
+  });
+  const trackingDay = loadedContent?.day ?? ramadanDay ?? 1;
 
   useEffect(() => {
     const loadRamadanDay = async () => {
+      const getCurrentRamadanDay = async (
+        params: URLSearchParams,
+      ): Promise<number | null> => {
+        const res = await fetch(`/api/ramadan?${params.toString()}`);
+        if (!res.ok) return null;
+
+        const data = (await res.json()) as { phase?: string; currentDay?: number };
+        if (
+          data.phase === "ramadan" &&
+          typeof data.currentDay === "number" &&
+          data.currentDay >= 1 &&
+          data.currentDay <= 30
+        ) {
+          return data.currentDay;
+        }
+
+        return null;
+      };
+
       try {
         const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        const params = new URLSearchParams({ tz });
+        const baseParams = new URLSearchParams({ tz });
+        const dayFromTimezone = await getCurrentRamadanDay(baseParams);
+        if (dayFromTimezone) {
+          setRamadanDay(dayFromTimezone);
+        }
 
         if ("geolocation" in navigator) {
           try {
@@ -56,24 +101,16 @@ export function TodayContent() {
                   timeout: 5000,
                 }),
             );
-            params.set("lat", String(pos.coords.latitude));
-            params.set("lng", String(pos.coords.longitude));
+            const geoParams = new URLSearchParams({ tz });
+            geoParams.set("lat", String(pos.coords.latitude));
+            geoParams.set("lng", String(pos.coords.longitude));
+            const dayFromGeo = await getCurrentRamadanDay(geoParams);
+            if (dayFromGeo) {
+              setRamadanDay(dayFromGeo);
+            }
           } catch {
             // Keep timezone-only fallback
           }
-        }
-
-        const res = await fetch(`/api/ramadan?${params.toString()}`);
-        if (!res.ok) return;
-
-        const data = (await res.json()) as { phase?: string; currentDay?: number };
-        if (
-          data.phase === "ramadan" &&
-          typeof data.currentDay === "number" &&
-          data.currentDay >= 1 &&
-          data.currentDay <= 30
-        ) {
-          setRamadanDay(data.currentDay);
         }
       } catch {
         // Keep fallback day
@@ -84,7 +121,7 @@ export function TodayContent() {
   }, []);
 
   const fallbackContent = {
-    day: ramadanDay,
+    day: ramadanDay ?? 1,
     ayah_ar: t("fallbackAyahAr"),
     ayah_bn: t("fallbackAyahBn"),
     ayah_en: t("fallbackAyahEn"),
@@ -194,6 +231,11 @@ export function TodayContent() {
 
   useEffect(() => {
     const loadDailyContent = async () => {
+      if (!ramadanDay) {
+        setLoadedContent(null);
+        return;
+      }
+
       try {
         const res = await fetch(`/api/daily-content?day=${ramadanDay}`);
         if (!res.ok) {
@@ -248,7 +290,84 @@ export function TodayContent() {
     loadDailyContent();
   }, [ramadanDay]);
 
+  useEffect(() => {
+    autoMarkedRef.current = { quranRead: false, hadithRead: false };
+  }, [trackingDay]);
+
+  const markAutoTracker = useCallback(
+    async (type: "quranRead" | "hadithRead") => {
+      if (authLoading || autoMarkedRef.current[type]) return;
+      autoMarkedRef.current[type] = true;
+
+      if (isGuest) {
+        updateGuestTracker((prev) =>
+          prev[type] ? prev : { ...prev, [type]: true },
+        );
+        return;
+      }
+
+      const marker =
+        type === "quranRead"
+          ? DAILY_TRACKER_MARKERS.quran
+          : DAILY_TRACKER_MARKERS.hadith;
+
+      const res = await getDailyLogAction(trackingDay);
+      if (!res.ok) return;
+
+      const baseChecklist = res.data?.checklist ?? [];
+      if (baseChecklist.includes(marker)) return;
+
+      await saveDailyLogAction({
+        day: trackingDay,
+        checklist: [...baseChecklist, marker],
+      });
+    },
+    [authLoading, isGuest, trackingDay, updateGuestTracker],
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const observers: IntersectionObserver[] = [];
+    const timers: Array<ReturnType<typeof setTimeout>> = [];
+
+    const register = (
+      node: HTMLElement | null,
+      onRead: () => void,
+    ) => {
+      if (!node) return;
+
+      let timer: ReturnType<typeof setTimeout> | null = null;
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
+            timer = setTimeout(onRead, 6000);
+            timers.push(timer);
+          } else if (timer) {
+            clearTimeout(timer);
+            timer = null;
+          }
+        },
+        { threshold: [0.6] },
+      );
+      observer.observe(node);
+      observers.push(observer);
+    };
+
+    register(ayahCardRef.current, () => {
+      void markAutoTracker("quranRead");
+    });
+    register(hadithCardRef.current, () => {
+      void markAutoTracker("hadithRead");
+    });
+
+    return () => {
+      observers.forEach((o) => o.disconnect());
+      timers.forEach((t) => clearTimeout(t));
+    };
+  }, [markAutoTracker]);
+
   const dayContent = loadedContent ?? fallbackContent;
+  const resolvedDay = loadedContent?.day ?? ramadanDay;
   const showEnglish = locale === "en";
   const isAyahPlaying = recitationTarget === "ayah" && isReciting;
   const isAyahPaused = recitationTarget === "ayah" && isRecitationPaused;
@@ -260,13 +379,18 @@ export function TodayContent() {
       <div className="space-y-1">
         <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
         <p className="text-muted-foreground">
-          {tDashboard("ramadanDay", {
-            day: getRamadanDayOrdinal(dayContent.day, locale as "bn" | "en", "short"),
-          })}
+          {resolvedDay
+            ? tDashboard("ramadanDay", {
+                day: getRamadanDayOrdinal(resolvedDay, locale as "bn" | "en", "short"),
+              })
+            : "Ramadan Day --"}
         </p>
       </div>
 
-      <Card>
+      <DailyIbadahTracker day={trackingDay} />
+
+      <div ref={ayahCardRef}>
+        <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
             <BookOpen className="h-4 w-4 text-primary" />
@@ -283,7 +407,10 @@ export function TodayContent() {
               {!isAyahPlaying && !isAyahPaused ? (
                 <Button
                   size="sm"
-                  onClick={() => speakText("ayah", dayContent.ayah_ar)}
+                  onClick={() => {
+                    void markAutoTracker("quranRead");
+                    speakText("ayah", dayContent.ayah_ar);
+                  }}
                 >
                   <Play className="h-4 w-4 mr-1.5" />
                   {tQuranReader("listenRecitation")}
@@ -331,9 +458,11 @@ export function TodayContent() {
           </p>
           <p className="text-xs text-muted-foreground">{dayContent.ayah_ref}</p>
         </CardContent>
-      </Card>
+        </Card>
+      </div>
 
-      <Card>
+      <div ref={hadithCardRef}>
+        <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
             <Scroll className="h-4 w-4 text-primary" />
@@ -348,7 +477,8 @@ export function TodayContent() {
           </p>
           <p className="text-xs text-muted-foreground">{dayContent.hadith_ref}</p>
         </CardContent>
-      </Card>
+        </Card>
+      </div>
 
       <Card>
         <CardHeader className="pb-3">
@@ -429,10 +559,10 @@ export function TodayContent() {
         </Card>
       )}
 
-      <SalahTracker day={ramadanDay} />
-      <QuranTracker day={ramadanDay} />
-      <DailyChecklist day={ramadanDay} />
-      <JournalSection day={ramadanDay} />
+      <SalahTracker day={trackingDay} />
+      <QuranTracker day={trackingDay} />
+      <DailyChecklist day={trackingDay} />
+      <JournalSection day={trackingDay} />
     </div>
   );
 }

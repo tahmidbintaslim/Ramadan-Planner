@@ -49,7 +49,7 @@ export function SignupForm() {
         <CardTitle className="text-xl">{t("signup")}</CardTitle>
         <CardDescription>
           {t("hasAccount")}{" "}
-          <Link href="/login" className="text-primary hover:underline">
+          <Link href="/sign-in" className="text-primary hover:underline">
             {t("loginHere")}
           </Link>
         </CardDescription>

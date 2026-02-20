@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useSyncExternalStore } from "react";
+import { useState, useCallback, useSyncExternalStore, useEffect } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 import {
@@ -21,7 +21,14 @@ const FONT_SIZE_KEY = "ramadan-planner-font-size";
 const DEFAULT_FONT_SIZE = 100;
 const MIN_FONT_SIZE = 80;
 const MAX_FONT_SIZE = 150;
-const STEP = 10;
+const STEP = 5;
+
+function applyFontSize(size: number) {
+  if (typeof document === "undefined") return;
+  const value = `${size}%`;
+  document.documentElement.style.fontSize = value;
+  document.body.style.fontSize = "1rem";
+}
 
 function getInitialFontSize(): number {
   if (typeof window === "undefined") return DEFAULT_FONT_SIZE;
@@ -29,10 +36,11 @@ function getInitialFontSize(): number {
   if (saved) {
     const size = parseInt(saved, 10);
     if (size >= MIN_FONT_SIZE && size <= MAX_FONT_SIZE) {
-      document.documentElement.style.fontSize = `${size}%`;
+      applyFontSize(size);
       return size;
     }
   }
+  applyFontSize(DEFAULT_FONT_SIZE);
   return DEFAULT_FONT_SIZE;
 }
 
@@ -64,9 +72,13 @@ export function AccessibilitySidebar() {
   const updateFontSize = useCallback((newSize: number) => {
     const clamped = Math.max(MIN_FONT_SIZE, Math.min(MAX_FONT_SIZE, newSize));
     setFontSize(clamped);
-    document.documentElement.style.fontSize = `${clamped}%`;
+    applyFontSize(clamped);
     localStorage.setItem(FONT_SIZE_KEY, String(clamped));
   }, []);
+
+  useEffect(() => {
+    applyFontSize(fontSize);
+  }, [fontSize]);
 
   const increaseFontSize = () => updateFontSize(fontSize + STEP);
   const decreaseFontSize = () => updateFontSize(fontSize - STEP);
@@ -84,7 +96,7 @@ export function AccessibilitySidebar() {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "fixed bottom-45 md:bottom-6 right-6   z-50 flex items-center justify-center",
+          "fixed bottom-24 right-4 z-50 flex items-center justify-center md:bottom-6 md:right-6 border shadow-lg transition-all duration-200",
           "h-12 w-12 rounded-full shadow-lg transition-all duration-200",
           "bg-primary text-primary-foreground hover:scale-110",
           "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
@@ -102,7 +114,7 @@ export function AccessibilitySidebar() {
       {/* Panel */}
       <div
         className={cn(
-          "fixed bottom-40 md:bottom-20 right-4 z-50 w-64",
+          "fixed bottom-40 right-4 z-50 w-[min(92vw,18rem)] md:bottom-20 md:w-72",
           "rounded-xl border bg-card shadow-2xl transition-all duration-200 origin-bottom-right",
           isOpen
             ? "scale-100 opacity-100 pointer-events-auto"
@@ -133,7 +145,10 @@ export function AccessibilitySidebar() {
               </Button>
 
               <div className="flex-1 text-center">
-                <span className="text-sm font-medium tabular-nums">
+                <span
+                  className="text-sm font-medium tabular-nums"
+                  aria-live="polite"
+                >
                   {formatLocalizedNumber(fontSize, locale)}%
                 </span>
               </div>

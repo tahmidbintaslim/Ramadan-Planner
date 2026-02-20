@@ -10,9 +10,14 @@ import {
   Bell,
   Settings,
   Moon,
+  HandHeart,
+  Brain,
+  Calculator,
+  Hand,
   LogIn,
   UserPlus,
   BookOpen,
+  Library,
   Scroll,
   ShieldCheck,
   ChevronLeft,
@@ -27,7 +32,12 @@ const navItems = [
   { href: "/dashboard", icon: LayoutDashboard, labelKey: "dashboard" as const },
   { href: "/today", icon: CalendarDays, labelKey: "today" as const },
   { href: "/quran", icon: BookOpen, labelKey: "quran" as const },
+  { href: "/books", icon: Library, labelKey: "books" as const },
+  { href: "/duas", icon: HandHeart, labelKey: "duas" as const },
   { href: "/hadith", icon: Scroll, labelKey: "hadith" as const },
+  { href: "/quiz", icon: Brain, labelKey: "quiz" as const },
+  { href: "/tasbih", icon: Hand, labelKey: "tasbih" as const },
+  { href: "/zakat", icon: Calculator, labelKey: "zakat" as const },
   { href: "/plan", icon: Target, labelKey: "plan" as const },
   { href: "/reminders", icon: Bell, labelKey: "reminders" as const },
   {
@@ -129,7 +139,7 @@ export function DesktopSidebar() {
             asChild
           >
             <Link
-              href="/signup"
+              href="/sign-up"
               className={cn(
                 "flex items-center",
                 collapsed ? "justify-center" : "justify-start",
@@ -145,7 +155,7 @@ export function DesktopSidebar() {
             asChild
           >
             <Link
-              href="/login"
+              href="/sign-in"
               className={cn(
                 "flex items-center",
                 collapsed ? "justify-center" : "justify-start",

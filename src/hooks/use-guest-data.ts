@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/components/providers/auth-provider";
+import { pruneLocalHistory } from "@/lib/local-history";
 
 function loadFromStorage<T>(key: string, defaultValue: T): T {
     if (typeof window === "undefined") return defaultValue;
@@ -27,33 +28,27 @@ export function useGuestData<T>(key: string, defaultValue: T) {
     const { isGuest } = useAuth();
     const [data, setData] = useState<T>(() => loadFromStorage(key, defaultValue));
     const [showPrompt, setShowPrompt] = useState(false);
-    const [hasInteracted, setHasInteracted] = useState(false);
+    const [hasInteracted] = useState(false);
+
+    const keyFamily = key.replace(/_\d{4}-\d{2}-\d{2}$/, "");
+    const prefixWithRp = `rp_${keyFamily}`;
 
     // Save to localStorage whenever data changes
     useEffect(() => {
         if (typeof window === "undefined") return;
         try {
             localStorage.setItem(`rp_${key}`, JSON.stringify(data));
+            pruneLocalHistory(prefixWithRp, 7);
         } catch {
             // Storage full or unavailable
         }
-    }, [key, data]);
+    }, [key, data, prefixWithRp]);
 
     const updateData = useCallback(
         (updater: T | ((prev: T) => T)) => {
             setData(updater);
-
-            // Show signup prompt on first guest interaction (once per session)
-            if (isGuest && !hasInteracted) {
-                const prompted = sessionStorage.getItem("rp_signup_prompted");
-                if (!prompted) {
-                    sessionStorage.setItem("rp_signup_prompted", "1");
-                    setShowPrompt(true);
-                    setHasInteracted(true);
-                } else {
-                    setHasInteracted(true);
-                }
-            }
+            // Guest mode now supports local-first persistence without signup prompts.
+            if (isGuest && !hasInteracted) setShowPrompt(false);
         },
         [isGuest, hasInteracted],
     );

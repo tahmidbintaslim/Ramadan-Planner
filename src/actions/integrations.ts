@@ -1,8 +1,8 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
+import { getAppAuthUser } from "@/lib/auth/server";
 import { buildCalendarEventsFromRules } from "@/lib/calendar";
 import { decryptJson, encryptJson } from "@/lib/secure-json";
 import {
@@ -20,17 +20,12 @@ export type IntegrationResult<T> =
 async function getUser(): Promise<
   IntegrationResult<{ id: string; email: string | null }>
 > {
-  const supabase = await createClient();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-
-  if (error || !user) {
+  const user = await getAppAuthUser({ ensureProfile: true });
+  if (!user) {
     return { ok: false, error: "unauthorized" };
   }
 
-  return { ok: true, data: { id: user.id, email: user.email ?? null } };
+  return { ok: true, data: { id: user.id, email: user.email } };
 }
 
 export async function getOrCreateIcsLinkAction(): Promise<

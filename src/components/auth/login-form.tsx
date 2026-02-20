@@ -50,7 +50,7 @@ export function LoginForm() {
         <CardTitle className="text-xl">{t("login")}</CardTitle>
         <CardDescription>
           {t("noAccount")}{" "}
-          <Link href="/signup" className="text-primary hover:underline">
+          <Link href="/sign-up" className="text-primary hover:underline">
             {t("signupHere")}
           </Link>
         </CardDescription>

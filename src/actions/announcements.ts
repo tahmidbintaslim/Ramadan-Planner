@@ -3,8 +3,8 @@
 import { z } from "zod";
 import type { Announcement } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { createClient } from "@/lib/supabase/server";
 import { isUserAdmin } from "@/lib/admin";
+import { getAppAuthUser } from "@/lib/auth/server";
 
 export interface AnnouncementDTO {
   id: string;
@@ -35,13 +35,8 @@ const deleteSchema = z.object({ id: z.string().uuid() });
 async function requireAdmin(): Promise<
   AnnouncementResult<{ userId: string; email: string }>
 > {
-  const supabase = await createClient();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-
-  if (error || !user || !user.email) {
+  const user = await getAppAuthUser();
+  if (!user || !user.email) {
     return { ok: false, error: "unauthorized" };
   }
 

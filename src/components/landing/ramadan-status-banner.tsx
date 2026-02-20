@@ -69,7 +69,10 @@ export function RamadanStatusBanner() {
                 {" • "}
                 {t("currentHijriDate", {
                   day: localizeAsciiDigits(String(status.hijriDay), locale),
-                  month: status.hijriMonthName,
+                  month:
+                    status.hijriMonthName
+                      ?.normalize("NFKD")
+                      .replace(/[\u0300-\u036f]/g, "") ?? status.hijriMonthName,
                   year: localizeAsciiDigits(String(status.hijriYear), locale),
                 })}
               </p>
@@ -103,7 +106,11 @@ export function RamadanStatusBanner() {
                 <p className="text-xs text-muted-foreground">
                   {t("currentHijriDate", {
                     day: localizeAsciiDigits(String(status.hijriDay), locale),
-                    month: status.hijriMonthName,
+                    month:
+                      status.hijriMonthName
+                        ?.normalize("NFKD")
+                        .replace(/[\u0300-\u036f]/g, "") ??
+                      status.hijriMonthName,
                     year: localizeAsciiDigits(String(status.hijriYear), locale),
                   })}
                   {status.ramadanStartGregorian && (

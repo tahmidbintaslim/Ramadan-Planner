@@ -34,6 +34,32 @@ const HADITH_API_KEY = requireEnv(
     "Missing HADITH API key. Set HADITHAPI_KEY or HADIHAD_API_KEY in your .env.local",
 );
 
+type AnyRecord = Record<string, unknown>;
+
+function isRecord(value: unknown): value is AnyRecord {
+    return typeof value === "object" && value !== null;
+}
+
+function arrayFromPayload(payload: unknown, keys: string[] = ["books", "data", "hadiths", "hadith", "chapters"]): AnyRecord[] {
+    if (Array.isArray(payload)) {
+        return payload.filter(isRecord);
+    }
+    if (!isRecord(payload)) return [];
+    for (const key of keys) {
+        const value = payload[key];
+        if (Array.isArray(value)) {
+            return value.filter(isRecord);
+        }
+    }
+    return [];
+}
+
+function asOptionalString(value: unknown): string | null {
+    if (typeof value !== "string") return null;
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+}
+
 async function fetchJson(url: string) {
     console.log("  ⬇  ", url);
     const res = await fetch(url);
@@ -90,6 +116,26 @@ function errorToLog(err: unknown): string {
     return err instanceof Error ? err.message : String(err);
 }
 
+function sanitizeBookLabel(raw: unknown): string | null {
+    if (typeof raw !== "string") return null;
+    const trimmed = raw.trim();
+    if (!trimmed) return null;
+
+    const lowered = trimmed.toLowerCase();
+    if (
+        lowered === "true" ||
+        lowered === "false" ||
+        lowered === "true true" ||
+        lowered === "false false" ||
+        lowered === "null" ||
+        lowered === "undefined"
+    ) {
+        return null;
+    }
+
+    return trimmed;
+}
+
 async function main() {
     console.log("📚 Seeding Hadith via pg …\n");
     const client = new Client({ connectionString: DB_URL });
@@ -111,10 +157,10 @@ async function main() {
     console.log("1/3  Fetching books from hadithapi.com …");
     const books = await fetchJson(`${API_BASE}/books?apiKey=${encodeURIComponent(HADITH_API_KEY)}`);
     // hadithapi returns { status, message, books: [...] }
-    let booksArr: any[] = [];
-    if (Array.isArray(books)) booksArr = books;
-    else if (Array.isArray(books?.books)) booksArr = books.books;
-    else if (Array.isArray(books?.data)) booksArr = books.data;
+    const booksArr = arrayFromPayload(books, ["books", "data"]);
+    if (booksArr.length > 0) {
+        // no-op
+    }
     else {
         console.warn('Unexpected books response shape from hadithapi:', JSON.stringify(books).slice(0, 1000));
     }
@@ -125,7 +171,11 @@ async function main() {
     const processedEditions = new Set<string>();
 
     // Reusable helper to process and insert hadith list for any edition
-    async function processHadithList(hadithList: any[], editionNameParam: string, chapterField: number | null) {
+    async function processHadithList(
+        hadithList: ReadonlyArray<AnyRecord>,
+        editionNameParam: string,
+        chapterField: number | null,
+    ) {
         if (!hadithList || !Array.isArray(hadithList) || hadithList.length === 0) return;
 
         // Normalize entries and filter out items without a numeric hadith number
@@ -137,7 +187,7 @@ async function main() {
             // If missing, try to extract from nested reference objects like { book: 1, hadith: 1 }
             if (hadithNo == null) {
                 const ref = h.references ?? h.reference ?? h.ref ?? h.meta ?? null;
-                if (ref && typeof ref === 'object') {
+                if (isRecord(ref)) {
                     // common keys
                     const cand = ref.hadith ?? ref.hadith_no ?? ref.hadithNumber ?? ref.number ?? null;
                     if (cand != null && !Number.isNaN(Number(cand))) hadithNo = Number(cand);
@@ -149,7 +199,16 @@ async function main() {
 
             // If still missing, try to parse from any string fields like text or translation (last resort)
             if (hadithNo == null) {
-                const candidates = [h.text, h.translation, h.hadith, h.hadithEnglish, h.hadith_arabic, JSON.stringify(h)].filter(Boolean).map(String);
+                const candidates = [
+                    h.text,
+                    h.translation,
+                    h.hadith,
+                    h.hadithEnglish,
+                    h.hadith_arabic,
+                    JSON.stringify(h),
+                ]
+                    .filter(Boolean)
+                    .map(String);
                 for (const s of candidates) {
                     const m = s.match(/(?:hadith|hadith_no|hadithNumber|hadith no|hadith no\.?|#)\s*[:#-]?\s*(\d{1,6})/i);
                     if (m && m[1]) { hadithNo = Number(m[1]); break; }
@@ -162,7 +221,10 @@ async function main() {
                 hadithNo,
                 text: h.hadithEnglish ?? h.hadith_english ?? h.text ?? h.translation ?? h.hadith ?? "",
                 textArabic: h.hadithArabic ?? h.hadith_arabic ?? h.textArabic ?? h.arabic ?? null,
-                bookField: h.book ?? titleFromEdition(editionNameParam) ?? editionNameParam,
+                bookField:
+                    sanitizeBookLabel(h.book) ??
+                    titleFromEdition(editionNameParam) ??
+                    editionNameParam,
                 chapterVal: chapterField != null ? Number(chapterField) : (h.chapter ?? h.chapter_no ?? null),
                 gradeParam: normalizeJsonField(h.status ?? h.grade ?? h.statuses ?? null),
                 referenceParam: normalizeJsonField(h.references ?? h.reference ?? h.ref ?? null),
@@ -201,8 +263,17 @@ async function main() {
 
     for (const b of booksArr) {
         // Normalize known keys from hadithapi response
-        const slug = b.bookSlug || b.slug || (typeof b.bookName === 'string' ? String(b.bookName).toLowerCase().replace(/\s+/g, '-') : null) || null;
-        const title = b.bookName || b.title || b.name || b.book || String(slug || 'unknown');
+        const bookName = asOptionalString(b.bookName);
+        const slug =
+            asOptionalString(b.bookSlug) ||
+            asOptionalString(b.slug) ||
+            (bookName ? bookName.toLowerCase().replace(/\s+/g, "-") : null);
+        const title =
+            bookName ||
+            asOptionalString(b.title) ||
+            asOptionalString(b.name) ||
+            asOptionalString(b.book) ||
+            String(slug || "unknown");
         const editionName = slug || title;
 
         if (!editionName) continue;
@@ -223,13 +294,10 @@ async function main() {
         processedEditions.add(editionName);
 
         // Fetch chapters for this book
-        let chaptersArr: any[] = [];
+        let chaptersArr: AnyRecord[] = [];
         try {
             const ch = await fetchJson(`${API_BASE}/${encodeURIComponent(editionName)}/chapters?apiKey=${encodeURIComponent(HADITH_API_KEY)}`);
-            if (Array.isArray(ch)) chaptersArr = ch;
-            else if (Array.isArray(ch?.chapters)) chaptersArr = ch.chapters;
-            else if (Array.isArray(ch?.data)) chaptersArr = ch.data;
-            else chaptersArr = [];
+            chaptersArr = arrayFromPayload(ch, ["chapters", "data"]);
         } catch (e) {
             console.warn(`  ⚠️  chapters fetch failed for ${editionName}:`, e);
             chaptersArr = [];
@@ -242,7 +310,7 @@ async function main() {
                 const chapterNo = ch.chapterNumber ?? ch.chapter_no ?? ch.number ?? ch.id ?? ch.chapter ?? null;
                 if (chapterNo == null) continue;
 
-                let hadithsRes: any;
+                let hadithsRes: unknown;
                 try {
                     const url = `${API_BASE}/hadiths?apiKey=${encodeURIComponent(HADITH_API_KEY)}&book=${encodeURIComponent(editionName)}&chapter=${encodeURIComponent(String(chapterNo))}&paginate=500`;
                     hadithsRes = await fetchJson(url);
@@ -251,11 +319,7 @@ async function main() {
                     continue;
                 }
 
-                let hadithList = [];
-                if (Array.isArray(hadithsRes)) hadithList = hadithsRes;
-                else if (Array.isArray(hadithsRes?.hadiths)) hadithList = hadithsRes.hadiths;
-                else if (Array.isArray(hadithsRes?.data)) hadithList = hadithsRes.data;
-                else if (Array.isArray(hadithsRes?.hadith)) hadithList = hadithsRes.hadith;
+                const hadithList = arrayFromPayload(hadithsRes, ["hadiths", "data", "hadith"]);
 
                 await processHadithList(hadithList, editionName, Number(chapterNo));
             }
@@ -264,14 +328,10 @@ async function main() {
             try {
                 const url = `${API_BASE}/hadiths?apiKey=${encodeURIComponent(HADITH_API_KEY)}&book=${encodeURIComponent(editionName)}&paginate=500`;
                 const hadithsRes = await fetchJson(url);
-                let hadithList = [];
-                if (Array.isArray(hadithsRes)) hadithList = hadithsRes;
-                else if (Array.isArray(hadithsRes?.hadiths)) hadithList = hadithsRes.hadiths;
-                else if (Array.isArray(hadithsRes?.data)) hadithList = hadithsRes.data;
-                else if (Array.isArray(hadithsRes?.hadith)) hadithList = hadithsRes.hadith;
+                const hadithList = arrayFromPayload(hadithsRes, ["hadiths", "data", "hadith"]);
 
                 await processHadithList(hadithList, editionName, null);
-            } catch (e) {
+            } catch {
                 // already logged in fetchJson
             }
         }
@@ -295,16 +355,16 @@ async function main() {
             } else if (editionsRaw && typeof editionsRaw === 'object') {
                 for (const v of Object.values(editionsRaw)) {
                     if (!v || typeof v !== 'object') continue;
-                    if ('collection' in v && Array.isArray((v as any).collection)) {
-                        for (const item of (v as any).collection) {
-                            if (item && typeof item === 'object' && 'name' in item && typeof (item as {name: unknown}).name === 'string') {
-                                editionNames.push((item as {name: string}).name);
+                    if ("collection" in v && Array.isArray(v.collection)) {
+                        for (const item of v.collection) {
+                            if (item && typeof item === "object" && "name" in item && typeof (item as { name: unknown }).name === "string") {
+                                editionNames.push((item as { name: string }).name);
                             }
                         }
                     } else if (Array.isArray(v)) {
-                        for (const item of v as any[]) {
-                            if (item && typeof item === 'object' && 'name' in item && typeof (item as {name: unknown}).name === 'string') {
-                                editionNames.push((item as {name: string}).name);
+                        for (const item of v) {
+                            if (item && typeof item === "object" && "name" in item && typeof (item as { name: unknown }).name === "string") {
+                                editionNames.push((item as { name: string }).name);
                             }
                         }
                     }
@@ -319,10 +379,11 @@ async function main() {
                     const rawEdition = `https://raw.githubusercontent.com/fawazahmed0/hadith-api/1/editions/${name}.json`;
                     const editionData = await fetchWithFallback(editionBase, rawEdition);
 
-                    const hadithList = editionData?.hadiths || editionData?.hadis || editionData?.data || (Array.isArray(editionData) ? editionData : []);
+                    const hadithList = arrayFromPayload(editionData, ["hadiths", "hadis", "data"]);
 
                     // Upsert edition
-                    const rawInfo = editionData?.info ?? editionData?.meta ?? null;
+                    const editionDataRecord = isRecord(editionData) ? editionData : {};
+                    const rawInfo = editionDataRecord.info ?? editionDataRecord.meta ?? null;
                     const infoParam = normalizeJsonField(rawInfo);
                     await client.query(
                         `INSERT INTO hadith_editions(name, title, language, translator, total_hadith, info, created_at, updated_at)
@@ -331,16 +392,20 @@ async function main() {
                          SET title=EXCLUDED.title, language=EXCLUDED.language, translator=EXCLUDED.translator, total_hadith=EXCLUDED.total_hadith, info=EXCLUDED.info, updated_at=now()` ,
                         [
                             name,
-                            editionData?.title || editionData?.name || name,
-                            editionData?.language || editionData?.lang || null,
-                            editionData?.translator || editionData?.translatedBy || null,
-                            Array.isArray(hadithList) ? hadithList.length : null,
+                            asOptionalString(editionDataRecord.title) ||
+                              asOptionalString(editionDataRecord.name) ||
+                              name,
+                            asOptionalString(editionDataRecord.language) ||
+                              asOptionalString(editionDataRecord.lang),
+                            asOptionalString(editionDataRecord.translator) ||
+                              asOptionalString(editionDataRecord.translatedBy),
+                            hadithList.length,
                             infoParam,
                         ],
                     );
 
-                    await processHadithList(Array.isArray(hadithList) ? hadithList : [], name, null);
-                    console.log(`   • fallback ${name}: ${Array.isArray(hadithList) ? hadithList.length : 0} hadiths processed.`);
+                    await processHadithList(hadithList, name, null);
+                    console.log(`   • fallback ${name}: ${hadithList.length} hadiths processed.`);
                 } catch (err) {
                     console.error(`   ⚠️  fallback failed for ${name}:`, err);
                     try { await client.query('ROLLBACK'); } catch {}

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { NextIntlClientProvider } from "next-intl";
+import { ClerkProvider } from "@clerk/nextjs";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/components/providers/auth-provider";
@@ -31,13 +32,15 @@ export default async function RootLayout({
   return (
     <html lang={locale} suppressHydrationWarning>
       <body className="antialiased bg-background text-foreground">
-        <NextIntlClientProvider messages={messages}>
-          <ThemeProvider>
-            <AuthProvider>{children}</AuthProvider>
-            <AccessibilitySidebar />
-            <Toaster />
-          </ThemeProvider>
-        </NextIntlClientProvider>
+        <ClerkProvider>
+          <NextIntlClientProvider messages={messages}>
+            <ThemeProvider>
+              <AuthProvider>{children}</AuthProvider>
+              <AccessibilitySidebar />
+              <Toaster />
+            </ThemeProvider>
+          </NextIntlClientProvider>
+        </ClerkProvider>
       </body>
     </html>
   );

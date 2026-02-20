@@ -119,7 +119,9 @@ export function QuranPreview() {
   const locale = useLocale();
   const showBengaliName = locale.startsWith("bn");
 
-  const [surahs, setSurahs] = useState<SurahInfo[]>(FALLBACK_SURAHS);
+  const [surahs, setSurahs] = useState<SurahInfo[]>(
+    FALLBACK_SURAHS.slice(0, 4),
+  );
   const [totalSurahs, setTotalSurahs] = useState(114);
   const [loading, setLoading] = useState(true);
 
@@ -135,7 +137,7 @@ export function QuranPreview() {
         if (res.ok) {
           const data: SurahInfo[] = await res.json();
           if (data.length > 0) {
-            setSurahs(data.slice(0, 10));
+            setSurahs(data.slice(0, 4));
             setTotalSurahs(data.length);
           }
         }
@@ -151,14 +153,10 @@ export function QuranPreview() {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground text-center">
-        {t("quranDesc")}
-      </p>
-
       {/* Surah list preview */}
       <div className="grid gap-2 sm:grid-cols-2">
         {loading
-          ? Array.from({ length: 10 }).map((_, i) => (
+          ? Array.from({ length: 4 }).map((_, i) => (
               <Skeleton key={i} className="h-14 rounded-lg" />
             ))
           : surahs.map((surah) => (
@@ -172,7 +170,7 @@ export function QuranPreview() {
                       <div className="flex items-center justify-between gap-2">
                         <p className="text-sm font-medium truncate">
                           {showBengaliName
-                            ? (surah.nameBengali || surah.nameEnglish)
+                            ? surah.nameBengali || surah.nameEnglish
                             : surah.nameEnglish}
                         </p>
                         <p className="text-sm font-arabic shrink-0" dir="rtl">

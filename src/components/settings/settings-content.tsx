@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
+import { useClerk } from "@clerk/nextjs";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { Bell, CalendarClock, Globe, LogIn, LogOut, UserPlus } from "lucide-react";
 import { switchLocaleAction } from "@/actions/locale";
-import { logoutAction } from "@/actions/auth";
 import { getUserProfileAction, updateUserProfileAction } from "@/actions/planner";
 import {
   disconnectGoogleCalendarAction,
@@ -44,6 +44,7 @@ export function SettingsContent() {
   const tCommon = useTranslations("common");
   const locale = useLocale();
   const searchParams = useSearchParams();
+  const { signOut } = useClerk();
 
   const [isPending, startTransition] = useTransition();
   const { user, isGuest, loading } = useAuth();
@@ -110,7 +111,7 @@ export function SettingsContent() {
 
   const handleLogout = () => {
     startTransition(() => {
-      logoutAction();
+      void signOut({ redirectUrl: "/" });
     });
   };
 
@@ -438,13 +439,13 @@ export function SettingsContent() {
               <>
                 <p className="text-sm text-muted-foreground mb-4">{t("profile")}</p>
                 <Button className="w-full" asChild>
-                  <Link href="/signup">
+                  <Link href="/sign-up">
                     <UserPlus className="h-4 w-4 mr-2" />
                     {tAuth("signup")}
                   </Link>
                 </Button>
                 <Button variant="outline" className="w-full" asChild>
-                  <Link href="/login">
+                  <Link href="/sign-in">
                     <LogIn className="h-4 w-4 mr-2" />
                     {tAuth("login")}
                   </Link>

@@ -2,14 +2,14 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
-import { Target } from "lucide-react";
+import { CheckSquare, Sparkles, Target } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/components/providers/auth-provider";
-import { SignupPrompt } from "@/components/shared/signup-prompt";
+import { getTodayKey, useGuestData } from "@/hooks/use-guest-data";
 import {
   createPlanTaskAction,
   createPrayerGoalAction,
@@ -28,19 +28,75 @@ export function PlanContent() {
   const tCommon = useTranslations("common");
   const { isGuest, loading } = useAuth();
 
-  const [goals, setGoals] = useState<PrayerGoalDTO[]>([]);
-  const [tasks, setTasks] = useState<PlanTaskDTO[]>([]);
+  const [serverGoals, setServerGoals] = useState<PrayerGoalDTO[]>([]);
+  const [serverTasks, setServerTasks] = useState<PlanTaskDTO[]>([]);
+  const {
+    data: guestGoals,
+    updateData: updateGuestGoals,
+  } = useGuestData<PrayerGoalDTO[]>(getTodayKey("plan_goals"), []);
+  const {
+    data: guestTasks,
+    updateData: updateGuestTasks,
+  } = useGuestData<PlanTaskDTO[]>(getTodayKey("plan_tasks"), []);
 
   const [newGoalTitle, setNewGoalTitle] = useState("");
   const [newGoalTargetCount, setNewGoalTargetCount] = useState("1");
   const [newTaskTitle, setNewTaskTitle] = useState("");
 
   const [error, setError] = useState<string | null>(null);
-  const [showPrompt, setShowPrompt] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const goals = isGuest ? guestGoals : serverGoals;
+  const tasks = isGuest ? guestTasks : serverTasks;
+
+  const setAllGoals = (
+    updater:
+      | PrayerGoalDTO[]
+      | ((prev: PrayerGoalDTO[]) => PrayerGoalDTO[]),
+  ) => {
+    if (isGuest) {
+      updateGuestGoals(updater);
+      return;
+    }
+    setServerGoals(updater);
+  };
+
+  const setAllTasks = (
+    updater: PlanTaskDTO[] | ((prev: PlanTaskDTO[]) => PlanTaskDTO[]),
+  ) => {
+    if (isGuest) {
+      updateGuestTasks(updater);
+      return;
+    }
+    setServerTasks(updater);
+  };
+  const notifyTrackerUpdate = () => {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("rp-tracker-updated"));
+    }
+  };
+
+  const goalTemplates = [
+    { title: t("templateGoalQuran"), targetCount: 2 },
+    { title: t("templateGoalHadith"), targetCount: 1 },
+    { title: t("templateGoalDhikr"), targetCount: 100 },
+    { title: t("templateGoalDua"), targetCount: 5 },
+  ];
+  const recommendedGoal = {
+    title: t("recommendedGoalName"),
+    targetCount: 1,
+    targetUnit: t("recommendedGoalUnit"),
+  };
+
+  const checklistTemplates = [
+    t("templateTaskMealPlan"),
+    t("templateTaskSleep"),
+    t("templateTaskFamily"),
+    t("templateTaskCharity"),
+  ];
 
   useEffect(() => {
-    if (loading || isGuest) return;
+    if (loading) return;
+    if (isGuest) return;
 
     startTransition(async () => {
       const [goalsRes, tasksRes] = await Promise.all([
@@ -48,8 +104,8 @@ export function PlanContent() {
         listPlanTasksAction(),
       ]);
 
-      if (goalsRes.ok) setGoals(goalsRes.data);
-      if (tasksRes.ok) setTasks(tasksRes.data);
+      if (goalsRes.ok) setServerGoals(goalsRes.data);
+      if (tasksRes.ok) setServerTasks(tasksRes.data);
 
       if (!goalsRes.ok || !tasksRes.ok) {
         setError(t("genericError"));
@@ -57,18 +113,26 @@ export function PlanContent() {
     });
   }, [isGuest, loading, t]);
 
-  const guardGuest = (): boolean => {
-    if (!isGuest) return false;
-    setShowPrompt(true);
-    return true;
-  };
-
   const addGoal = () => {
-    if (guardGuest()) return;
-
     const title = newGoalTitle.trim();
     const count = Number.parseInt(newGoalTargetCount, 10) || 1;
     if (!title) return;
+
+    if (isGuest) {
+      const next: PrayerGoalDTO = {
+        id: crypto.randomUUID(),
+        title,
+        targetCount: Math.max(1, count),
+        targetUnit: t("defaultTargetUnit"),
+        isCompleted: false,
+        sortOrder: goals.length,
+      };
+      setAllGoals((prev) => [...prev, next]);
+      setNewGoalTitle("");
+      setNewGoalTargetCount("1");
+      notifyTrackerUpdate();
+      return;
+    }
 
     setError(null);
     startTransition(async () => {
@@ -83,14 +147,87 @@ export function PlanContent() {
         return;
       }
 
-      setGoals((prev) => [...prev, res.data]);
+      setServerGoals((prev) => [...prev, res.data]);
       setNewGoalTitle("");
       setNewGoalTargetCount("1");
+      notifyTrackerUpdate();
+    });
+  };
+
+  const addGoalTemplate = (title: string, targetCount: number) => {
+    if (isGuest) {
+      const next: PrayerGoalDTO = {
+        id: crypto.randomUUID(),
+        title: title.trim(),
+        targetCount: Math.max(1, targetCount),
+        targetUnit: t("defaultTargetUnit"),
+        isCompleted: false,
+        sortOrder: goals.length,
+      };
+      setAllGoals((prev) => [...prev, next]);
+      notifyTrackerUpdate();
+      return;
+    }
+
+    setError(null);
+    startTransition(async () => {
+      const res = await createPrayerGoalAction({
+        title: title.trim(),
+        targetCount: Math.max(1, targetCount),
+        targetUnit: t("defaultTargetUnit"),
+      });
+
+      if (!res.ok) {
+        setError(t("genericError"));
+        return;
+      }
+
+      setServerGoals((prev) => [...prev, res.data]);
+      notifyTrackerUpdate();
+    });
+  };
+
+  const addRecommendedGoal = () => {
+    if (isGuest) {
+      const next: PrayerGoalDTO = {
+        id: crypto.randomUUID(),
+        title: recommendedGoal.title,
+        targetCount: recommendedGoal.targetCount,
+        targetUnit: recommendedGoal.targetUnit,
+        isCompleted: false,
+        sortOrder: goals.length,
+      };
+      setAllGoals((prev) => [...prev, next]);
+      notifyTrackerUpdate();
+      return;
+    }
+
+    setError(null);
+    startTransition(async () => {
+      const res = await createPrayerGoalAction({
+        title: recommendedGoal.title,
+        targetCount: recommendedGoal.targetCount,
+        targetUnit: recommendedGoal.targetUnit,
+      });
+
+      if (!res.ok) {
+        setError(t("genericError"));
+        return;
+      }
+
+      setServerGoals((prev) => [...prev, res.data]);
+      notifyTrackerUpdate();
     });
   };
 
   const saveGoal = (goal: PrayerGoalDTO) => {
-    if (guardGuest()) return;
+    if (isGuest) {
+      setAllGoals((prev) =>
+        prev.map((item) => (item.id === goal.id ? goal : item)),
+      );
+      notifyTrackerUpdate();
+      return;
+    }
 
     startTransition(async () => {
       const res = await updatePrayerGoalAction(goal);
@@ -98,12 +235,17 @@ export function PlanContent() {
         setError(t("genericError"));
         return;
       }
-      setGoals((prev) => prev.map((item) => (item.id === goal.id ? res.data : item)));
+      setServerGoals((prev) => prev.map((item) => (item.id === goal.id ? res.data : item)));
+      notifyTrackerUpdate();
     });
   };
 
   const removeGoal = (id: string) => {
-    if (guardGuest()) return;
+    if (isGuest) {
+      setAllGoals((prev) => prev.filter((item) => item.id !== id));
+      notifyTrackerUpdate();
+      return;
+    }
 
     startTransition(async () => {
       const res = await deletePrayerGoalAction(id);
@@ -111,15 +253,28 @@ export function PlanContent() {
         setError(t("genericError"));
         return;
       }
-      setGoals((prev) => prev.filter((item) => item.id !== id));
+      setServerGoals((prev) => prev.filter((item) => item.id !== id));
+      notifyTrackerUpdate();
     });
   };
 
   const addTask = () => {
-    if (guardGuest()) return;
-
     const title = newTaskTitle.trim();
     if (!title) return;
+
+    if (isGuest) {
+      const next: PlanTaskDTO = {
+        id: crypto.randomUUID(),
+        title,
+        isDone: false,
+        dueDate: null,
+        sortOrder: tasks.length,
+      };
+      setAllTasks((prev) => [...prev, next]);
+      setNewTaskTitle("");
+      notifyTrackerUpdate();
+      return;
+    }
 
     setError(null);
     startTransition(async () => {
@@ -128,13 +283,46 @@ export function PlanContent() {
         setError(t("genericError"));
         return;
       }
-      setTasks((prev) => [...prev, res.data]);
+      setServerTasks((prev) => [...prev, res.data]);
       setNewTaskTitle("");
+      notifyTrackerUpdate();
+    });
+  };
+
+  const addTaskTemplate = (title: string) => {
+    if (isGuest) {
+      const next: PlanTaskDTO = {
+        id: crypto.randomUUID(),
+        title: title.trim(),
+        isDone: false,
+        dueDate: null,
+        sortOrder: tasks.length,
+      };
+      setAllTasks((prev) => [...prev, next]);
+      notifyTrackerUpdate();
+      return;
+    }
+
+    setError(null);
+    startTransition(async () => {
+      const res = await createPlanTaskAction({ title: title.trim() });
+      if (!res.ok) {
+        setError(t("genericError"));
+        return;
+      }
+      setServerTasks((prev) => [...prev, res.data]);
+      notifyTrackerUpdate();
     });
   };
 
   const saveTask = (task: PlanTaskDTO) => {
-    if (guardGuest()) return;
+    if (isGuest) {
+      setAllTasks((prev) =>
+        prev.map((item) => (item.id === task.id ? task : item)),
+      );
+      notifyTrackerUpdate();
+      return;
+    }
 
     startTransition(async () => {
       const res = await updatePlanTaskAction(task);
@@ -142,12 +330,17 @@ export function PlanContent() {
         setError(t("genericError"));
         return;
       }
-      setTasks((prev) => prev.map((item) => (item.id === task.id ? res.data : item)));
+      setServerTasks((prev) => prev.map((item) => (item.id === task.id ? res.data : item)));
+      notifyTrackerUpdate();
     });
   };
 
   const removeTask = (id: string) => {
-    if (guardGuest()) return;
+    if (isGuest) {
+      setAllTasks((prev) => prev.filter((item) => item.id !== id));
+      notifyTrackerUpdate();
+      return;
+    }
 
     startTransition(async () => {
       const res = await deletePlanTaskAction(id);
@@ -155,7 +348,8 @@ export function PlanContent() {
         setError(t("genericError"));
         return;
       }
-      setTasks((prev) => prev.filter((item) => item.id !== id));
+      setServerTasks((prev) => prev.filter((item) => item.id !== id));
+      notifyTrackerUpdate();
     });
   };
 
@@ -164,7 +358,14 @@ export function PlanContent() {
       <div className="space-y-6">
         <div className="space-y-1">
           <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("plannerSubtitle")}</p>
         </div>
+
+        {!loading && isGuest && (
+          <p className="text-sm text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
+            {t("guestLocalNotice")}
+          </p>
+        )}
 
         {error && (
           <p className="text-sm text-destructive bg-destructive/10 rounded-md px-3 py-2">
@@ -172,7 +373,21 @@ export function PlanContent() {
           </p>
         )}
 
-        <Card>
+        <Card className="surface-soft border-primary/20">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Sparkles className="h-4 w-4 text-primary" />
+              {t("gettingStarted")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm text-muted-foreground">
+            <p>{t("guideStep1")}</p>
+            <p>{t("guideStep2")}</p>
+            <p>{t("guideStep3")}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="surface-soft border-primary/20">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <Target className="h-4 w-4 text-primary" />
@@ -180,6 +395,44 @@ export function PlanContent() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold">{t("recommendedGoalTitle")}</p>
+                  <p className="text-xs text-muted-foreground">{t("recommendedGoalDesc")}</p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={addRecommendedGoal}
+                  disabled={isPending}
+                >
+                  {t("addRecommendedGoal")}
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">
+                {t("quickGoalTemplates")}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {goalTemplates.map((template) => (
+                  <Button
+                    key={template.title}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={isPending}
+                    onClick={() => addGoalTemplate(template.title, template.targetCount)}
+                    className="h-8"
+                  >
+                    {template.title}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
             <div className="grid gap-2 sm:grid-cols-[1fr_140px_auto]">
               <Input
                 value={newGoalTitle}
@@ -199,7 +452,12 @@ export function PlanContent() {
             </div>
 
             {goals.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t("noGoals")}</p>
+              <div className="rounded-lg border border-dashed border-border/80 bg-background/60 p-4">
+                <p className="text-sm font-medium">{t("noGoals")}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {t("noGoalsHint")}
+                </p>
+              </div>
             ) : (
               <div className="space-y-3">
                 {goals.map((goal) => (
@@ -208,7 +466,7 @@ export function PlanContent() {
                       <Checkbox
                         checked={goal.isCompleted}
                         onCheckedChange={(checked) => {
-                          setGoals((prev) =>
+                          setAllGoals((prev) =>
                             prev.map((item) =>
                               item.id === goal.id
                                 ? { ...item, isCompleted: Boolean(checked) }
@@ -227,7 +485,7 @@ export function PlanContent() {
                         value={goal.title}
                         onChange={(e) => {
                           const value = e.target.value;
-                          setGoals((prev) =>
+                          setAllGoals((prev) =>
                             prev.map((item) =>
                               item.id === goal.id ? { ...item, title: value } : item,
                             ),
@@ -243,7 +501,7 @@ export function PlanContent() {
                             1,
                             Number.parseInt(e.target.value || "1", 10) || 1,
                           );
-                          setGoals((prev) =>
+                          setAllGoals((prev) =>
                             prev.map((item) =>
                               item.id === goal.id
                                 ? { ...item, targetCount: value }
@@ -256,7 +514,7 @@ export function PlanContent() {
                         value={goal.targetUnit}
                         onChange={(e) => {
                           const value = e.target.value;
-                          setGoals((prev) =>
+                          setAllGoals((prev) =>
                             prev.map((item) =>
                               item.id === goal.id
                                 ? { ...item, targetUnit: value }
@@ -292,11 +550,35 @@ export function PlanContent() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="surface-soft border-primary/20">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">{t("preRamadanChecklist")}</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <CheckSquare className="h-4 w-4 text-primary" />
+              {t("preRamadanChecklist")}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">
+                {t("quickChecklistTemplates")}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {checklistTemplates.map((template) => (
+                  <Button
+                    key={template}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={isPending}
+                    onClick={() => addTaskTemplate(template)}
+                    className="h-8"
+                  >
+                    {template}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
             <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
               <Input
                 value={newTaskTitle}
@@ -309,7 +591,12 @@ export function PlanContent() {
             </div>
 
             {tasks.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t("noTasks")}</p>
+              <div className="rounded-lg border border-dashed border-border/80 bg-background/60 p-4">
+                <p className="text-sm font-medium">{t("noTasks")}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {t("noTasksHint")}
+                </p>
+              </div>
             ) : (
               <div className="space-y-3">
                 {tasks.map((task) => (
@@ -318,7 +605,7 @@ export function PlanContent() {
                       <Checkbox
                         checked={task.isDone}
                         onCheckedChange={(checked) => {
-                          setTasks((prev) =>
+                          setAllTasks((prev) =>
                             prev.map((item) =>
                               item.id === task.id
                                 ? { ...item, isDone: Boolean(checked) }
@@ -336,7 +623,7 @@ export function PlanContent() {
                       value={task.title}
                       onChange={(e) => {
                         const value = e.target.value;
-                        setTasks((prev) =>
+                        setAllTasks((prev) =>
                           prev.map((item) =>
                             item.id === task.id ? { ...item, title: value } : item,
                           ),
@@ -370,7 +657,6 @@ export function PlanContent() {
         </Card>
       </div>
 
-      <SignupPrompt open={showPrompt} onClose={() => setShowPrompt(false)} />
     </>
   );
 }

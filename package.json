@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node ./generateVapidKeys.mjs && next dev --turbopack",
+    "dev": "node ./scripts/generateVapidKeys.mjs && next dev --turbopack",
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
@@ -16,9 +16,10 @@
     "seed:quran": "npx tsx scripts/seed-quran.ts",
     "seed:daily-content": "npx tsx scripts/seed-daily-content.ts",
     "translations:check": "node scripts/compare-translations.mjs",
-    "vapid:generate": "node ./generateVapidKeys.mjs"
+    "vapid:generate": "node ./scripts/generateVapidKeys.mjs"
   },
   "dependencies": {
+    "@clerk/nextjs": "^6.38.0",
     "@prisma/adapter-pg": "^7.4.0",
     "@prisma/client": "^7.4.0",
     "@supabase/ssr": "^0.8.0",

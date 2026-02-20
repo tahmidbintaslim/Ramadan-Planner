@@ -3,15 +3,17 @@
 import {
   createContext,
   useContext,
-  useEffect,
-  useState,
   type ReactNode,
 } from "react";
-import { createClient } from "@/lib/supabase/client";
-import type { User } from "@supabase/supabase-js";
+import { useUser } from "@clerk/nextjs";
+
+interface AuthUser {
+  id: string;
+  email?: string | null;
+}
 
 interface AuthContextValue {
-  user: User | null;
+  user: AuthUser | null;
   loading: boolean;
   isGuest: boolean;
 }
@@ -23,31 +25,16 @@ const AuthContext = createContext<AuthContextValue>({
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const supabase = createClient();
-
-    // Get initial session
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
-      setLoading(false);
-    });
-
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+  const { isLoaded, isSignedIn, user } = useUser();
+  const authUser = isSignedIn && user
+    ? {
+        id: user.id,
+        email: user.primaryEmailAddress?.emailAddress ?? null,
+      }
+    : null;
 
   return (
-    <AuthContext.Provider value={{ user, loading, isGuest: !user }}>
+    <AuthContext.Provider value={{ user: authUser, loading: !isLoaded, isGuest: !isSignedIn }}>
       {children}
     </AuthContext.Provider>
   );

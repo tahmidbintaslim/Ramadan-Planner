@@ -21,7 +21,7 @@ const url = `https://hadithapi.com/api/books?apiKey=${encodeURIComponent(key)}`;
     try {
       const json = JSON.parse(text);
       console.log("Body (JSON):", JSON.stringify(json, null, 2));
-    } catch (e) {
+    } catch {
       console.log("Body (text):", text);
     }
   } catch (err) {

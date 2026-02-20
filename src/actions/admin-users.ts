@@ -1,9 +1,9 @@
 "use server";
 
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { isUserAdmin } from "@/lib/admin";
+import { getAppAuthUser } from "@/lib/auth/server";
 
 export type AdminUsersResult<T> =
   | { ok: true; data: T }
@@ -15,13 +15,8 @@ const removeSchema = z.object({ userId: z.string().uuid() });
 async function requireAdmin(): Promise<
   AdminUsersResult<{ userId: string; email: string | null }>
 > {
-  const supabase = await createClient();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-
-  if (error || !user) {
+  const user = await getAppAuthUser();
+  if (!user) {
     return { ok: false, error: "unauthorized" };
   }
 
@@ -30,7 +25,7 @@ async function requireAdmin(): Promise<
     return { ok: false, error: "forbidden" };
   }
 
-  return { ok: true, data: { userId: user.id, email: user.email ?? null } };
+  return { ok: true, data: { userId: user.id, email: user.email } };
 }
 
 export async function listAdminUsersAction(): Promise<
@@ -48,7 +43,7 @@ export async function listAdminUsersAction(): Promise<
     ok: true,
     data: rows.map((row) => ({
       userId: row.userId,
-      createdAt: row.createdAt.toISOString(),
+      createdAt: row.createdAt ? row.createdAt.toISOString() : "",
     })),
   };
 }

@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/components/providers/auth-provider";
-import { SignupPrompt } from "@/components/shared/signup-prompt";
+import { getTodayKey, useGuestData } from "@/hooks/use-guest-data";
 import {
   createReminderRuleAction,
   deleteReminderRuleAction,
@@ -37,7 +37,11 @@ export function RemindersContent() {
   const tSalah = useTranslations("salah");
   const { isGuest, loading } = useAuth();
 
-  const [rules, setRules] = useState<ReminderRuleDTO[]>([]);
+  const [serverRules, setServerRules] = useState<ReminderRuleDTO[]>([]);
+  const {
+    data: guestRules,
+    updateData: updateGuestRules,
+  } = useGuestData<ReminderRuleDTO[]>(getTodayKey("reminder_rules"), []);
   const [newType, setNewType] = useState<ReminderRuleDTO["type"]>("fajr");
   const [newLabel, setNewLabel] = useState("");
   const [newOffset, setNewOffset] = useState("-15");
@@ -45,11 +49,28 @@ export function RemindersContent() {
   const [newCalendar, setNewCalendar] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
-  const [showPrompt, setShowPrompt] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const rules = isGuest ? guestRules : serverRules;
+  const setAllRules = (
+    updater:
+      | ReminderRuleDTO[]
+      | ((prev: ReminderRuleDTO[]) => ReminderRuleDTO[]),
+  ) => {
+    if (isGuest) {
+      updateGuestRules(updater);
+      return;
+    }
+    setServerRules(updater);
+  };
+  const notifyTrackerUpdate = () => {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("rp-tracker-updated"));
+    }
+  };
 
   useEffect(() => {
-    if (loading || isGuest) return;
+    if (loading) return;
+    if (isGuest) return;
 
     startTransition(async () => {
       const res = await listReminderRulesAction();
@@ -57,19 +78,11 @@ export function RemindersContent() {
         setError(t("genericError"));
         return;
       }
-      setRules(res.data);
+      setServerRules(res.data);
     });
   }, [isGuest, loading, t]);
 
-  const guardGuest = (): boolean => {
-    if (!isGuest) return false;
-    setShowPrompt(true);
-    return true;
-  };
-
   const addRule = () => {
-    if (guardGuest()) return;
-
     const channels = [newPush ? "push" : null, newCalendar ? "calendar" : null]
       .filter((value): value is "push" | "calendar" => Boolean(value));
 
@@ -79,6 +92,24 @@ export function RemindersContent() {
     }
 
     const offset = Number.parseInt(newOffset, 10);
+
+    if (isGuest) {
+      const next: ReminderRuleDTO = {
+        id: crypto.randomUUID(),
+        type: newType,
+        label: newLabel.trim(),
+        offsetMinutes: Number.isFinite(offset) ? offset : -15,
+        channels,
+        enabled: true,
+      };
+      setAllRules((prev) => [...prev, next]);
+      setNewLabel("");
+      setNewOffset("-15");
+      setNewPush(true);
+      setNewCalendar(false);
+      notifyTrackerUpdate();
+      return;
+    }
 
     setError(null);
     startTransition(async () => {
@@ -95,19 +126,26 @@ export function RemindersContent() {
         return;
       }
 
-      setRules((prev) => [...prev, res.data]);
+      setServerRules((prev) => [...prev, res.data]);
       setNewLabel("");
       setNewOffset("-15");
       setNewPush(true);
       setNewCalendar(false);
+      notifyTrackerUpdate();
     });
   };
 
   const saveRule = (rule: ReminderRuleDTO) => {
-    if (guardGuest()) return;
-
     if (rule.channels.length === 0) {
       setError(t("chooseChannel"));
+      return;
+    }
+
+    if (isGuest) {
+      setAllRules((prev) =>
+        prev.map((item) => (item.id === rule.id ? rule : item)),
+      );
+      notifyTrackerUpdate();
       return;
     }
 
@@ -117,12 +155,17 @@ export function RemindersContent() {
         setError(t("genericError"));
         return;
       }
-      setRules((prev) => prev.map((item) => (item.id === rule.id ? res.data : item)));
+      setServerRules((prev) => prev.map((item) => (item.id === rule.id ? res.data : item)));
+      notifyTrackerUpdate();
     });
   };
 
   const removeRule = (id: string) => {
-    if (guardGuest()) return;
+    if (isGuest) {
+      setAllRules((prev) => prev.filter((item) => item.id !== id));
+      notifyTrackerUpdate();
+      return;
+    }
 
     startTransition(async () => {
       const res = await deleteReminderRuleAction(id);
@@ -130,7 +173,8 @@ export function RemindersContent() {
         setError(t("genericError"));
         return;
       }
-      setRules((prev) => prev.filter((item) => item.id !== id));
+      setServerRules((prev) => prev.filter((item) => item.id !== id));
+      notifyTrackerUpdate();
     });
   };
 
@@ -170,6 +214,12 @@ export function RemindersContent() {
         <div className="space-y-1">
           <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
         </div>
+
+        {!loading && isGuest && (
+          <p className="text-sm text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
+            {t("guestLocalNotice")}
+          </p>
+        )}
 
         {error && (
           <p className="text-sm text-destructive bg-destructive/10 rounded-md px-3 py-2">
@@ -252,7 +302,7 @@ export function RemindersContent() {
                         onChange={(e) => {
                           const type = e.target
                             .value as ReminderRuleDTO["type"];
-                          setRules((prev) =>
+                          setAllRules((prev) =>
                             prev.map((item) =>
                               item.id === rule.id ? { ...item, type } : item,
                             ),
@@ -271,7 +321,7 @@ export function RemindersContent() {
                         value={rule.label}
                         onChange={(e) => {
                           const label = e.target.value;
-                          setRules((prev) =>
+                          setAllRules((prev) =>
                             prev.map((item) =>
                               item.id === rule.id ? { ...item, label } : item,
                             ),
@@ -285,7 +335,7 @@ export function RemindersContent() {
                         value={String(rule.offsetMinutes)}
                         onChange={(e) => {
                           const offsetMinutes = Number.parseInt(e.target.value, 10) || 0;
-                          setRules((prev) =>
+                          setAllRules((prev) =>
                             prev.map((item) =>
                               item.id === rule.id
                                 ? { ...item, offsetMinutes }
@@ -300,7 +350,7 @@ export function RemindersContent() {
                         <Checkbox
                           checked={rule.enabled}
                           onCheckedChange={(checked) => {
-                            setRules((prev) =>
+                            setAllRules((prev) =>
                               prev.map((item) =>
                                 item.id === rule.id
                                   ? { ...item, enabled: Boolean(checked) }
@@ -318,7 +368,7 @@ export function RemindersContent() {
                         <Checkbox
                           checked={rule.channels.includes("push")}
                           onCheckedChange={(checked) => {
-                            setRules((prev) =>
+                            setAllRules((prev) =>
                               prev.map((item) => {
                                 if (item.id !== rule.id) return item;
                                 const next = new Set(item.channels);
@@ -336,7 +386,7 @@ export function RemindersContent() {
                         <Checkbox
                           checked={rule.channels.includes("calendar")}
                           onCheckedChange={(checked) => {
-                            setRules((prev) =>
+                            setAllRules((prev) =>
                               prev.map((item) => {
                                 if (item.id !== rule.id) return item;
                                 const next = new Set(item.channels);
@@ -377,7 +427,6 @@ export function RemindersContent() {
         </Card>
       </div>
 
-      <SignupPrompt open={showPrompt} onClose={() => setShowPrompt(false)} />
     </>
   );
 }

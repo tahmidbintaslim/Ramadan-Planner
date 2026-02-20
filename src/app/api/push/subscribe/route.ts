@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { getAppAuthUser } from "@/lib/auth/server";
 
 const payloadSchema = z.object({
   endpoint: z.string().url(),
@@ -12,13 +12,8 @@ const payloadSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-
-  if (error || !user) {
+  const user = await getAppAuthUser({ ensureProfile: true });
+  if (!user) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
 

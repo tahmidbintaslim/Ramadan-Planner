@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { getAppAuthUser } from "@/lib/auth/server";
 
 export type ActionResult<T> =
   | { ok: true; data: T }
@@ -157,13 +158,8 @@ const updateProfileSchema = z.object({
 });
 
 async function requireUserId(): Promise<ActionResult<string>> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-
-  if (error || !user) {
+  const user = await getAppAuthUser({ ensureProfile: true });
+  if (!user) {
     return { ok: false, error: "unauthorized" };
   }
 
