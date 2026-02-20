@@ -1023,7 +1023,7 @@ export default async function LandingPage() {
               <h2 className="text-2xl font-bold sm:text-3xl">
                 {t("ctaTitle")}
               </h2>
-              <p className="reading-copy leading-relaxed font-bold text-white">
+              <p className="reading-copy leading-relaxed font-bold !text-white dark:!text-primary-foreground">
                 {t("ctaDesc")}
               </p>
             </div>
