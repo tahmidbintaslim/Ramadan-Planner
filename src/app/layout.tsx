@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { NextIntlClientProvider } from "next-intl";
 import { ClerkProvider } from "@clerk/nextjs";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
+import { Analytics } from "@vercel/analytics/next";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/components/providers/auth-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
@@ -41,6 +42,7 @@ export default async function RootLayout({
             </ThemeProvider>
           </NextIntlClientProvider>
         </ClerkProvider>
+        <Analytics />
       </body>
     </html>
   );
