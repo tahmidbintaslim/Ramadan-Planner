@@ -12,6 +12,6 @@ Core screen: Today/Daily Planner combining:
 
 Key constraints:
 
-- Supabase Auth + DB with strict RLS
+- Clerk auth; Postgres on Supabase through Prisma (and supabase-js with the service role for planner data). Queries bypass RLS, so scope every query to the signed-in user in code
 - Timezone correctness globally (including DST)
 - Web reminders = push + calendar alerts (Google + ICS)

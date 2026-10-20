@@ -4,4 +4,4 @@ globs: ["src/**/*.test.ts", "src/**/*.test.tsx", "tests/**/*", "e2e/**/*"]
 
 Unit tests: Vitest. E2E tests: Playwright.
 Test timezone/DST edge cases for prayer times and reminders.
-Mock Supabase auth in unit tests. Use test fixtures for daily content.
+Mock Clerk auth (`getAppAuthUser`) and Prisma in unit tests. Use test fixtures for daily content.

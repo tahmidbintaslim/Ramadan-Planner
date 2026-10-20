@@ -35,5 +35,5 @@
 ## Non-Functional Requirements
 
 - Fast on BD networks (mobile-first)
-- Privacy-first (RLS, no sensitive leakage)
+- Privacy-first (every query scoped to the signed-in account, no sensitive leakage)
 - Timezone-correct across countries (DST safe)

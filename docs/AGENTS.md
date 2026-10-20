@@ -8,8 +8,9 @@ Goal: A high-performance Next.js 16 (App Router) website for Bangladeshi Muslims
 
 - Frontend: Next.js 16 (App Router), Tailwind CSS
 - UI Components: shadcn/ui
-- Backend: Supabase (Auth + Postgres DB)
-- Testing: Playwright (E2E), Vitest (Unit)
+- Auth: Clerk
+- Database: PostgreSQL on Supabase, accessed through Prisma 7 and, for planner data, supabase-js with the service role key (server only)
+- Testing: Vitest (unit). Playwright is installed but has no specs yet.
 - Hosting: Vercel
 
 ## Development Rules (Non-negotiable)
@@ -32,7 +33,7 @@ Goal: A high-performance Next.js 16 (App Router) website for Bangladeshi Muslims
 - Prefer Server Components; use Client Components only when required.
 - Public pages: SEO-first, static/ISR where possible.
 - Authenticated pages: privacy-first, noindex.
-- Data layer: Supabase RLS + user-scoped queries (never trust client `user_id`).
+- Data layer: server queries bypass RLS (Prisma and the service role), so every query must filter by the signed-in user's ID from `getAppAuthUser()`; never trust a client `user_id`.
 
 ## Definition of Done (DoD)
 
@@ -40,7 +41,7 @@ A change is "done" only when:
 
 1. UX matches shadcn/ui patterns + mobile-first layout
 2. BN/EN translations added for all user-facing text
-3. RLS/user-scope validated
+3. User scope validated on every new query
 4. `npm run lint` passes
 5. `npm run build` passes
 6. Tests added/updated when behavior changes
