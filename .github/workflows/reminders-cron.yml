@@ -1,0 +1,43 @@
+name: Reminders cron
+
+# Calls GET /api/push/dispatch every 5 minutes so push reminders are sent.
+# Vercel Hobby crons run at most once a day, which is why this lives here.
+#
+# Repository secrets (Settings > Secrets and variables > Actions):
+#   PUSH_DISPATCH_URL  full URL, e.g. https://your-domain/api/push/dispatch
+#   CRON_SECRET        same value as the CRON_SECRET env var on the deployment
+# When either is unset (forks, fresh clones) the job exits without calling.
+#
+# GitHub may start scheduled runs late and pauses them after 60 days without
+# repository activity; the dispatch due window allows for some delay.
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: reminders-cron
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Call push dispatch
+        env:
+          PUSH_DISPATCH_URL: ${{ secrets.PUSH_DISPATCH_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$PUSH_DISPATCH_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "PUSH_DISPATCH_URL or CRON_SECRET is not set; skipping."
+            exit 0
+          fi
+          curl --silent --show-error --fail-with-body \
+            --max-time 120 --retry 2 --retry-delay 10 \
+            --header "Authorization: Bearer ${CRON_SECRET}" \
+            "$PUSH_DISPATCH_URL"
+          echo

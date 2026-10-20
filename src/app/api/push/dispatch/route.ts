@@ -1,66 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { fromZonedTime } from "date-fns-tz";
 import webpush from "web-push";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { fetchPrayerTimes, todayDateString } from "@/lib/prayer-times";
+import {
+  applyOffset,
+  baseTimeForRule,
+  findDueOccurrence,
+  hasBearerSecret,
+} from "@/lib/push-schedule";
 
 export const dynamic = "force-dynamic";
-
-const DUE_WINDOW_MS = 2 * 60 * 1000;
-
-function parseTime(value: string): { h: number; m: number } | null {
-  const [hRaw, mRaw] = value.split(":");
-  const h = Number.parseInt(hRaw, 10);
-  const m = Number.parseInt(mRaw, 10);
-  if (!Number.isInteger(h) || !Number.isInteger(m)) return null;
-  if (h < 0 || h > 23 || m < 0 || m > 59) return null;
-  return { h, m };
-}
-
-function applyOffset(time: string, offsetMinutes: number): string | null {
-  const parsed = parseTime(time);
-  if (!parsed) return null;
-  const total = parsed.h * 60 + parsed.m + offsetMinutes;
-  const wrapped = ((total % 1440) + 1440) % 1440;
-  return `${String(Math.floor(wrapped / 60)).padStart(2, "0")}:${String(wrapped % 60).padStart(2, "0")}`;
-}
-
-function baseTimeForRule(
-  type: string,
-  prayerTimes: {
-    sehri: string;
-    iftar: string;
-    fajr: string;
-    dhuhr: string;
-    asr: string;
-    maghrib: string;
-    isha: string;
-  },
-): string | null {
-  switch (type) {
-    case "sehri":
-      return prayerTimes.sehri;
-    case "iftar":
-      return prayerTimes.iftar;
-    case "fajr":
-      return prayerTimes.fajr;
-    case "dhuhr":
-      return prayerTimes.dhuhr;
-    case "asr":
-      return prayerTimes.asr;
-    case "maghrib":
-      return prayerTimes.maghrib;
-    case "isha":
-      return prayerTimes.isha;
-    case "taraweeh":
-      return prayerTimes.isha;
-    case "tahajjud":
-      return "03:00";
-    default:
-      return null;
-  }
-}
 
 function displayName(type: string): string {
   switch (type) {
@@ -94,6 +44,8 @@ function isUniqueError(error: unknown): boolean {
   );
 }
 
+// POST keeps its original contract for manual or external callers:
+// PUSH_DISPATCH_SECRET (or CRON_SECRET) as `x-cron-secret` or a Bearer token.
 function ensureAuthorized(request: NextRequest): boolean {
   const expected =
     process.env.PUSH_DISPATCH_SECRET?.trim() ||
@@ -103,9 +55,7 @@ function ensureAuthorized(request: NextRequest): boolean {
   const headerSecret = request.headers.get("x-cron-secret");
   if (headerSecret && headerSecret === expected) return true;
 
-  const auth = request.headers.get("authorization");
-  if (!auth) return false;
-  return auth === `Bearer ${expected}`;
+  return hasBearerSecret(request.headers.get("authorization"), expected);
 }
 
 function configureWebPush(): void {
@@ -120,26 +70,7 @@ function configureWebPush(): void {
   webpush.setVapidDetails(subject, publicKey, privateKey);
 }
 
-export async function POST(request: NextRequest) {
-  if (!ensureAuthorized(request)) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-  }
-
-  if (process.env.PUSH_DISPATCH_DEBUG === "1") {
-    const hasPublicKey = Boolean(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim());
-    const hasPrivateKey = Boolean(process.env.VAPID_PRIVATE_KEY?.trim());
-    const hasSubject = Boolean(process.env.VAPID_SUBJECT?.trim());
-    console.info(
-      `[push/dispatch] VAPID config presence - public: ${hasPublicKey}, private: ${hasPrivateKey}, subject: ${hasSubject}`,
-    );
-  }
-
-  try {
-    configureWebPush();
-  } catch {
-    return NextResponse.json({ ok: false, error: "Push config missing" }, { status: 500 });
-  }
-
+async function dispatchDueReminders(now: Date) {
   const users = await prisma.userProfile.findMany({
     select: {
       id: true,
@@ -169,41 +100,43 @@ export async function POST(request: NextRequest) {
 
   let delivered = 0;
   let checked = 0;
+  let skippedUsers = 0;
 
   for (const user of users) {
     if (user.pushSubscriptions.length === 0) continue;
 
-    const date = todayDateString(user.timezone);
-    const timings = await fetchPrayerTimes(
-      user.latitude,
-      user.longitude,
-      date,
-      user.timezone,
-      user.locationLabel,
-    );
-
-    const todayIso = new Date().toLocaleDateString("en-CA", {
-      timeZone: user.timezone,
+    const pushRules = user.reminderRules.filter((rule) => {
+      const channels = Array.isArray(rule.channels) ? rule.channels : [];
+      return channels.includes("push");
     });
+    if (pushRules.length === 0) continue;
 
-    for (const rule of user.reminderRules) {
-      const channels = Array.isArray(rule.channels)
-        ? rule.channels.filter((c): c is string => typeof c === "string")
-        : [];
+    // Today's local timings are used for an occurrence that started just
+    // before local midnight as well; the day-to-day drift is about a minute.
+    let timings: Awaited<ReturnType<typeof fetchPrayerTimes>>;
+    try {
+      timings = await fetchPrayerTimes(
+        user.latitude,
+        user.longitude,
+        todayDateString(user.timezone),
+        user.timezone,
+        user.locationLabel,
+      );
+    } catch {
+      // One user's timing lookup failing must not block everyone else.
+      skippedUsers += 1;
+      continue;
+    }
 
-      if (!channels.includes("push")) continue;
-
+    for (const rule of pushRules) {
       const base = baseTimeForRule(rule.type, timings.prayerTimes);
       if (!base) continue;
 
       const scheduledLocal = applyOffset(base, rule.offsetMinutes);
       if (!scheduledLocal) continue;
 
-      const scheduledAt = fromZonedTime(`${todayIso}T${scheduledLocal}:00`, user.timezone);
-      const now = new Date();
-      const diff = now.getTime() - scheduledAt.getTime();
-
-      if (diff < 0 || diff > DUE_WINDOW_MS) continue;
+      const scheduledAt = findDueOccurrence(scheduledLocal, user.timezone, now);
+      if (!scheduledAt) continue;
 
       checked += 1;
 
@@ -220,6 +153,7 @@ export async function POST(request: NextRequest) {
           });
         } catch (error) {
           if (isUniqueError(error)) {
+            // Already sent by an earlier, overlapping run.
             continue;
           }
           throw error;
@@ -260,5 +194,49 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, checked, delivered });
+  return { checked, delivered, skippedUsers };
+}
+
+async function runDispatch(): Promise<NextResponse> {
+  if (process.env.PUSH_DISPATCH_DEBUG === "1") {
+    const hasPublicKey = Boolean(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim());
+    const hasPrivateKey = Boolean(process.env.VAPID_PRIVATE_KEY?.trim());
+    const hasSubject = Boolean(process.env.VAPID_SUBJECT?.trim());
+    console.info(
+      `[push/dispatch] VAPID config presence - public: ${hasPublicKey}, private: ${hasPrivateKey}, subject: ${hasSubject}`,
+    );
+  }
+
+  try {
+    configureWebPush();
+  } catch {
+    return NextResponse.json({ ok: false, error: "Push config missing" }, { status: 500 });
+  }
+
+  try {
+    const result = await dispatchDueReminders(new Date());
+    return NextResponse.json({ ok: true, ...result });
+  } catch (error) {
+    console.error("[push/dispatch] dispatch failed", error);
+    return NextResponse.json(
+      { ok: false, error: "Dispatch temporarily unavailable" },
+      { status: 503 },
+    );
+  }
+}
+
+// Scheduler entry point (GitHub Actions cron, Vercel Cron). Both send
+// `Authorization: Bearer <CRON_SECRET>`; nothing else is accepted on GET.
+export async function GET(request: NextRequest) {
+  if (!hasBearerSecret(request.headers.get("authorization"), process.env.CRON_SECRET)) {
+    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  }
+  return runDispatch();
+}
+
+export async function POST(request: NextRequest) {
+  if (!ensureAuthorized(request)) {
+    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  }
+  return runDispatch();
 }
