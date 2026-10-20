@@ -1,5 +1,6 @@
 // Quran data service – reads from local Postgres (seeded from quranapi.pages.dev)
-// Falls back to external API when DB is empty (pre-seed).
+// Falls back to the external API when the DB is empty (pre-seed) or the
+// query fails (database paused, unreachable or misconfigured).
 
 import { prisma } from "@/lib/prisma";
 
@@ -72,54 +73,61 @@ function setCache(key: string, data: unknown): void {
 
 /**
  * Fetch list of all 114 surahs (metadata only, no ayahs).
+ * Returns an empty array only when both the DB and the external API fail.
  */
 export async function fetchSurahList(): Promise<SurahInfo[]> {
     const cacheKey = "surah-list";
     const cached = getFromCache<SurahInfo[]>(cacheKey);
     if (cached) return cached;
 
-    const rows = await prisma.quranSurah.findMany({
-        orderBy: { surahNo: "asc" },
-        select: {
-            surahNo: true,
-            nameArabic: true,
-            nameArabicLong: true,
-            nameEnglish: true,
-            nameTranslation: true,
-            nameBengali: true,
-            revelationPlace: true,
-            totalAyah: true,
-        },
-    });
+    let rows: SurahInfo[] = [];
+    try {
+        rows = await prisma.quranSurah.findMany({
+            orderBy: { surahNo: "asc" },
+            select: {
+                surahNo: true,
+                nameArabic: true,
+                nameArabicLong: true,
+                nameEnglish: true,
+                nameTranslation: true,
+                nameBengali: true,
+                revelationPlace: true,
+                totalAyah: true,
+            },
+        });
+    } catch (error) {
+        logDbFallback("surah list", error);
+    }
 
     if (rows.length === 0) {
-        // DB not seeded yet – fall back to external API
+        // DB not seeded yet or unreachable – fall back to external API.
+        // Not cached here so a recovered or freshly seeded DB wins next time.
         return fetchSurahListExternal();
     }
 
-    const data: SurahInfo[] = rows;
-    setCache(cacheKey, data);
-    return data;
+    setCache(cacheKey, rows);
+    return rows;
 }
 
 /**
  * Fetch a full surah with ayahs (Arabic + English + Bengali + audio).
+ * Returns null only when both the DB and the external API fail.
  */
 export async function fetchSurah(surahNumber: number): Promise<SurahDetail | null> {
     const cacheKey = `surah-${surahNumber}`;
     const cached = getFromCache<SurahDetail>(cacheKey);
     if (cached) return cached;
 
-    const row = await prisma.quranSurah.findUnique({
-        where: { surahNo: surahNumber },
-        include: {
-            ayahs: {
-                orderBy: { ayahNo: "asc" },
-            },
-        },
-    });
+    let row: Awaited<ReturnType<typeof findSurahWithAyahs>> = null;
+    try {
+        row = await findSurahWithAyahs(surahNumber);
+    } catch (error) {
+        logDbFallback(`surah ${surahNumber}`, error);
+    }
 
-    if (!row) return null;
+    if (!row || row.ayahs.length === 0) {
+        return fetchSurahExternal(surahNumber);
+    }
 
     const detail: SurahDetail = {
         surahNo: row.surahNo,
@@ -145,6 +153,17 @@ export async function fetchSurah(surahNumber: number): Promise<SurahDetail | nul
     return detail;
 }
 
+function findSurahWithAyahs(surahNumber: number) {
+    return prisma.quranSurah.findUnique({
+        where: { surahNo: surahNumber },
+        include: {
+            ayahs: {
+                orderBy: { ayahNo: "asc" },
+            },
+        },
+    });
+}
+
 /**
  * Fetch available reciters.
  */
@@ -153,11 +172,20 @@ export async function fetchReciters(): Promise<ReciterInfo[]> {
     const cached = getFromCache<ReciterInfo[]>(cacheKey);
     if (cached) return cached;
 
-    const rows = await prisma.quranReciter.findMany({
-        orderBy: { id: "asc" },
-    });
+    let data: ReciterInfo[] = [];
+    try {
+        const rows = await prisma.quranReciter.findMany({
+            orderBy: { id: "asc" },
+        });
+        data = rows.map((r) => ({ id: r.id, name: r.name }));
+    } catch (error) {
+        logDbFallback("reciters", error);
+    }
 
-    const data: ReciterInfo[] = rows.map((r) => ({ id: r.id, name: r.name }));
+    if (data.length === 0) {
+        return fetchRecitersExternal();
+    }
+
     setCache(cacheKey, data);
     return data;
 }
@@ -173,14 +201,20 @@ export async function fetchRandomAyah(): Promise<{
     textBengali: string;
     textEnglish: string;
 } | null> {
-    const count = await prisma.quranAyah.count();
-    if (count === 0) return null;
+    let ayah;
+    try {
+        const count = await prisma.quranAyah.count();
+        if (count === 0) return null;
 
-    const skip = Math.floor(Math.random() * count);
-    const ayah = await prisma.quranAyah.findFirst({
-        skip,
-        include: { surah: { select: { nameArabic: true } } },
-    });
+        const skip = Math.floor(Math.random() * count);
+        ayah = await prisma.quranAyah.findFirst({
+            skip,
+            include: { surah: { select: { nameArabic: true } } },
+        });
+    } catch (error) {
+        logDbFallback("random ayah", error);
+        return null;
+    }
 
     if (!ayah) return null;
 
@@ -194,7 +228,12 @@ export async function fetchRandomAyah(): Promise<{
     };
 }
 
-// ── External API fallback (pre-seed only) ────────────────
+// ── External API fallback (pre-seed or DB error) ─────────
+
+function logDbFallback(what: string, error: unknown): void {
+    const reason = error instanceof Error ? error.name : "unknown error";
+    console.warn(`[quran] DB read failed for ${what} (${reason}); using external API`);
+}
 
 interface ExtSurah {
     surahName: string;
@@ -203,6 +242,15 @@ interface ExtSurah {
     surahNameTranslation: string;
     revelationPlace: string;
     totalAyah: number;
+}
+
+export interface ExtSurahDetail extends ExtSurah {
+    surahNo?: number;
+    audio?: Record<string, AudioEntry>;
+    english?: string[];
+    arabic1?: string[];
+    arabic2?: string[];
+    bengali?: string[];
 }
 
 async function fetchSurahListExternal(): Promise<SurahInfo[]> {
@@ -222,6 +270,74 @@ async function fetchSurahListExternal(): Promise<SurahInfo[]> {
             revelationPlace: s.revelationPlace,
             totalAyah: s.totalAyah,
         }));
+    } catch {
+        return [];
+    }
+}
+
+/**
+ * Map one surah from quranapi.pages.dev (`/api/{n}.json`) to SurahDetail.
+ * The per-surah file carries chapter audio only, so ayah audio stays empty.
+ */
+export function mapExternalSurah(
+    surahNumber: number,
+    data: ExtSurahDetail,
+): SurahDetail | null {
+    const arabic = data.arabic1 ?? [];
+    if (arabic.length === 0) return null;
+
+    const ayahs: QuranAyah[] = arabic.map((textArabic, i) => ({
+        ayahNo: i + 1,
+        textArabic,
+        textArabicClean: data.arabic2?.[i] ?? "",
+        textEnglish: data.english?.[i] ?? "",
+        textBengali: data.bengali?.[i] ?? "",
+        audio: {},
+    }));
+
+    const audio: Record<string, AudioEntry> = {};
+    for (const [id, entry] of Object.entries(data.audio ?? {})) {
+        audio[id] = { reciter: entry.reciter, url: entry.url, originalUrl: entry.originalUrl };
+    }
+
+    return {
+        surahNo: surahNumber,
+        nameArabic: data.surahNameArabic,
+        nameArabicLong: data.surahNameArabicLong,
+        nameEnglish: data.surahName,
+        nameTranslation: data.surahNameTranslation,
+        nameBengali: SURAH_NAMES_BN[surahNumber] ?? data.surahName,
+        revelationPlace: data.revelationPlace,
+        totalAyah: data.totalAyah,
+        audio,
+        ayahs,
+    };
+}
+
+async function fetchSurahExternal(surahNumber: number): Promise<SurahDetail | null> {
+    try {
+        const res = await fetch(`${QURAN_API_BASE}/${surahNumber}.json`, {
+            next: { revalidate: 604800 },
+        });
+        if (!res.ok) return null;
+        const data: ExtSurahDetail = await res.json();
+        return mapExternalSurah(surahNumber, data);
+    } catch {
+        return null;
+    }
+}
+
+async function fetchRecitersExternal(): Promise<ReciterInfo[]> {
+    try {
+        const res = await fetch(`${QURAN_API_BASE}/reciters.json`, {
+            next: { revalidate: 604800 },
+        });
+        if (!res.ok) return [];
+        const data: Record<string, string> = await res.json();
+        return Object.entries(data)
+            .map(([id, name]) => ({ id: Number(id), name }))
+            .filter((r) => Number.isInteger(r.id) && typeof r.name === "string")
+            .sort((a, b) => a.id - b.id);
     } catch {
         return [];
     }
