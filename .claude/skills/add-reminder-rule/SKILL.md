@@ -5,7 +5,7 @@ description: Implement reminders end-to-end (UI + DB + scheduling) with timezone
 
 # Skill Instructions
 
-1. Add/extend reminder_rules storage (RLS, user scoped)
+1. Add/extend reminder_rules storage (scoped to the signed-in user in code; server queries bypass RLS)
 2. Build ReminderRuleBuilder UI with presets and disable/snooze
 3. Compute schedules in user timezone (DST-safe)
 4. Integrate channels:

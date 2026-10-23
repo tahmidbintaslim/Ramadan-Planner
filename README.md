@@ -1,6 +1,6 @@
 # Ramadan Planner
 
-**Live demo:** [ramadan-planner-puce.vercel.app](https://ramadan-planner-puce.vercel.app) (working demo, partly down: its database is paused, so the Quran list, daily content and announcements do not load there and sign-in runs on a Clerk development instance. Prayer times and the guest tracker work.)
+**Live demo:** [ramadan-planner-puce.vercel.app](https://ramadan-planner-puce.vercel.app) (working demo, partly down: its database is unreachable, so daily content and announcements do not load there, and its current build also shows an empty Quran list. Sign-in runs on a Clerk development instance. Prayer times and the guest tracker work.)
 
 A Bengali-first web app for planning and tracking Ramadan, with English as a second language. You can use it as a guest, with data kept in your browser, or sign in to save it to the database.
 
