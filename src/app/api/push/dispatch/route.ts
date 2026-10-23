@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import webpush from "web-push";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { fetchPrayerTimes, todayDateString } from "@/lib/prayer-times";
+import { fetchPrayerTimes } from "@/lib/prayer-times";
 import {
-  applyOffset,
-  baseTimeForRule,
-  findDueOccurrence,
+  dueLocalDates,
+  dueOccurrenceForRule,
   hasBearerSecret,
+  toAlAdhanDate,
+  type DayPrayerTimes,
 } from "@/lib/push-schedule";
 
 export const dynamic = "force-dynamic";
@@ -111,32 +112,32 @@ async function dispatchDueReminders(now: Date) {
     });
     if (pushRules.length === 0) continue;
 
-    // Today's local timings are used for an occurrence that started just
-    // before local midnight as well; the day-to-day drift is about a minute.
-    let timings: Awaited<ReturnType<typeof fetchPrayerTimes>>;
-    try {
-      timings = await fetchPrayerTimes(
-        user.latitude,
-        user.longitude,
-        todayDateString(user.timezone),
-        user.timezone,
-        user.locationLabel,
-      );
-    } catch {
-      // One user's timing lookup failing must not block everyone else.
+    // Usually one local date; two just after local midnight. Each date gets
+    // its own prayer times (see dueOccurrenceForRule).
+    const days: DayPrayerTimes[] = [];
+    for (const day of dueLocalDates(user.timezone, now)) {
+      try {
+        const timings = await fetchPrayerTimes(
+          user.latitude,
+          user.longitude,
+          toAlAdhanDate(day),
+          user.timezone,
+          user.locationLabel,
+        );
+        days.push({ day, prayerTimes: timings.prayerTimes });
+      } catch {
+        // One timing lookup failing must not block everyone else.
+      }
+    }
+    if (days.length === 0) {
       skippedUsers += 1;
       continue;
     }
 
     for (const rule of pushRules) {
-      const base = baseTimeForRule(rule.type, timings.prayerTimes);
-      if (!base) continue;
-
-      const scheduledLocal = applyOffset(base, rule.offsetMinutes);
-      if (!scheduledLocal) continue;
-
-      const scheduledAt = findDueOccurrence(scheduledLocal, user.timezone, now);
-      if (!scheduledAt) continue;
+      const due = dueOccurrenceForRule(rule, days, user.timezone, now);
+      if (!due) continue;
+      const { scheduledAt } = due;
 
       checked += 1;
 
@@ -168,7 +169,7 @@ async function dispatchDueReminders(now: Date) {
           title: "Ramadan Planner",
           body:
             (rule.label?.trim() || displayName(rule.type)) +
-            ` • ${timings.location}`,
+            ` • ${user.locationLabel}`,
         });
 
         try {

@@ -4,9 +4,12 @@ import {
   DUE_WINDOW_MS,
   applyOffset,
   baseTimeForRule,
+  dueLocalDates,
+  dueOccurrenceForRule,
   findDueOccurrence,
   hasBearerSecret,
   isDue,
+  toAlAdhanDate,
 } from "./push-schedule";
 
 const MIN = 60 * 1000;
@@ -97,6 +100,56 @@ describe("rule time helpers", () => {
     expect(applyOffset("00:10", -20)).toBe("23:50");
     expect(applyOffset("23:50", 20)).toBe("00:10");
     expect(applyOffset("bad", 5)).toBeNull();
+  });
+});
+
+describe("per-day prayer times", () => {
+  const dayTimes = (isha: string) => ({
+    sehri: "04:50",
+    iftar: "17:55",
+    fajr: "04:55",
+    dhuhr: "12:10",
+    asr: "15:30",
+    maghrib: "17:55",
+    isha,
+  });
+
+  it("formats dates for AlAdhan", () => {
+    expect(toAlAdhanDate("2027-02-08")).toBe("08-02-2027");
+  });
+
+  it("checks the previous local date only just after local midnight", () => {
+    // Dhaka is UTC+6: 18:03 UTC is 00:03 on Feb 9 local.
+    expect(dueLocalDates("Asia/Dhaka", new Date("2027-02-08T18:03:00Z"))).toEqual([
+      "2027-02-08",
+      "2027-02-09",
+    ]);
+    expect(dueLocalDates("Asia/Dhaka", new Date("2027-02-08T12:00:00Z"))).toEqual([
+      "2027-02-08",
+    ]);
+  });
+
+  it("gives runs on both sides of midnight the same instant, so the second send is deduped", () => {
+    // Isha + 30 min falls at 23:52 on Feb 8 local; Feb 9's Isha is a minute later.
+    const rule = { type: "isha", offsetMinutes: 30 };
+    const feb8 = { day: "2027-02-08", prayerTimes: dayTimes("23:22") };
+    const feb9 = { day: "2027-02-09", prayerTimes: dayTimes("23:23") };
+
+    // 23:55 local (17:55 UTC): only Feb 8 is a candidate date.
+    const before = dueOccurrenceForRule(rule, [feb8], "Asia/Dhaka", new Date("2027-02-08T17:55:00Z"));
+    // 00:00 local on Feb 9 (18:00 UTC): both dates are candidates.
+    const after = dueOccurrenceForRule(rule, [feb8, feb9], "Asia/Dhaka", new Date("2027-02-08T18:00:00Z"));
+
+    expect(before?.scheduledAt.toISOString()).toBe("2027-02-08T17:52:00.000Z");
+    expect(after?.day).toBe("2027-02-08");
+    expect(after?.scheduledAt.toISOString()).toBe(before?.scheduledAt.toISOString());
+  });
+
+  it("skips rules without a base time", () => {
+    const days = [{ day: "2027-02-08", prayerTimes: dayTimes("19:10") }];
+    expect(
+      dueOccurrenceForRule({ type: "custom", offsetMinutes: 0 }, days, "Asia/Dhaka", new Date("2027-02-08T13:10:00Z")),
+    ).toBeNull();
   });
 });
 

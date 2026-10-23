@@ -96,11 +96,48 @@ export function localDateIso(date: Date, timeZone: string): string {
   return date.toLocaleDateString("en-CA", { timeZone });
 }
 
+/** "2027-02-08" (YYYY-MM-DD) to "08-02-2027", the date format AlAdhan expects. */
+export function toAlAdhanDate(isoDay: string): string {
+  const [y, m, d] = isoDay.split("-");
+  return `${d}-${m}-${y}`;
+}
+
 /**
- * Find the occurrence of a daily reminder at local time `localTime` (HH:mm)
- * that is due at `now`, or null. Both the local date of `now` and the local
- * date at the start of the window are checked, so a reminder just before
- * local midnight is still sent by a run just after it.
+ * Local dates (YYYY-MM-DD, oldest first) whose reminders can be due at `now`:
+ * the date at the start of the window and the date of `now`. They differ only
+ * just after local midnight, when a reminder late on the previous day can
+ * still be due.
+ */
+export function dueLocalDates(
+  timeZone: string,
+  now: Date,
+  windowMs: number = DUE_WINDOW_MS,
+): string[] {
+  return [
+    ...new Set([
+      localDateIso(new Date(now.getTime() - windowMs), timeZone),
+      localDateIso(now, timeZone),
+    ]),
+  ];
+}
+
+/** The instant of local `day` at `localTime` (HH:mm) if it is due at `now`. */
+export function dueOccurrenceOn(
+  day: string,
+  localTime: string,
+  timeZone: string,
+  now: Date,
+  windowMs: number = DUE_WINDOW_MS,
+): Date | null {
+  if (!parseTime(localTime)) return null;
+  const scheduledAt = fromZonedTime(`${day}T${localTime}:00`, timeZone);
+  return isDue(scheduledAt, now, windowMs) ? scheduledAt : null;
+}
+
+/**
+ * Find the occurrence of a daily reminder at a fixed local time `localTime`
+ * (HH:mm) that is due at `now`, or null. A reminder just before local
+ * midnight is still sent by a run just after it.
  */
 export function findDueOccurrence(
   localTime: string,
@@ -108,16 +145,41 @@ export function findDueOccurrence(
   now: Date,
   windowMs: number = DUE_WINDOW_MS,
 ): Date | null {
-  if (!parseTime(localTime)) return null;
+  for (const day of dueLocalDates(timeZone, now, windowMs)) {
+    const scheduledAt = dueOccurrenceOn(day, localTime, timeZone, now, windowMs);
+    if (scheduledAt) return scheduledAt;
+  }
+  return null;
+}
 
-  const days = new Set([
-    localDateIso(new Date(now.getTime() - windowMs), timeZone),
-    localDateIso(now, timeZone),
-  ]);
+export interface DayPrayerTimes {
+  /** Local date, YYYY-MM-DD. */
+  day: string;
+  prayerTimes: RulePrayerTimes;
+}
 
-  for (const day of days) {
-    const scheduledAt = fromZonedTime(`${day}T${localTime}:00`, timeZone);
-    if (isDue(scheduledAt, now, windowMs)) return scheduledAt;
+/**
+ * The occurrence of a reminder rule that is due at `now`, or null. Each
+ * candidate date uses its own prayer times, so every run that sees the same
+ * occurrence computes the same instant and push_delivery_logs' unique index
+ * can stop a second send. (Prayer times move about a minute a day, so using
+ * today's times for yesterday's occurrence gave runs on either side of
+ * midnight different instants, and both sent.)
+ */
+export function dueOccurrenceForRule(
+  rule: { type: string; offsetMinutes: number },
+  days: DayPrayerTimes[],
+  timeZone: string,
+  now: Date,
+  windowMs: number = DUE_WINDOW_MS,
+): { day: string; scheduledAt: Date } | null {
+  for (const { day, prayerTimes } of days) {
+    const base = baseTimeForRule(rule.type, prayerTimes);
+    if (!base) continue;
+    const localTime = applyOffset(base, rule.offsetMinutes);
+    if (!localTime) continue;
+    const scheduledAt = dueOccurrenceOn(day, localTime, timeZone, now, windowMs);
+    if (scheduledAt) return { day, scheduledAt };
   }
   return null;
 }

@@ -14,7 +14,7 @@
 1. A scheduler calls `GET /api/push/dispatch` every 5 minutes with `Authorization: Bearer <CRON_SECRET>`.
 2. For each user with a push subscription and an enabled rule on the `push` channel, the route gets that day's prayer times for the user's saved location and time zone.
 3. A rule's time is its base time (sehri, iftar, a prayer, Isha for Taraweeh, or 03:00 for Tahajjud) plus its offset, in the user's local time. `custom` rules have no base time and are never pushed.
-4. A rule is due when that time fell in the last 10 minutes (`DUE_WINDOW_MS` in `src/lib/push-schedule.ts`: the 5-minute interval plus 5 minutes of grace for late scheduler runs). Times just before local midnight are matched by a run just after it.
+4. A rule is due when that time fell in the last 10 minutes (`DUE_WINDOW_MS` in `src/lib/push-schedule.ts`: the 5-minute interval plus 5 minutes of grace for late scheduler runs). Times just before local midnight are matched by a run just after it, computed from that earlier date's prayer times so both runs agree on the scheduled time.
 5. Each send is recorded in `push_delivery_logs`; its unique (subscription, rule, scheduled time) index stops overlapping runs from sending twice. Subscriptions that the push service reports as gone (404/410) are deleted.
 
 The schedule math is unit-tested in `src/lib/push-schedule.test.ts`.
