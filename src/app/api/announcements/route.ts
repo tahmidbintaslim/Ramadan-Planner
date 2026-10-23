@@ -5,11 +5,25 @@ import {
 } from "@/actions/announcements";
 
 export async function GET() {
-  const res = await listActiveAnnouncementsAction();
-  if (!res.ok) {
-    return NextResponse.json({ ok: false, error: res.error }, { status: 500 });
+  try {
+    const res = await listActiveAnnouncementsAction();
+    if (res.ok) {
+      return NextResponse.json({ ok: true, data: res.data });
+    }
+  } catch (error) {
+    console.error("[api/announcements] database read failed", error);
   }
-  return NextResponse.json({ ok: true, data: res.data });
+
+  return NextResponse.json(
+    {
+      ok: false,
+      error: {
+        code: "unavailable",
+        message: "Announcements are temporarily unavailable",
+      },
+    },
+    { status: 503, headers: { "Cache-Control": "no-store" } },
+  );
 }
 
 export async function POST(request: NextRequest) {

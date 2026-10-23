@@ -4,7 +4,7 @@
 
 - Generate a private ICS link from Settings.
 - Feed URL format: `/api/calendar/ics/:secret`
-- Revoke clears the secret and invalidates existing subscriptions.
+- Revoke clears the secret, so new requests for the old link fail. Responses are CDN-cached (`s-maxage=3600, stale-while-revalidate=21600`), so a revoked feed can still be served for a few hours.
 
 ## Google Calendar OAuth Sync (Implemented)
 

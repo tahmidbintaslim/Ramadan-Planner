@@ -60,11 +60,13 @@ export default async function LandingPage() {
       icon: Library,
       title: t("featureBooks"),
       description: t("featureBooksDesc"),
+      comingSoon: true,
     },
     {
       icon: HandHeart,
       title: t("featureDuas"),
       description: t("featureDuasDesc"),
+      comingSoon: true,
     },
     {
       icon: Hand,
@@ -85,6 +87,7 @@ export default async function LandingPage() {
       icon: Brain,
       title: t("featureQuiz"),
       description: t("featureQuizDesc"),
+      comingSoon: true,
     },
     {
       icon: CalendarDays,
@@ -449,21 +452,27 @@ export default async function LandingPage() {
               <Link
                 href="/books"
                 className="tap-target mobile-comfy surface-soft motion-spring rounded-xl border border-border/70 bg-card/60 p-3 text-center transition-colors hover:border-primary/40 hover:bg-accent/40"
-                aria-label={t("featureBooks")}
+                aria-label={`${t("featureBooks")} (${t("comingSoon")})`}
               >
                 <Library className="mx-auto h-5 w-5 text-primary" />
                 <p className="mt-2 text-[0.95rem] font-medium leading-snug">
                   {t("featureBooks")}
                 </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {t("comingSoon")}
+                </p>
               </Link>
               <Link
-                href="/today"
+                href="/duas"
                 className="tap-target mobile-comfy surface-soft motion-spring rounded-xl border border-border/70 bg-card/60 p-3 text-center transition-colors hover:border-primary/40 hover:bg-accent/40"
-                aria-label={t("featureDuas")}
+                aria-label={`${t("featureDuas")} (${t("comingSoon")})`}
               >
                 <HandHeart className="mx-auto h-5 w-5 text-primary" />
                 <p className="mt-2 text-[0.95rem] font-medium leading-snug">
                   {t("featureDuas")}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {t("comingSoon")}
                 </p>
               </Link>
               <Link
@@ -479,11 +488,14 @@ export default async function LandingPage() {
               <Link
                 href="/quiz"
                 className="tap-target mobile-comfy surface-soft motion-spring rounded-xl border border-border/70 bg-card/60 p-3 text-center transition-colors hover:border-primary/40 hover:bg-accent/40"
-                aria-label={t("featureQuiz")}
+                aria-label={`${t("featureQuiz")} (${t("comingSoon")})`}
               >
                 <Brain className="mx-auto h-5 w-5 text-primary" />
                 <p className="mt-2 text-[0.95rem] font-medium leading-snug">
                   {t("featureQuiz")}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {t("comingSoon")}
                 </p>
               </Link>
               <Link
@@ -585,7 +597,7 @@ export default async function LandingPage() {
                     <h3 className="text-lg font-semibold">
                       {t("featureBooks")}
                     </h3>
-                    <Badge variant="outline">{t("featureBooks")}</Badge>
+                    <Badge variant="secondary">{t("comingSoon")}</Badge>
                   </div>
                   <p className="reading-copy text-sm text-muted-foreground">
                     {t("featureBooksDesc")}
@@ -616,7 +628,7 @@ export default async function LandingPage() {
                     <h3 className="text-lg font-semibold">
                       {t("featureDuas")}
                     </h3>
-                    <Badge variant="outline">{t("featureDuas")}</Badge>
+                    <Badge variant="secondary">{t("comingSoon")}</Badge>
                   </div>
                   <p className="reading-copy text-sm text-muted-foreground">
                     {t("featureDuasDesc")}
@@ -636,7 +648,7 @@ export default async function LandingPage() {
                     </div>
                   </div>
                   <Button variant="outline" asChild>
-                    <Link href="/today">{t("learnMore")}</Link>
+                    <Link href="/duas">{t("learnMore")}</Link>
                   </Button>
                 </CardContent>
               </Card>
@@ -790,7 +802,7 @@ export default async function LandingPage() {
                     <h3 className="text-lg font-semibold">
                       {t("featureQuiz")}
                     </h3>
-                    <Badge variant="outline">{t("featureQuiz")}</Badge>
+                    <Badge variant="secondary">{t("comingSoon")}</Badge>
                   </div>
                   <p className="reading-copy text-sm text-muted-foreground">
                     {t("featureQuizDesc")}
@@ -807,7 +819,7 @@ export default async function LandingPage() {
                     </div>
                   </div>
                   <Button variant="outline" asChild>
-                    <Link href="/quiz">{t("getStarted")}</Link>
+                    <Link href="/quiz">{t("learnMore")}</Link>
                   </Button>
                 </CardContent>
               </Card>
@@ -907,6 +919,9 @@ export default async function LandingPage() {
                       <feature.icon className="h-5 w-5 text-primary" />
                     </div>
                     <h3 className="text-sm font-semibold">{feature.title}</h3>
+                    {feature.comingSoon && (
+                      <Badge variant="secondary">{t("comingSoon")}</Badge>
+                    )}
                     <p className="reading-copy text-sm leading-relaxed text-muted-foreground">
                       {feature.description}
                     </p>

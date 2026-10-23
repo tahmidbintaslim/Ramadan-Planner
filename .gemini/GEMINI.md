@@ -10,7 +10,8 @@ The Ramadan Planner is a high-performance Next.js 16 (App Router) website tailor
 
 - **Frontend:** Next.js 16 (App Router), React 19, Tailwind CSS
 - **UI Components:** shadcn/ui (preferred for all UI primitives)
-- **Backend:** Supabase (Auth + Postgres DB)
+- **Auth:** Clerk
+- **Database:** PostgreSQL on Supabase, through Prisma 7 and (planner data) supabase-js with the service role key
 - **ORM:** Prisma
 - **Internationalization:** `next-intl` (BN primary, EN secondary)
 - **State Management:** Zustand
@@ -32,10 +33,10 @@ The Ramadan Planner is a high-performance Next.js 16 (App Router) website tailor
   - User locale and timezone preferences should be stored in their profile settings.
   - Use domain-based namespaces for translation keys (e.g., `common`, `auth`, `dashboard`, `today`, `plan`, `reminders`, `settings`).
 - **Data Handling:**
-  - **Supabase RLS:** Strictly enforce Row Level Security on all user-owned tables.
+  - **User scope:** Server queries bypass Row Level Security (Prisma and the service role), so every query on user-owned tables must filter by the signed-in user's ID.
   - **Security:** Never trust client-provided `user_id`. Supabase service role keys must never be shipped to the browser.
   - Data segregation: Daily content (Day 1–30) is shared and cacheable. User logs are private and strictly user-scoped.
-  - Ensure server queries are scoped by the session user (`auth.uid()`).
+  - Ensure server queries are scoped by the session user (`getAppAuthUser()` in `src/lib/auth/server.ts`).
 - **Code Quality:**
   - After every feature change, run `npm run lint`. All ESLint checks must pass.
   - Utilize Zod for strict schema validation of all API inputs and critical data structures.
@@ -48,7 +49,7 @@ The Ramadan Planner is a high-performance Next.js 16 (App Router) website tailor
 - **API Routes:**
   - `src/app/api/<name>/route.ts` for new API routes.
   - Validate input (query/body) with Zod and strict schemas.
-  - Verify Supabase auth server-side.
+  - Verify Clerk auth server-side with `getAppAuthUser()`.
   - Consistent JSON response format: `{ ok: true, data }` for success, `{ ok: false, error: { code, message } }` for errors.
 - **Public Pages:**
   - **SEO-first:** Implement localized metadata (BN/EN) using Next.js Metadata API, OpenGraph, and Twitter cards.
@@ -72,7 +73,7 @@ When implementing a new feature or making significant changes:
 5.  **Building:** Run `npm run build`. Build must pass without errors.
 6.  **Internationalization:** Ensure BN/EN translations are added for all new user-facing text.
 7.  **Performance Check:** Verify performance impact (e.g., bundle size, caching effectiveness).
-8.  **RLS/User Scope:** Validate RLS policies and user-scoping for data access.
+8.  **User Scope:** Validate user-scoping for data access.
 
 ## 6. Definition of Done (DoD)
 
@@ -80,7 +81,7 @@ A change is considered "done" only when ALL of the following criteria are met:
 
 1.  **UX/UI:** User experience matches shadcn/ui patterns and implements a mobile-first layout.
 2.  **i18n:** BN/EN translations are added for all user-facing text.
-3.  **Security:** RLS policies and user-scoping for data are validated.
+3.  **Security:** User-scoping for data is validated.
 4.  **Linting:** `npm run lint` passes without any warnings or errors.
 5.  **Build:** `npm run build` passes successfully.
 6.  **Testing:** Tests have been added or updated to cover the new or changed behavior.

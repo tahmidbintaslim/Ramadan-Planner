@@ -11,7 +11,12 @@ if (!DATABASE_URL) {
     throw new Error('DATABASE_URL is not set');
 }
 
-const pool = new Pool({ connectionString: DATABASE_URL });
+// Fail fast when the database is paused or unreachable so API routes can
+// return a fallback or a 503 instead of hanging until the platform timeout.
+const pool = new Pool({
+    connectionString: DATABASE_URL,
+    connectionTimeoutMillis: 10_000,
+});
 const adapter = new PrismaPg(pool);
 
 export const prisma =
