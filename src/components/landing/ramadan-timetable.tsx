@@ -137,6 +137,12 @@ export function RamadanTimetable({ compact = false }: RamadanTimetableProps) {
           <CalendarDays className="h-4 w-4 text-primary" />
           {t("timetableTitle")}
         </CardTitle>
+        {/* Outside Ramadan the service returns the next one, so say which. */}
+        <p className="text-sm text-muted-foreground">
+          {t("timetableYear", {
+            year: localizeAsciiDigits(timetable.hijriYear, locale),
+          })}
+        </p>
         <div className="flex items-center justify-between flex-wrap gap-2 text-sm text-muted-foreground">
           <div className="flex items-center gap-1.5">
             <MapPin className="h-3.5 w-3.5 text-primary" />
