@@ -185,18 +185,28 @@ export function dueOccurrenceForRule(
 }
 
 /**
- * Constant-time check of an `Authorization: Bearer <secret>` header.
- * Returns false when the secret is unset, so an unconfigured deployment
- * rejects every call.
+ * Constant-time comparison of a request value with a configured secret.
+ * Returns false when either side is missing or the secret is blank, so an
+ * unconfigured deployment rejects every call.
  */
+export function secretMatches(
+  given: string | null | undefined,
+  secret: string | undefined,
+): boolean {
+  const expected = secret?.trim();
+  if (!expected || !given) return false;
+
+  const a = Buffer.from(given);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
+/** Constant-time check of an `Authorization: Bearer <secret>` header. */
 export function hasBearerSecret(
   authorization: string | null,
   secret: string | undefined,
 ): boolean {
   const expected = secret?.trim();
-  if (!expected || !authorization) return false;
-
-  const given = Buffer.from(authorization);
-  const wanted = Buffer.from(`Bearer ${expected}`);
-  return given.length === wanted.length && timingSafeEqual(given, wanted);
+  if (!expected) return false;
+  return secretMatches(authorization, `Bearer ${expected}`);
 }

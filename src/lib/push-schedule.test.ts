@@ -9,6 +9,7 @@ import {
   findDueOccurrence,
   hasBearerSecret,
   isDue,
+  secretMatches,
   toAlAdhanDate,
 } from "./push-schedule";
 
@@ -164,5 +165,22 @@ describe("hasBearerSecret", () => {
   it("rejects everything when the secret is unset", () => {
     expect(hasBearerSecret("Bearer ", undefined)).toBe(false);
     expect(hasBearerSecret("Bearer ", "  ")).toBe(false);
+  });
+});
+
+describe("secretMatches", () => {
+  it("accepts only the exact secret", () => {
+    expect(secretMatches("s3cret", "s3cret")).toBe(true);
+    expect(secretMatches("s3cret", " s3cret ")).toBe(true);
+    expect(secretMatches("s3cre", "s3cret")).toBe(false);
+    expect(secretMatches("s3cret!", "s3cret")).toBe(false);
+    expect(secretMatches("S3CRET", "s3cret")).toBe(false);
+  });
+
+  it("rejects a missing header or an unset secret", () => {
+    expect(secretMatches(null, "s3cret")).toBe(false);
+    expect(secretMatches("", "s3cret")).toBe(false);
+    expect(secretMatches("s3cret", undefined)).toBe(false);
+    expect(secretMatches("", "  ")).toBe(false);
   });
 });
