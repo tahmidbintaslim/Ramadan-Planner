@@ -89,31 +89,49 @@ function cleanTime(t: string): string {
     return t.replace(/\s*\(.*\)$/, "");
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Hijri month (1-12) of `date` in `timezone`, by the Umm al-Qura calendar. */
+function hijriMonth(date: Date, timezone: string): number {
+    const parts = new Intl.DateTimeFormat("en-US-u-ca-islamic-umalqura", {
+        timeZone: timezone,
+        month: "numeric",
+    }).formatToParts(date);
+    return parseInt(parts.find((p) => p.type === "month")?.value ?? "0", 10);
+}
+
 /**
- * Determine which 2 Gregorian months to scan for Ramadan.
+ * Determine which Gregorian months to scan for Ramadan.
  *
- * For a given date, we first check the current Gregorian month.
- * Ramadan always spans ~2 consecutive Gregorian months.
- * We use the heuristic: if today is before the 20th of the month,
- * fetch this month + next; otherwise fetch this month + next.
- *
- * As a fallback, we also check the previous month.
+ * Targets the current Ramadan, or the next one when today is outside it:
+ * outside Ramadan the months around today hold no Hijri month 9, so the
+ * timetable used to fail for most of the year. Walks forward from today to
+ * the first day of Hijri month 9 (Umm al-Qura, computed locally) and
+ * returns that Gregorian month with the one before and after. Ramadan
+ * spans at most two Gregorian months, and the extra month on each side
+ * absorbs the day or two by which AlAdhan's calendar method and the
+ * per-country Hijri offset can differ from Umm al-Qura.
  */
-function getGregorianMonthsToScan(timezone: string): Array<{ year: number; month: number }> {
-    const now = new Date();
+export function getGregorianMonthsToScan(
+    timezone: string,
+    now: Date = new Date(),
+): Array<{ year: number; month: number }> {
+    let anchor = now;
+    for (let i = 0; i < 400 && hijriMonth(anchor, timezone) !== 9; i++) {
+        anchor = new Date(anchor.getTime() + DAY_MS);
+    }
+
     const formatter = new Intl.DateTimeFormat("en-CA", {
         timeZone: timezone,
         year: "numeric",
         month: "2-digit",
     });
-    const parts = formatter.format(now).split("-"); // YYYY-MM
+    const parts = formatter.format(anchor).split("-"); // YYYY-MM
     const year = parseInt(parts[0], 10);
     const month = parseInt(parts[1], 10);
 
-    // Scan current month, next month, and the following month
-    // to ensure we capture complete Ramadan regardless of when it starts
     const months: Array<{ year: number; month: number }> = [];
-    for (let i = -1; i <= 2; i++) {
+    for (let i = -1; i <= 1; i++) {
         let m = month + i;
         let y = year;
         if (m > 12) { m -= 12; y += 1; }

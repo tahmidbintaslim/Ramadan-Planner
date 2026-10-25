@@ -19,6 +19,11 @@ export async function GET(request: NextRequest) {
     const { searchParams } = request.nextUrl;
 
     const timezone = searchParams.get("tz") ?? DHAKA_DEFAULTS.timezone;
+    try {
+        new Intl.DateTimeFormat("en", { timeZone: timezone });
+    } catch {
+        return NextResponse.json({ error: "Invalid timezone" }, { status: 400 });
+    }
 
     // Prefer explicit coordinates, otherwise use timezone-based defaults where available
     const lat = parseFloat(

@@ -420,6 +420,7 @@
         "ramadanTimingsTitle": "রমযান {year} সময়সূচী",
         "ramadanTimingsDesc": "আপনার শহরের পূর্ণ মাসের সেহরি ও ইফতার সময়সূচী",
         "timetableTitle": "রমযান সেহরি ও ইফতার সময়সূচী",
+        "timetableYear": "রমযান {year} হিজরি",
         "timetableDesc": "আপনার অবস্থানের জন্য ৩০ দিনের পূর্ণ সেহরি ও ইফতার সময়সূচী",
         "timetableDay": "দিন",
         "timetableDate": "তারিখ",

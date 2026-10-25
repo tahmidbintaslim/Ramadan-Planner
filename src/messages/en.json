@@ -420,6 +420,7 @@
         "ramadanTimingsTitle": "Ramadan {year} Timings",
         "ramadanTimingsDesc": "Full month Sehri & Iftar schedule for your city",
         "timetableTitle": "Ramadan Sehri & Iftar Timetable",
+        "timetableYear": "Ramadan {year} AH",
         "timetableDesc": "Full 30-day Sehri & Iftar schedule for your location",
         "timetableDay": "Day",
         "timetableDate": "Date",
