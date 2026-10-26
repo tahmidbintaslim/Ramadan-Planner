@@ -5,14 +5,13 @@ import { timingSafeEqual } from "node:crypto";
 import { fromZonedTime } from "date-fns-tz";
 
 /**
- * How often the scheduler calls GET /api/push/dispatch
- * (.github/workflows/reminders-cron.yml runs every 5 minutes).
+ * How often the scheduler must call GET /api/push/dispatch (docs/reminders.md).
  */
 export const DISPATCH_INTERVAL_MS = 5 * 60 * 1000;
 
 /**
- * Extra time a reminder stays due after one interval. GitHub Actions often
- * starts scheduled runs a few minutes late; the overlap keeps those
+ * Extra time a reminder stays due after one interval. Schedulers can start
+ * a run a few minutes late; the overlap keeps those
  * reminders from being skipped, and push_delivery_logs' unique
  * (subscription, rule, scheduled_for) index stops a second send.
  */

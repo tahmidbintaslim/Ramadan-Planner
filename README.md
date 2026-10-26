@@ -54,7 +54,7 @@ flowchart LR
   prayer["AlAdhan API<br/>(IslamicAPI when a key is set)"]
   quran["quranapi.pages.dev<br/>Quran fallback"]
   google["Google Calendar API"]
-  cron["GitHub Actions<br/>reminders cron, every 5 min"]
+  cron["Scheduler, every 5 min<br/>(not set up; GitHub Actions<br/>runs hours apart here)"]
   pushsvc["Browser push services"]
   calapps["Calendar apps"]
 
@@ -95,7 +95,7 @@ npm run dev
 
 Open http://localhost:3000. With the Clerk keys empty, `npm run dev` starts Clerk in keyless mode with temporary keys. Prayer times, the timetable, the Quran reader (through its fallback), the guest tracker, plan, reminders list, tasbih and zakat work. Daily content, hadith, announcements and anything saved to an account need the database.
 
-`npm run dev` first runs `scripts/generateVapidKeys.mjs`, which writes new VAPID keys to `.env.local` on every start. That breaks existing push subscriptions. If you rely on push locally, run `npx next dev --turbopack` instead.
+`npm run dev` first runs `scripts/generateVapidKeys.mjs`, which writes new VAPID keys into `.env.local` on every start (other lines and comments are kept). That breaks existing push subscriptions. If you rely on push locally, run `npx next dev --turbopack` instead.
 
 ### Full setup
 
@@ -103,7 +103,7 @@ Fill in `.env.local`. [`.env.example`](.env.example) lists every variable the ap
 
 #### Database
 
-There is no one-command schema setup yet. The SQL in `supabase/migrations` was written for Supabase Auth: it points `user_id` foreign keys at `auth.users`, where Clerk users never exist, so saving a profile fails on a fresh database. `prisma/schema.prisma` was introspected from the live database and also models Supabase's `auth` schema. Until a baseline Prisma migration replaces both, a new database needs those foreign keys pointed at `user_profiles(id)` by hand after running the SQL files in order.
+There is no one-command schema setup yet. The SQL in `supabase/migrations` was written for Supabase Auth: it points `user_id` foreign keys at `auth.users`, where Clerk users never exist, so saving a profile fails on a fresh database. `prisma/schema.prisma` was introspected from the live database and also models Supabase's `auth` schema. Until a baseline Prisma migration replaces both, a new database needs fixing by hand after running the SQL files in order: drop the foreign key from `user_profiles.id` to `auth.users` and the `on_auth_user_created` trigger on `auth.users`, then point every other `user_id` foreign key (including `push_delivery_logs` and `admin_users`) at `user_profiles(id)`.
 
 Seed content (each script reads `DIRECT_URL` or `DATABASE_URL` from `.env.local`):
 
@@ -139,18 +139,18 @@ npm run build   # prisma generate + next build; needs DATABASE_URL set, any well
 
 ## Deployment
 
-The app is deployed on Vercel through its GitHub integration: each pull request gets a preview deployment and `main` deploys to production at [ramadan-planner-puce.vercel.app](https://ramadan-planner-puce.vercel.app). Set the variables from `.env.example` in the Vercel project settings; Next.js inlines `NEXT_PUBLIC_*` values at build time, so redeploy after changing them. `vercel.json` schedules one daily call to the push dispatcher; [Push reminders](#push-reminders) explains the 5-minute scheduler.
+The app is deployed on Vercel through its GitHub integration: each pull request gets a preview deployment and `main` deploys to production at [ramadan-planner-puce.vercel.app](https://ramadan-planner-puce.vercel.app). Set the variables from `.env.example` in the Vercel project settings, including `NEXT_PUBLIC_SITE_URL` (for this deployment, `https://ramadan-planner-puce.vercel.app`): robots.txt, sitemap.xml and surah page metadata use it, and without it they fall back to Vercel's `VERCEL_PROJECT_PRODUCTION_URL`. Next.js inlines `NEXT_PUBLIC_*` values at build time, so redeploy after changing them. `vercel.json` schedules one daily call to the push dispatcher; [Push reminders](#push-reminders) explains what else has to call it.
 
 ## Push reminders
 
-`GET /api/push/dispatch` sends every push reminder that fell due in the last 10 minutes and records each send in `push_delivery_logs`, so overlapping runs do not send twice. It requires `Authorization: Bearer <CRON_SECRET>`.
+`GET /api/push/dispatch` sends every push reminder that fell due in the last 10 minutes and records each send in `push_delivery_logs`, so overlapping runs do not send twice. It requires `Authorization: Bearer <CRON_SECRET>`. A reminder is only sent if a call lands within those 10 minutes; missed ones are not sent later. So something has to call the endpoint every 5 minutes.
 
-Vercel Hobby crons run at most once a day (the one in `vercel.json` runs at 00:00 UTC), so `.github/workflows/reminders-cron.yml` calls the endpoint every 5 minutes. To turn it on, add two repository secrets under Settings > Secrets and variables > Actions:
+Nothing in this repo does that reliably yet:
 
-- `PUSH_DISPATCH_URL`: for example `https://your-domain/api/push/dispatch`
-- `CRON_SECRET`: the same value as the deployment's `CRON_SECRET`
+- Vercel Hobby crons run at most once a day (the one in `vercel.json` runs at 00:00 UTC).
+- `.github/workflows/reminders-cron.yml` asks GitHub for a run every 5 minutes, but GitHub treats schedules as best effort. On this repository the 19 scheduled runs between 23 and 26 October 2026 started 2 to 5.5 hours apart, which would send only a few percent of reminders.
 
-Without them the workflow exits without calling anything. GitHub can start scheduled runs late and pauses them after 60 days without repository activity. Details in [docs/reminders.md](docs/reminders.md).
+To turn push on, point a scheduler that keeps a 5-minute interval at the endpoint with the Bearer header, for example cron-job.org, Upstash QStash, Supabase `pg_cron` or a Vercel Pro cron. The GitHub workflow can run alongside it once you add the repository secrets `PUSH_DISPATCH_URL` (for example `https://your-domain/api/push/dispatch`) and `CRON_SECRET` (the same value as the deployment's); without them it exits without calling anything. Details in [docs/reminders.md](docs/reminders.md).
 
 Known blocker: in this repo's schema, `push_delivery_logs.user_id` (like `admin_users.user_id`) references `auth.users`. If the live database matches, every delivery log insert fails for Clerk users and the endpoint answers 503 without sending. The fix is to point that foreign key at `user_profiles(id)`.
 
@@ -179,11 +179,12 @@ This is a personal project. The live deployment is a demo, not a supported servi
 Live demo, checked 2026-10-25:
 
 - Works: landing page, dashboard with prayer, sehri and iftar times and the Ramadan 1448 timetable, the Quran list and reader (served by the quranapi.pages.dev fallback), the guest tracker, plan and reminders lists, tasbih, zakat, and switching between Bengali and English.
-- Does not work: the database behind the demo is unreachable, so `/api/daily-content` and `/api/announcements` answer 503, the hadith page shows no hadith, and anything that saves to an account (logs, goals, reminders, profile, ICS links, Google Calendar sync) fails. Sign-in runs on a Clerk development instance. Push reminders are not sent there, because the repository has no `PUSH_DISPATCH_URL` or `CRON_SECRET` secrets.
+- Does not work: the database behind the demo is unreachable, so `/api/daily-content` and `/api/announcements` answer 503, the hadith page shows no hadith, and anything that saves to an account (logs, goals, reminders, profile, ICS links, Google Calendar sync) fails. Sign-in runs on a Clerk development instance. Push reminders are not sent there, because no scheduler calls the dispatcher every 5 minutes (see [Push reminders](#push-reminders)).
 
 Known issues:
 
 - The schema is not reproducible from this repo yet (see [Database](#database)).
+- Push reminders need an external 5-minute scheduler (see [Push reminders](#push-reminders)).
 - In English, the default location label still reads "ঢাকা, বাংলাদেশ", because the default is hard-coded in Bengali.
 - Revoking an ICS link stops new requests, but the feed response is CDN-cached for up to an hour plus a 6-hour stale window.
 - There is no rate limiting on push subscribe or calendar sync.
