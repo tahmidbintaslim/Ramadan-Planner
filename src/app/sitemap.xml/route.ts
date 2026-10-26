@@ -3,7 +3,10 @@ import { NextResponse } from 'next/server';
 export async function GET() {
   const baseUrl =
     process.env.NEXT_PUBLIC_SITE_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+    // The production domain, not the per-deployment VERCEL_URL, which sits behind Vercel SSO
+    (process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : 'http://localhost:3000');
 
   const staticPages = [
     '/',
