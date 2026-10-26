@@ -16,6 +16,12 @@ You can use the app as a guest, with your data kept in the browser, or sign in t
 
 Screenshots taken from the live demo on 2026-10-25.
 
+### Guest walk-through
+
+![A 27-second recording of the live demo in guest mode: the dashboard with Dhaka prayer, sehri and iftar times and the iftar countdown, the Ramadan 1448 timetable, ticking Fajr, Dhuhr and Asr in the Today tracker, the tasbih counter, and Surah Al-Fatiha in the Quran reader](docs/images/guest-demo.gif)
+
+Recorded on 2026-10-26 with Playwright against the live demo, as a guest (no sign-in), with the browser location set to Dhaka and the time zone to Asia/Dhaka. Everything shown is guest data kept in the browser; nothing is saved to the database, which the demo cannot reach.
+
 ## Features
 
 - Prayer, sehri and iftar times for your location from the AlAdhan API (Karachi method, Hanafi Asr), with the Hijri date and per-country Hijri offsets. IslamicAPI is used first when a key is set.
