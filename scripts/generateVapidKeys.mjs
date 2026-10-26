@@ -3,35 +3,25 @@ import path from "node:path";
 import webPush from "web-push";
 
 function upsertEnv(filePath, entries) {
-  let content = "";
-  if (fs.existsSync(filePath)) {
-    content = fs.readFileSync(filePath, "utf8");
-  }
-
+  const content = fs.existsSync(filePath) ? fs.readFileSync(filePath, "utf8") : "";
   const lines = content.split(/\r?\n/);
-  const map = new Map();
+  if (lines.at(-1) === "") lines.pop();
 
-  for (const line of lines) {
-    if (!line.trim() || line.trim().startsWith("#")) continue;
-    const idx = line.indexOf("=");
-    if (idx === -1) continue;
-    const key = line.slice(0, idx);
-    const val = line.slice(idx + 1);
-    map.set(key, val);
-  }
-
+  // Replace keys in place and keep every other line, so the comments copied
+  // from .env.example survive.
   for (const [k, v] of Object.entries(entries)) {
-    if (typeof v === "string" && v.trim().length > 0) {
-      map.set(k, v);
+    if (typeof v !== "string" || v.trim().length === 0) continue;
+    let found = false;
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].startsWith(`${k}=`)) {
+        lines[i] = `${k}=${v}`;
+        found = true;
+      }
     }
+    if (!found) lines.push(`${k}=${v}`);
   }
 
-  const out = [];
-  for (const [k, v] of map) {
-    out.push(`${k}=${v}`);
-  }
-
-  fs.writeFileSync(filePath, out.join("\n") + "\n");
+  fs.writeFileSync(filePath, lines.join("\n") + "\n");
 }
 
 function readArg(name) {
