@@ -4,9 +4,9 @@ A Bengali-first web app for planning and tracking Ramadan: prayer, sehri and ift
 
 [![CI](https://github.com/tahmidbintaslim/Ramadan-Planner/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/tahmidbintaslim/Ramadan-Planner/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/github/license/tahmidbintaslim/Ramadan-Planner)](LICENSE)
-[![Live demo: partial](https://img.shields.io/badge/live%20demo-partial-yellow)](https://ramadan-planner-puce.vercel.app)
+[![Live demo: guest mode and content](https://img.shields.io/badge/live%20demo-guest%20%2B%20content-green)](https://ramadan-planner-puce.vercel.app)
 
-**Live demo:** [ramadan-planner-puce.vercel.app](https://ramadan-planner-puce.vercel.app). It works in guest mode only for now: the database behind it is unreachable. See [Status](#status) for exactly what works there.
+**Live demo:** [ramadan-planner-puce.vercel.app](https://ramadan-planner-puce.vercel.app). Guest mode and the database-backed content (daily content, hadith, announcements) work. Accounts run on a Clerk development instance, so treat sign-in as a test setup. See [Status](#status) for exactly what works there.
 
 You can use the app as a guest, with your data kept in the browser, or sign in to save it to the database.
 
@@ -20,7 +20,7 @@ Screenshots taken from the live demo on 2026-10-25.
 
 ![A 27-second recording of the live demo in guest mode: the dashboard with Dhaka prayer, sehri and iftar times and the iftar countdown, the Ramadan 1448 timetable, ticking Fajr, Dhuhr and Asr in the Today tracker, the tasbih counter, and Surah Al-Fatiha in the Quran reader](docs/images/guest-demo.gif)
 
-Recorded on 2026-10-26 with Playwright against the live demo, as a guest (no sign-in), with the browser location set to Dhaka and the time zone to Asia/Dhaka. Everything shown is guest data kept in the browser; nothing is saved to the database, which the demo cannot reach.
+Recorded on 2026-10-26 with Playwright against the live demo, as a guest (no sign-in), with the browser location set to Dhaka and the time zone to Asia/Dhaka. Everything shown is guest data kept in the browser; nothing in the recording is saved to an account.
 
 ## Features
 
@@ -182,10 +182,12 @@ docs/           Architecture, API, data model, reminders, security, product spec
 
 This is a personal project. The live deployment is a demo, not a supported service.
 
-Live demo, checked 2026-10-25:
+Live demo, checked 2026-10-26 (the Supabase database was restored that day):
 
-- Works: landing page, dashboard with prayer, sehri and iftar times and the Ramadan 1448 timetable, the Quran list and reader (served by the quranapi.pages.dev fallback), the guest tracker, plan and reminders lists, tasbih, zakat, and switching between Bengali and English.
-- Does not work: the database behind the demo is unreachable, so `/api/daily-content` and `/api/announcements` answer 503, the hadith page shows no hadith, and anything that saves to an account (logs, goals, reminders, profile, ICS links, Google Calendar sync) fails. Sign-in runs on a Clerk development instance. Push reminders are not sent there, because no scheduler calls the dispatcher every 5 minutes (see [Push reminders](#push-reminders)).
+- Works: landing page, dashboard with prayer, sehri and iftar times and the Ramadan 1448 timetable, the Quran list and reader, the guest tracker, plan and reminders lists, tasbih, zakat, and switching between Bengali and English. A guest's ticks and lists are kept in the browser (`localStorage`) and survive a reload.
+- Works from the database: `/api/daily-content` returns the day's ayah, hadith and dua (200), the Today page shows them, the hadith page lists 63 editions (10 collections in 9 languages) with their chapters, and `/api/announcements` answers 200 (with no announcements published yet). The Quran API reads the database first and falls back to quranapi.pages.dev; its response does not say which one served it.
+- Not checked: anything that saves to an account (logs, goals, reminders, profile, ICS links, Google Calendar sync). Sign-in runs on a Clerk development instance (`pk_test_` key), which is meant for testing, and the Clerk keys are set for the Production environment only, so Vercel preview deployments run without them.
+- Not running: push reminders, because no scheduler calls the dispatcher every 5 minutes (see [Push reminders](#push-reminders)).
 
 Known issues:
 
@@ -195,7 +197,7 @@ Known issues:
 - Revoking an ICS link stops new requests, but the feed response is CDN-cached for up to an hour plus a 6-hour stale window.
 - There is no rate limiting on push subscribe or calendar sync.
 
-Next steps: restore the demo database and move Clerk to a production instance, add a baseline Prisma migration with the foreign keys pointed at `user_profiles(id)`, then finish the features in [docs/ROADMAP.md](docs/ROADMAP.md).
+Next steps: move Clerk to a production instance (and add preview keys), add a baseline Prisma migration with the foreign keys pointed at `user_profiles(id)`, then finish the features in [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Docs
 
