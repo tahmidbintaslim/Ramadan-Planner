@@ -298,7 +298,10 @@ async function getRamadanGregorianDates(
     adjustment: number,
 ): Promise<{ start: string; end: string; totalDays: number }> {
     try {
-        const hToGUrl = `${ALADHAN_BASE}/hToGCalendar/9/${hijriYear}?calendarMethod=MATHEMATICAL&adjustment=${adjustment}`;
+        // AlAdhan shifts the Gregorian result here but the Hijri date in gToH
+        // and /calendar, so the sign flips: -1 (BD) must start Ramadan a day
+        // later, as the timetable does.
+        const hToGUrl = `${ALADHAN_BASE}/hToGCalendar/9/${hijriYear}?calendarMethod=MATHEMATICAL&adjustment=${-adjustment}`;
         // Try hToGCalendar first
         const res = await fetch(
             hToGUrl,

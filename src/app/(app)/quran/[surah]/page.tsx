@@ -6,12 +6,8 @@ interface SurahPageProps {
   params: Promise<{ surah: string }>;
 }
 
-export async function generateMetadata({
-  params,
-}: {
-  params: { surah: string };
-}) {
-  const surahParam = params.surah;
+export async function generateMetadata({ params }: SurahPageProps) {
+  const { surah: surahParam } = await params;
   const surahNumber = parseInt(surahParam, 10);
 
   if (isNaN(surahNumber) || surahNumber < 1 || surahNumber > 114) {

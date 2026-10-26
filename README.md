@@ -1,24 +1,37 @@
 # Ramadan Planner
 
-**Live demo:** [ramadan-planner-puce.vercel.app](https://ramadan-planner-puce.vercel.app) (working demo, partly down: its database is unreachable, so daily content and announcements do not load there, and its current build also shows an empty Quran list. Sign-in runs on a Clerk development instance. Prayer times and the guest tracker work.)
+A Bengali-first web app for planning and tracking Ramadan: prayer, sehri and iftar times for your location, a daily ibadah tracker, a Quran reader and reminders. English is the second language.
 
-A Bengali-first web app for planning and tracking Ramadan, with English as a second language. You can use it as a guest, with data kept in your browser, or sign in to save it to the database.
+[![CI](https://github.com/tahmidbintaslim/Ramadan-Planner/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/tahmidbintaslim/Ramadan-Planner/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/github/license/tahmidbintaslim/Ramadan-Planner)](LICENSE)
+[![Live demo: partial](https://img.shields.io/badge/live%20demo-partial-yellow)](https://ramadan-planner-puce.vercel.app)
+
+**Live demo:** [ramadan-planner-puce.vercel.app](https://ramadan-planner-puce.vercel.app). It works in guest mode only for now: the database behind it is unreachable. See [Status](#status) for exactly what works there.
+
+You can use the app as a guest, with your data kept in the browser, or sign in to save it to the database.
+
+| Landing page (Bengali) | Dashboard (English, dark theme) | Quran reader |
+| --- | --- | --- |
+| [![Landing page in Bengali with the "start free" and "see live demo" buttons](docs/images/landing.png)](docs/images/landing.png) | [![Dashboard showing the days until Ramadan, today's prayer, sehri and iftar times for Dhaka, and the iftar countdown](docs/images/dashboard.png)](docs/images/dashboard.png) | [![Surah Al-Fatiha with Arabic text, Bengali and English translations and a recitation player](docs/images/quran-reader.png)](docs/images/quran-reader.png) |
+
+Screenshots taken from the live demo on 2026-10-25.
 
 ## Features
 
-- Prayer, sehri and iftar times for your location from the AlAdhan API (Karachi method, Hanafi Asr), with the Hijri date and per-country Hijri offsets.
-- Ramadan status banner and countdown.
+- Prayer, sehri and iftar times for your location from the AlAdhan API (Karachi method, Hanafi Asr), with the Hijri date and per-country Hijri offsets. IslamicAPI is used first when a key is set.
+- Ramadan status banner with a countdown, and a 30-day sehri and iftar timetable. Outside Ramadan it shows the next one.
 - Today tracker: the five daily prayers plus Taraweeh and Tahajjud, Quran progress, a daily checklist, a day task, a journal and "My Dua".
 - Goals and a pre-Ramadan plan.
-- Quran reader: 114 surahs with Arabic, Bengali and English text and recitation audio. Reads from the database and falls back to [quranapi.pages.dev](https://quranapi.pages.dev) when the database is empty or unreachable.
+- Quran reader: 114 surahs with Arabic, Bengali and English text and recitation audio. It reads from the database and falls back to [quranapi.pages.dev](https://quranapi.pages.dev) when the database is empty or unreachable.
 - Hadith browser (from the database, seeded from hadithapi.com).
 - Tasbih counter and zakat calculator.
-- Reminder rules, delivered as a private ICS feed, through Google Calendar sync, or as web push. Push needs the scheduler described in [Push reminders](#push-reminders).
+- Reminder rules, delivered as a private ICS feed, through Google Calendar sync (OAuth tokens encrypted with AES-256-GCM), or as web push. Push needs the scheduler described in [Push reminders](#push-reminders).
 - Admin announcements.
+- Light, dark and system themes, and a font size control.
 
 Not built yet: Islamic books, a duas collection and a quiz (their pages say "coming soon"), plus the Laylatul Qadr mode and sleep dhikr checklist in [docs/PRODUCT_SPEC.md](docs/PRODUCT_SPEC.md).
 
-## Stack
+## Tech stack
 
 | Layer | What it uses |
 | --- | --- |
@@ -30,72 +43,153 @@ Not built yet: Islamic books, a duas collection and a quiz (their pages say "com
 | Tests | Vitest |
 | Hosting | Vercel |
 
-Supabase Auth is not used. Clerk user IDs are mapped to stable UUIDs (`src/lib/auth/server.ts`) and every server query filters by that ID. The service role key bypasses Postgres row-level security, so the RLS policies in `supabase/migrations` do not protect these queries; the scoping in application code does.
+## Architecture
+
+```mermaid
+flowchart LR
+  browser["Browser<br/>guest data in localStorage<br/>service worker for push"]
+  app["Next.js app on Vercel<br/>pages, server actions, API routes"]
+  clerk["Clerk<br/>sign-in"]
+  db[("Supabase Postgres")]
+  prayer["AlAdhan API<br/>(IslamicAPI when a key is set)"]
+  quran["quranapi.pages.dev<br/>Quran fallback"]
+  google["Google Calendar API"]
+  cron["Scheduler, every 5 min<br/>(not set up; GitHub Actions<br/>runs hours apart here)"]
+  pushsvc["Browser push services"]
+  calapps["Calendar apps"]
+
+  browser -->|HTTPS| app
+  app --> clerk
+  app -->|"Prisma (pg) and supabase-js"| db
+  app --> prayer
+  app --> quran
+  app --> google
+  cron -->|"GET /api/push/dispatch<br/>Bearer CRON_SECRET"| app
+  app -->|web push| pushsvc --> browser
+  calapps -->|private ICS feed| app
+```
+
+Supabase Auth is not used. Clerk user IDs are mapped to stable UUIDs (`src/lib/auth/server.ts`) and every server query filters by that ID. The service role key bypasses Postgres row-level security, so the RLS policies in `supabase/migrations` do not protect these queries; the scoping in application code does. More in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/SECURITY_PRIVACY.md](docs/SECURITY_PRIVACY.md).
 
 ## Getting started
 
-You need Node.js 22, npm, a Supabase project (Postgres plus its REST API, which the planner actions use) and a Clerk application.
+### Prerequisites
+
+- Node.js 22 (see `.nvmrc`) and npm 10
+- For signed-in features: a Supabase project (Postgres plus its REST API, which the planner actions use) and a Clerk application
+- Optional: a Google OAuth client for calendar sync, and VAPID keys for push
+
+### Run it locally without any accounts
+
+This runs the guest features against no database. It was checked from a clean clone on 2026-10-25.
 
 ```bash
+git clone https://github.com/tahmidbintaslim/Ramadan-Planner.git
+cd Ramadan-Planner
 npm ci
-cp .env.example .env.local   # then fill in the values
+cp .env.example .env.local
+# In .env.local, set DATABASE_URL to any well-formed URL, for example
+# DATABASE_URL=postgresql://dev:dev@localhost:5432/dev
+npm run dev
 ```
 
-`.env.example` lists every variable with a comment. The minimum to run the app is `DATABASE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY`.
+Open http://localhost:3000. With the Clerk keys empty, `npm run dev` starts Clerk in keyless mode with temporary keys. Prayer times, the timetable, the Quran reader (through its fallback), the guest tracker, plan, reminders list, tasbih and zakat work. Daily content, hadith, announcements and anything saved to an account need the database.
 
-### Database
+`npm run dev` first runs `scripts/generateVapidKeys.mjs`, which writes new VAPID keys into `.env.local` on every start (other lines and comments are kept). That breaks existing push subscriptions. If you rely on push locally, run `npx next dev --turbopack` instead.
 
-There is no one-command schema setup yet. The SQL in `supabase/migrations` was written for Supabase Auth: it points `user_id` foreign keys at `auth.users`, where Clerk users never exist, so saving a profile fails on a fresh database. `prisma/schema.prisma` was introspected from the live database and also models Supabase's `auth` schema. Until a baseline Prisma migration replaces both, a new database needs those foreign keys pointed at `user_profiles(id)` by hand after running the SQL files in order.
+### Full setup
+
+Fill in `.env.local`. [`.env.example`](.env.example) lists every variable the app and scripts read, with a comment for each. The minimum for signed-in use is `DATABASE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY`. `npm start` and Vercel deployments fail on every page without real Clerk keys.
+
+#### Database
+
+There is no one-command schema setup yet. The SQL in `supabase/migrations` was written for Supabase Auth: it points `user_id` foreign keys at `auth.users`, where Clerk users never exist, so saving a profile fails on a fresh database. `prisma/schema.prisma` was introspected from the live database and also models Supabase's `auth` schema. Until a baseline Prisma migration replaces both, a new database needs fixing by hand after running the SQL files in order: drop the foreign key from `user_profiles.id` to `auth.users` and the `on_auth_user_created` trigger on `auth.users`, then point every other `user_id` foreign key (including `push_delivery_logs` and `admin_users`) at `user_profiles(id)`.
 
 Seed content (each script reads `DIRECT_URL` or `DATABASE_URL` from `.env.local`):
 
 ```bash
-npm run seed:quran           # surahs, ayahs, reciters from quranapi.pages.dev
-npm run seed:daily-content   # day 1-30 content
+npm run seed:quran               # surahs, ayahs, reciters from quranapi.pages.dev
+npm run seed:daily-content       # day 1-30 content
 npx tsx scripts/seed-hadith.ts   # needs HADITHAPI_KEY
 ```
 
-### Run
+### Test and build
+
+These are the steps CI runs (`.github/workflows/ci.yml`):
 
 ```bash
-npm run dev
+npm run lint
+npx tsc --noEmit
+npm test        # Vitest unit tests
+npm run build   # prisma generate + next build; needs DATABASE_URL set, any well-formed URL works
 ```
 
-`npm run dev` first runs `scripts/generateVapidKeys.mjs`, which writes new VAPID keys to `.env.local` every time. That breaks existing push subscriptions. If you rely on push locally, run `npx next dev --turbopack` instead.
-
-## Scripts
+### Scripts
 
 | Command | What it does |
 | --- | --- |
 | `npm run dev` | Generate VAPID keys, then start the dev server |
-| `npm run build` | `prisma generate` and `next build` (needs `DATABASE_URL` set; any well-formed URL works for a build) |
+| `npm run build` | `prisma generate` and `next build` |
 | `npm start` | Serve the production build |
 | `npm run lint` | ESLint |
 | `npm test` | Vitest unit tests |
-| `npx tsc --noEmit` | Type check |
 | `npm run translations:check` | List keys missing from `src/messages/en.json` or `bn.json` |
 | `npm run seed:quran` / `npm run seed:daily-content` | Seed content tables |
 | `npm run vapid:generate` | Write a new VAPID key pair to `.env.local` |
 
+## Deployment
+
+The app is deployed on Vercel through its GitHub integration: each pull request gets a preview deployment and `main` deploys to production at [ramadan-planner-puce.vercel.app](https://ramadan-planner-puce.vercel.app). Set the variables from `.env.example` in the Vercel project settings, including `NEXT_PUBLIC_SITE_URL` (for this deployment, `https://ramadan-planner-puce.vercel.app`): robots.txt, sitemap.xml and surah page metadata use it, and without it they fall back to Vercel's `VERCEL_PROJECT_PRODUCTION_URL`. Next.js inlines `NEXT_PUBLIC_*` values at build time, so redeploy after changing them. `vercel.json` schedules one daily call to the push dispatcher; [Push reminders](#push-reminders) explains what else has to call it.
+
 ## Push reminders
 
-`GET /api/push/dispatch` sends every push reminder that fell due in the last 10 minutes and records each send in `push_delivery_logs`, so overlapping runs do not send twice. It requires `Authorization: Bearer <CRON_SECRET>`.
+`GET /api/push/dispatch` sends every push reminder that fell due in the last 10 minutes and records each send in `push_delivery_logs`, so overlapping runs do not send twice. It requires `Authorization: Bearer <CRON_SECRET>`. A reminder is only sent if a call lands within those 10 minutes; missed ones are not sent later. So something has to call the endpoint every 5 minutes.
 
-Vercel Hobby crons run at most once a day (the one in `vercel.json` runs at 00:00 UTC), so `.github/workflows/reminders-cron.yml` calls the endpoint every 5 minutes. To turn it on, add two repository secrets under Settings > Secrets and variables > Actions:
+Nothing in this repo does that reliably yet:
 
-- `PUSH_DISPATCH_URL`: for example `https://your-domain/api/push/dispatch`
-- `CRON_SECRET`: the same value as the deployment's `CRON_SECRET`
+- Vercel Hobby crons run at most once a day (the one in `vercel.json` runs at 00:00 UTC).
+- `.github/workflows/reminders-cron.yml` asks GitHub for a run every 5 minutes, but GitHub treats schedules as best effort. On this repository the 19 scheduled runs between 23 and 26 October 2026 started 2 to 5.5 hours apart, which would send only a few percent of reminders.
 
-Without them the workflow exits without calling anything. GitHub can start scheduled runs late and pauses them after 60 days without repository activity.
+To turn push on, point a scheduler that keeps a 5-minute interval at the endpoint with the Bearer header, for example cron-job.org, Upstash QStash, Supabase `pg_cron` or a Vercel Pro cron. The GitHub workflow can run alongside it once you add the repository secrets `PUSH_DISPATCH_URL` (for example `https://your-domain/api/push/dispatch`) and `CRON_SECRET` (the same value as the deployment's); without them it exits without calling anything. Details in [docs/reminders.md](docs/reminders.md).
 
 Known blocker: in this repo's schema, `push_delivery_logs.user_id` (like `admin_users.user_id`) references `auth.users`. If the live database matches, every delivery log insert fails for Clerk users and the endpoint answers 503 without sending. The fix is to point that foreign key at `user_profiles(id)`.
 
-## Known issues
+## Project structure
+
+```text
+src/
+  app/          App Router pages ((app), (auth)) and API routes (api/)
+  actions/      Server actions: planner data, announcements, integrations, locale
+  components/   UI grouped by feature; shadcn/ui primitives in ui/
+  lib/          Prayer times, Ramadan dates and timetable, Quran, push schedule,
+                calendar, auth, Prisma and Supabase clients (unit tests sit next to them)
+  messages/     bn.json and en.json for next-intl
+  proxy.ts      Clerk middleware
+prisma/         schema.prisma (introspected from the live database)
+supabase/       SQL migrations, written for Supabase Auth (see Database)
+scripts/        Content seeding, VAPID key generation, translation check
+public/sw.js    Service worker that shows push notifications
+docs/           Architecture, API, data model, reminders, security, product spec
+```
+
+## Status
+
+This is a personal project. The live deployment is a demo, not a supported service.
+
+Live demo, checked 2026-10-25:
+
+- Works: landing page, dashboard with prayer, sehri and iftar times and the Ramadan 1448 timetable, the Quran list and reader (served by the quranapi.pages.dev fallback), the guest tracker, plan and reminders lists, tasbih, zakat, and switching between Bengali and English.
+- Does not work: the database behind the demo is unreachable, so `/api/daily-content` and `/api/announcements` answer 503, the hadith page shows no hadith, and anything that saves to an account (logs, goals, reminders, profile, ICS links, Google Calendar sync) fails. Sign-in runs on a Clerk development instance. Push reminders are not sent there, because no scheduler calls the dispatcher every 5 minutes (see [Push reminders](#push-reminders)).
+
+Known issues:
 
 - The schema is not reproducible from this repo yet (see [Database](#database)).
-- `/api/ramadan-timetable` only scans the previous, current and next two Gregorian months, so outside that range (for Ramadan 1448, before December 2026) the landing page timetable shows an error.
+- Push reminders need an external 5-minute scheduler (see [Push reminders](#push-reminders)).
+- In English, the default location label still reads "ঢাকা, বাংলাদেশ", because the default is hard-coded in Bengali.
 - Revoking an ICS link stops new requests, but the feed response is CDN-cached for up to an hour plus a 6-hour stale window.
 - There is no rate limiting on push subscribe or calendar sync.
+
+Next steps: restore the demo database and move Clerk to a production instance, add a baseline Prisma migration with the foreign keys pointed at `user_profiles(id)`, then finish the features in [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Docs
 
@@ -106,6 +200,10 @@ Known blocker: in this repo's schema, `push_delivery_logs.user_id` (like `admin_
 - [docs/db.md](docs/db.md) and [docs/DATA_MODEL.md](docs/DATA_MODEL.md): tables
 - [docs/PRODUCT_SPEC.md](docs/PRODUCT_SPEC.md) and [docs/ROADMAP.md](docs/ROADMAP.md): plans, including features not built yet
 
+## Contributing
+
+Issues and pull requests are welcome. Before opening a pull request, run the four commands under [Test and build](#test-and-build); CI runs the same ones on every pull request to `main`. Keep user-facing strings in both `src/messages/bn.json` and `src/messages/en.json` (`npm run translations:check` lists gaps).
+
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE). Copyright (c) 2026 Tahmid Bin Taslim Rafi.

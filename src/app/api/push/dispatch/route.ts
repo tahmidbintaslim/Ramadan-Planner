@@ -7,6 +7,7 @@ import {
   dueLocalDates,
   dueOccurrenceForRule,
   hasBearerSecret,
+  secretMatches,
   toAlAdhanDate,
   type DayPrayerTimes,
 } from "@/lib/push-schedule";
@@ -53,8 +54,7 @@ function ensureAuthorized(request: NextRequest): boolean {
     process.env.CRON_SECRET?.trim();
   if (!expected) return false;
 
-  const headerSecret = request.headers.get("x-cron-secret");
-  if (headerSecret && headerSecret === expected) return true;
+  if (secretMatches(request.headers.get("x-cron-secret"), expected)) return true;
 
   return hasBearerSecret(request.headers.get("authorization"), expected);
 }

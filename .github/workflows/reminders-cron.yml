@@ -8,8 +8,10 @@ name: Reminders cron
 #   CRON_SECRET        same value as the CRON_SECRET env var on the deployment
 # When either is unset (forks, fresh clones) the job exits without calling.
 #
-# GitHub may start scheduled runs late and pauses them after 60 days without
-# repository activity; the dispatch due window allows for some delay.
+# GitHub schedules are best effort: on this repo runs started 2 to 5.5 hours
+# apart (Oct 2026), and dispatch only sends reminders due in the last 10
+# minutes. Use a reliable 5-minute scheduler too (see docs/reminders.md).
+# GitHub also pauses schedules after 60 days without repository activity.
 
 on:
   schedule:
