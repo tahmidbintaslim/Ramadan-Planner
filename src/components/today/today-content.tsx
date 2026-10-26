@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -136,8 +136,12 @@ export function TodayContent() {
     day_task_en: t("fallbackDayTaskEn"),
   };
 
-  const speechSupported =
-    typeof window !== "undefined" && "speechSynthesis" in window;
+  // false on the server and during hydration, so both renders match
+  const speechSupported = useSyncExternalStore(
+    () => () => {},
+    () => "speechSynthesis" in window,
+    () => false,
+  );
 
   const cancelRecitation = useCallback(() => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return;

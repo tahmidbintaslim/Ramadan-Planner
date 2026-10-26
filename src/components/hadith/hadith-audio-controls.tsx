@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Pause, Play, Square, Volume2, VolumeX } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -20,8 +20,12 @@ export function HadithAudioControls({
   const [isPaused, setIsPaused] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
 
-  const speechSupported =
-    typeof window !== "undefined" && "speechSynthesis" in window;
+  // false on the server and during hydration, so both renders match
+  const speechSupported = useSyncExternalStore(
+    () => () => {},
+    () => "speechSynthesis" in window,
+    () => false,
+  );
 
   useEffect(() => {
     return () => {
