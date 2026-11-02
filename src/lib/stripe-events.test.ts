@@ -1,6 +1,6 @@
 import type Stripe from "stripe";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { applyStripeEvent, type BillingDb, type SubscriptionRow } from "./stripe-events";
+import { applyStripeEvent, type BillingDb, type BillingTx, type SubscriptionRow } from "./stripe-events";
 
 beforeEach(() => {
   vi.stubEnv("STRIPE_PRICE_MONTHLY", "price_m");
@@ -13,14 +13,11 @@ function memDb() {
   const customers = new Map<string, string>(); // customerId -> userId
   const subs = new Map<string, SubscriptionRow>();
   const writes: string[] = [];
-  const db: BillingDb = {
+  const tx: BillingTx = {
     async recordEvent(id, type) {
       if (events.has(id)) return false;
       events.set(id, type);
       return true;
-    },
-    async forgetEvent(id) {
-      events.delete(id);
     },
     async userIdForCustomer(c) {
       return customers.get(c) ?? null;
@@ -36,12 +33,37 @@ function memDb() {
     async getEventCreated(id) {
       return subs.get(id)?.eventCreated ?? null;
     },
-    async markCanceledForUser(u) {
+    async markCanceledForUser(u, eventCreated) {
       writes.push("cancel");
-      for (const s of subs.values()) if (s.userId === u) s.status = "canceled";
+      for (const [id, s] of subs) if (s.userId === u) subs.set(id, { ...s, status: "canceled", eventCreated });
     },
   };
-  return { db, events, customers, subs, writes };
+  // Serialized transactions with snapshot/rollback, like a DB with a unique event id.
+  let queue: Promise<unknown> = Promise.resolve();
+  const restore = <K, V>(m: Map<K, V>, snap: Map<K, V>) => {
+    m.clear();
+    for (const [k, v] of snap) m.set(k, v);
+  };
+  const db: BillingDb = {
+    runInTransaction<T>(fn: (t: BillingTx) => Promise<T>): Promise<T> {
+      const run = async () => {
+        const snap = [new Map(events), new Map(customers), new Map(subs), [...writes]] as const;
+        try {
+          return await fn(tx);
+        } catch (err) {
+          restore(events, snap[0]);
+          restore(customers, snap[1]);
+          restore(subs, snap[2]);
+          writes.splice(0, writes.length, ...snap[3]);
+          throw err;
+        }
+      };
+      const result = queue.then(run);
+      queue = result.catch(() => {});
+      return result;
+    },
+  };
+  return { db, tx, events, customers, subs, writes };
 }
 
 function sub(over: Partial<{ id: string; status: string; price: string; customer: unknown; trialEnd: number | null }> = {}) {
@@ -207,15 +229,79 @@ describe("applyStripeEvent", () => {
     expect(s.writes).toEqual([]);
   });
 
-  it("a failure after recording propagates and the retry is processed, not treated as a duplicate", async () => {
+  it("a failure after recording rolls back and the retry is processed, not treated as a duplicate", async () => {
     const s = setup();
-    const upsert = s.db.upsertSubscription;
-    s.db.upsertSubscription = vi.fn().mockRejectedValueOnce(new Error("db down")).mockImplementation(upsert);
+    const upsert = s.tx.upsertSubscription;
+    s.tx.upsertSubscription = vi.fn().mockRejectedValueOnce(new Error("db down")).mockImplementation(upsert);
     const e = evt("customer.subscription.updated", sub());
     await expect(applyStripeEvent(e, s.deps)).rejects.toThrow("db down");
     expect(s.events.has("evt_1")).toBe(false);
     expect(await applyStripeEvent(e, s.deps)).toBe("applied");
     expect(s.subs.get("sub_1")?.status).toBe("active");
+  });
+
+  it("a concurrent redelivery waits for the first transaction; if that fails, the redelivery is processed", async () => {
+    const s = setup();
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    const upsert = s.tx.upsertSubscription;
+    s.tx.upsertSubscription = vi
+      .fn()
+      .mockImplementationOnce(async () => {
+        await gate;
+        throw new Error("crash mid-way");
+      })
+      .mockImplementation(upsert);
+    const e = evt("customer.subscription.updated", sub());
+    const a = applyStripeEvent(e, s.deps);
+    const b = applyStripeEvent(e, s.deps);
+    await new Promise((r) => setTimeout(r, 0));
+    release();
+    await expect(a).rejects.toThrow("crash mid-way");
+    expect(await b).toBe("applied");
+    expect(s.events.has("evt_1")).toBe(true);
+    expect(s.subs.get("sub_1")?.status).toBe("active");
+  });
+
+  it("a failed checkout rolls back the customer link too", async () => {
+    const s = setup(sub({ customer: "cus_new" }));
+    s.tx.upsertSubscription = vi.fn().mockRejectedValue(new Error("db down"));
+    const session = { object: "checkout.session", client_reference_id: "user_9", customer: "cus_new", subscription: "sub_1" };
+    await expect(applyStripeEvent(evt("checkout.session.completed", session), s.deps)).rejects.toThrow("db down");
+    expect(s.customers.has("cus_new")).toBe(false);
+    expect(s.events.size).toBe(0);
+  });
+
+  it("an older event arriving after a full refund is ignored", async () => {
+    const s = setup();
+    await applyStripeEvent(evt("customer.subscription.created", sub(), { id: "evt_c", created: 1000 }), s.deps);
+    const charge = { object: "charge", customer: "cus_1", amount: 500, amount_refunded: 500 };
+    await applyStripeEvent(evt("charge.refunded", charge, { id: "evt_r", created: 3000 }), s.deps);
+    expect(s.subs.get("sub_1")).toMatchObject({ status: "canceled", eventCreated: 3000 });
+    const invoice = { object: "invoice", parent: { subscription_details: { subscription: "sub_1" } } };
+    expect(await applyStripeEvent(evt("invoice.paid", invoice, { id: "evt_old", created: 2000 }), s.deps)).toBe("ignored");
+    expect(s.subs.get("sub_1")?.status).toBe("canceled");
+  });
+
+  it("an existing row whose subscription moved to a disallowed price is updated for non-granting statuses", async () => {
+    const s = setup();
+    await applyStripeEvent(evt("customer.subscription.created", sub(), { id: "evt_c" }), s.deps);
+    for (const [i, status] of ["past_due", "unpaid", "incomplete_expired", "canceled"].entries()) {
+      s.deps.retrieveSubscription.mockResolvedValueOnce(sub({ price: "price_evil", status }));
+      const e = evt("customer.subscription.updated", sub(), { id: `evt_${status}`, created: 2000 + i });
+      expect(await applyStripeEvent(e, s.deps)).toBe("applied");
+      expect(s.subs.get("sub_1")?.status).toBe(status);
+    }
+  });
+
+  it.each(["active", "trialing"])("an existing row moved to a disallowed price with status %s is left untouched", async (status) => {
+    const s = setup();
+    await applyStripeEvent(evt("customer.subscription.created", sub(), { id: "evt_c" }), s.deps);
+    const before = s.subs.get("sub_1");
+    s.deps.retrieveSubscription.mockResolvedValueOnce(sub({ price: "price_evil", status }));
+    const e = evt("customer.subscription.updated", sub(), { id: "evt_u", created: 2000 });
+    expect(await applyStripeEvent(e, s.deps)).toBe("ignored");
+    expect(s.subs.get("sub_1")).toEqual(before);
   });
 
   it("a failing re-fetch also releases the event for retry", async () => {

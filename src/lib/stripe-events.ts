@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import type Stripe from "stripe";
 import { isAllowedPrice } from "@/lib/stripe";
 
@@ -12,16 +13,21 @@ export type SubscriptionRow = {
   eventCreated: number;
 };
 
-export interface BillingDb {
+/** Database operations available inside one transaction. */
+export interface BillingTx {
   /** Inserts the event id; false if it was already recorded. */
   recordEvent(id: string, type: string): Promise<boolean>;
-  /** Removes a recorded event id so a failed delivery can be retried. */
-  forgetEvent(id: string): Promise<void>;
   userIdForCustomer(customerId: string): Promise<string | null>;
   linkCustomer(userId: string, customerId: string): Promise<void>;
   upsertSubscription(row: SubscriptionRow): Promise<void>;
   getEventCreated(subscriptionId: string): Promise<number | null>;
-  markCanceledForUser(userId: string): Promise<void>;
+  /** Sets status canceled and eventCreated on all of the user's subscriptions. */
+  markCanceledForUser(userId: string, eventCreated: number): Promise<void>;
+}
+
+export interface BillingDb {
+  /** Runs fn in one transaction: any throw rolls back everything, including the event record. */
+  runInTransaction<T>(fn: (tx: BillingTx) => Promise<T>): Promise<T>;
 }
 
 export type StripeEventDeps = {
@@ -31,64 +37,77 @@ export type StripeEventDeps = {
 
 export type ApplyResult = "applied" | "duplicate" | "ignored";
 
+type Step = (tx: BillingTx) => Promise<ApplyResult>;
+
 const idOf = (v: string | { id: string } | null | undefined): string | null => (typeof v === "string" ? v : (v?.id ?? null));
 
+const GRANTING = new Set(["active", "trialing"]);
+
 /**
- * Applies a verified Stripe event. The event id is recorded FIRST (so concurrent
- * redeliveries are deduped), and un-recorded via forgetEvent if processing throws,
- * so Stripe's retry is processed instead of being lost as a duplicate.
+ * Applies a verified Stripe event. Any Stripe fetch happens first, outside the transaction
+ * (never hold a transaction across a network call). Then the event record and all writes run
+ * in ONE transaction, record first: an error or crash rolls back the record so Stripe's retry
+ * is processed, and a concurrent delivery of the same id blocks on the unique insert until the
+ * first transaction commits ("duplicate") or rolls back (processed).
  */
 export async function applyStripeEvent(event: Stripe.Event, deps: StripeEventDeps): Promise<ApplyResult> {
-  if (!(await deps.db.recordEvent(event.id, event.type))) return "duplicate";
-  try {
-    return await processEvent(event, deps);
-  } catch (err) {
-    await deps.db.forgetEvent(event.id);
-    throw err;
-  }
+  const step = await prepare(event, deps.retrieveSubscription);
+  return deps.db.runInTransaction(async (tx) => {
+    if (!(await tx.recordEvent(event.id, event.type))) return "duplicate";
+    return step(tx);
+  });
 }
 
-async function processEvent(event: Stripe.Event, { db, retrieveSubscription }: StripeEventDeps): Promise<ApplyResult> {
+async function prepare(event: Stripe.Event, retrieveSubscription: StripeEventDeps["retrieveSubscription"]): Promise<Step> {
+  const ignored: Step = async () => "ignored";
+
   // Payload subscription data is never trusted: re-fetch from Stripe by id.
-  const sync = async (subscriptionId: string | null): Promise<ApplyResult> => {
-    if (!subscriptionId) return "ignored";
+  const sync = async (subscriptionId: string | null, before?: (tx: BillingTx) => Promise<void>): Promise<Step> => {
+    if (!subscriptionId) return ignored;
     const sub = await retrieveSubscription(subscriptionId);
-    const item = sub.items.data[0];
-    const priceId = item?.price.id ?? "";
-    if (!isAllowedPrice(priceId)) return "ignored";
-    const customerId = idOf(sub.customer);
-    const userId = customerId && (await db.userIdForCustomer(customerId));
-    if (!userId) return "ignored";
-    const stored = await db.getEventCreated(sub.id);
-    if (stored !== null && event.created < stored) return "ignored";
-    await db.upsertSubscription({
-      id: sub.id,
-      userId,
-      status: sub.status,
-      priceId,
-      currentPeriodEnd: item.current_period_end ? new Date(item.current_period_end * 1000) : null,
-      trialEnd: sub.trial_end ? new Date(sub.trial_end * 1000) : null,
-      cancelAtPeriodEnd: sub.cancel_at_period_end,
-      eventCreated: event.created,
-    });
-    return "applied";
+    return async (tx) => {
+      if (before) await before(tx);
+      const item = sub.items.data[0];
+      const priceId = item?.price.id ?? "";
+      const stored = await tx.getEventCreated(sub.id);
+      // A disallowed price may only revoke an existing row, never create or grant.
+      if (!isAllowedPrice(priceId) && (stored === null || GRANTING.has(sub.status))) return "ignored";
+      const customerId = idOf(sub.customer);
+      const userId = customerId && (await tx.userIdForCustomer(customerId));
+      if (!userId) return "ignored";
+      if (stored !== null && event.created < stored) return "ignored";
+      await tx.upsertSubscription({
+        id: sub.id,
+        userId,
+        status: sub.status,
+        priceId,
+        currentPeriodEnd: item?.current_period_end ? new Date(item.current_period_end * 1000) : null,
+        trialEnd: sub.trial_end ? new Date(sub.trial_end * 1000) : null,
+        cancelAtPeriodEnd: sub.cancel_at_period_end,
+        eventCreated: event.created,
+      });
+      return "applied";
+    };
   };
 
-  const cancelForCustomer = async (customerId: string | null): Promise<ApplyResult> => {
-    const userId = customerId && (await db.userIdForCustomer(customerId));
-    if (!userId) return "ignored";
-    await db.markCanceledForUser(userId);
-    return "applied";
-  };
+  const cancelForCustomer =
+    (customerId: string | null): Step =>
+    async (tx) => {
+      const userId = customerId && (await tx.userIdForCustomer(customerId));
+      if (!userId) return "ignored";
+      await tx.markCanceledForUser(userId, event.created);
+      return "applied";
+    };
 
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object;
       const customerId = idOf(session.customer);
-      const subscriptionId = idOf(session.subscription);
-      if (!subscriptionId) return "ignored";
-      if (session.client_reference_id && customerId) await db.linkCustomer(session.client_reference_id, customerId);
-      return sync(subscriptionId);
+      const userId = session.client_reference_id;
+      return sync(
+        idOf(session.subscription),
+        userId && customerId ? (tx) => tx.linkCustomer(userId, customerId) : undefined,
+      );
     }
     case "customer.subscription.created":
     case "customer.subscription.updated":
@@ -99,52 +118,50 @@ async function processEvent(event: Stripe.Event, { db, retrieveSubscription }: S
       return sync(idOf(event.data.object.parent?.subscription_details?.subscription));
     case "charge.refunded": {
       const charge = event.data.object;
-      if (charge.amount_refunded < charge.amount) return "ignored";
+      if (charge.amount_refunded < charge.amount) return ignored;
+      // Cancels locally and bumps eventCreated so older events can't re-grant. A refund does not
+      // cancel the Stripe subscription, so a NEWER subscription event may re-grant; the operator
+      // cancels the subscription in Stripe when refunding (sends customer.subscription.deleted).
       return cancelForCustomer(idOf(charge.customer));
     }
     case "customer.deleted":
       return cancelForCustomer(event.data.object.id);
     default:
-      return "ignored";
+      return ignored;
   }
+}
+
+function prismaTx(db: Prisma.TransactionClient): BillingTx {
+  return {
+    async recordEvent(id, type) {
+      const { count } = await db.stripeEvent.createMany({ data: [{ id, type }], skipDuplicates: true });
+      return count === 1;
+    },
+    async userIdForCustomer(stripeCustomerId) {
+      const row = await db.billingCustomer.findUnique({ where: { stripeCustomerId }, select: { userId: true } });
+      return row?.userId ?? null;
+    },
+    async linkCustomer(userId, stripeCustomerId) {
+      await db.billingCustomer.upsert({ where: { userId }, create: { userId, stripeCustomerId }, update: { stripeCustomerId } });
+    },
+    async upsertSubscription({ eventCreated, ...row }) {
+      const data = { ...row, eventCreated: BigInt(eventCreated) };
+      await db.subscription.upsert({ where: { id: row.id }, create: data, update: data });
+    },
+    async getEventCreated(id) {
+      const row = await db.subscription.findUnique({ where: { id }, select: { eventCreated: true } });
+      return row ? Number(row.eventCreated) : null;
+    },
+    async markCanceledForUser(userId, eventCreated) {
+      await db.subscription.updateMany({ where: { userId }, data: { status: "canceled", eventCreated: BigInt(eventCreated) } });
+    },
+  };
 }
 
 /** Prisma-backed BillingDb. Prisma is imported lazily so this module loads without DATABASE_URL. */
 export const prismaBillingDb: BillingDb = {
-  async recordEvent(id, type) {
+  async runInTransaction(fn) {
     const { prisma } = await import("@/lib/prisma");
-    const { count } = await prisma.stripeEvent.createMany({ data: [{ id, type }], skipDuplicates: true });
-    return count === 1;
-  },
-  async forgetEvent(id) {
-    const { prisma } = await import("@/lib/prisma");
-    await prisma.stripeEvent.deleteMany({ where: { id } });
-  },
-  async userIdForCustomer(stripeCustomerId) {
-    const { prisma } = await import("@/lib/prisma");
-    const row = await prisma.billingCustomer.findUnique({ where: { stripeCustomerId }, select: { userId: true } });
-    return row?.userId ?? null;
-  },
-  async linkCustomer(userId, stripeCustomerId) {
-    const { prisma } = await import("@/lib/prisma");
-    await prisma.billingCustomer.upsert({
-      where: { userId },
-      create: { userId, stripeCustomerId },
-      update: { stripeCustomerId },
-    });
-  },
-  async upsertSubscription({ eventCreated, ...row }) {
-    const { prisma } = await import("@/lib/prisma");
-    const data = { ...row, eventCreated: BigInt(eventCreated) };
-    await prisma.subscription.upsert({ where: { id: row.id }, create: data, update: data });
-  },
-  async getEventCreated(id) {
-    const { prisma } = await import("@/lib/prisma");
-    const row = await prisma.subscription.findUnique({ where: { id }, select: { eventCreated: true } });
-    return row ? Number(row.eventCreated) : null;
-  },
-  async markCanceledForUser(userId) {
-    const { prisma } = await import("@/lib/prisma");
-    await prisma.subscription.updateMany({ where: { userId }, data: { status: "canceled" } });
+    return prisma.$transaction((tx) => fn(prismaTx(tx)));
   },
 };
