@@ -1,10 +1,11 @@
 import type { ReactNode } from "react";
 import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router";
+import { ClerkProvider } from "@clerk/tanstack-react-start";
 import appCss from "@/styles/globals.css?url";
 import { getLocaleAndMessages } from "@/i18n/load";
 import { AppIntlProvider } from "@/i18n/provider";
 
-// Minimal shell; the real layout (theme, Clerk, analytics) is ported in later tasks.
+// Minimal shell; the real layout (theme, analytics) is ported in later tasks.
 export const Route = createRootRoute({
   loader: () => getLocaleAndMessages(),
   // Messages never go stale on their own; a locale switch calls router.invalidate() to reload.
@@ -28,9 +29,11 @@ function RootDocument({ children }: { children: ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <AppIntlProvider locale={locale} messages={messages}>
-          {children}
-        </AppIntlProvider>
+        <ClerkProvider>
+          <AppIntlProvider locale={locale} messages={messages}>
+            {children}
+          </AppIntlProvider>
+        </ClerkProvider>
         <Scripts />
       </body>
     </html>

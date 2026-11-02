@@ -23,11 +23,7 @@ import {
   Hand,
   Scroll,
 } from "lucide-react";
-import {
-  SignedIn,
-  SignedOut,
-  UserButton,
-} from "@clerk/nextjs";
+import { Show, UserButton } from "@clerk/tanstack-react-start";
 import { switchLocaleAction } from "@/actions/locale";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -132,7 +128,7 @@ export function AppHeader() {
                   })}
                 </nav>
                 <div className="flex flex-col gap-2 p-2 border-t mt-auto">
-                  <SignedOut>
+                  <Show when="signed-out">
                     <Button variant="ghost" asChild className="w-full justify-start">
                       <Link href="/">
                         <LayoutDashboard className="h-4 w-4 mr-3" />
@@ -151,19 +147,19 @@ export function AppHeader() {
                         {tAuth("signup")}
                       </Link>
                     </Button>
-                  </SignedOut>
-                  <SignedIn>
+                  </Show>
+                  <Show when="signed-in">
                     <div className="px-2 py-1">
                       <UserButton />
                     </div>
-                  </SignedIn>
+                  </Show>
                 </div>
               </SheetContent>
             </Sheet>
           </div>
 
           <div className="hidden md:flex items-center gap-2">
-            <SignedOut>
+            <Show when="signed-out">
               <Button variant="ghost" size="sm" asChild>
                 <Link href="/sign-in">
                   <LogIn className="h-4 w-4 mr-1.5" />
@@ -176,10 +172,10 @@ export function AppHeader() {
                   {tAuth("signup")}
                 </Link>
               </Button>
-            </SignedOut>
-            <SignedIn>
+            </Show>
+            <Show when="signed-in">
               <UserButton />
-            </SignedIn>
+            </Show>
           </div>
         </div>
       </div>

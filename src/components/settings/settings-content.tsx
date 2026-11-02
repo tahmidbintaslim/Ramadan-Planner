@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
-import { useClerk } from "@clerk/nextjs";
+import { useClerk } from "@clerk/tanstack-react-start";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { Bell, CalendarClock, Globe, LogIn, LogOut, UserPlus } from "lucide-react";

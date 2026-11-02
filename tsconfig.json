@@ -27,7 +27,6 @@
     ".tanstack",
     // TEMPORARY (TanStack migration Task 1): Next.js code not ported yet; Task 11 removes these.
     "src/app",
-    "src/proxy.ts",
     // TEMPORARY: these import next/*, next-intl or @clerk/nextjs (directly or via another file here); ported in Tasks 2-8.
     "src/actions/admin-users.ts",
     "src/actions/announcements.ts",
@@ -50,7 +49,6 @@
     "src/components/layout/desktop-sidebar.tsx",
     "src/components/layout/mobile-nav.tsx",
     "src/components/plan/plan-content.tsx",
-    "src/components/providers/auth-provider.tsx",
     "src/components/quran/quran-reader.tsx",
     "src/components/quran/quran-surah-list.tsx",
     "src/components/reminders/reminders-content.tsx",
@@ -68,8 +66,6 @@
     "src/components/ui/dialog.tsx",
     "src/components/ui/sheet.tsx",
     "src/hooks/use-guest-data.ts",
-    "src/lib/auth/server.ts",
-    "src/lib/supabase/middleware.ts",
     "src/lib/supabase/server.ts"
   ]
 }
