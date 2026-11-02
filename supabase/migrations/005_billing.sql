@@ -1,4 +1,6 @@
--- Ramadan Planner: Billing (Stripe) tables + one-time grandfather snapshot
+-- Ramadan Planner: Billing (Stripe) tables
+-- The legacy-user grandfather grant is NOT here: it runs once at cutover via
+-- supabase/manual/grandfather_legacy_users.sql (re-applying a migration must never grant Plus).
 -- RLS enabled with no policies: only the service role (server) can access.
 
 CREATE TABLE IF NOT EXISTS public.billing_customers (
@@ -40,7 +42,3 @@ ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.stripe_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.entitlement_grants ENABLE ROW LEVEL SECURITY;
 
--- One-time grandfather snapshot: every existing user keeps access.
-INSERT INTO public.entitlement_grants (user_id, source)
-SELECT id, 'legacy_signup' FROM public.user_profiles
-ON CONFLICT DO NOTHING;
