@@ -56,12 +56,18 @@ Node runtime, raw body via `req.text()`, `constructEvent` signature check, inser
 - `createReminderRuleAction` and re-enable in `updateReminderRuleAction` (`src/actions/planner.ts`): free users capped at 3 enabled rules.
 - `/api/push/dispatch`: free users send at most 3 enabled rules (oldest first).
 - `/api/calendar/ics/[secret]` and `/api/calendar/google/*`: 403 when not Plus; shorten the CDN cache on gated responses.
-- Cloud writes for daily logs, goals and tasks: Plus only; reads stay allowed.
-- A test asserts every Plus action calls `requirePlus`.
+- Cloud writes for daily logs, goals and tasks: **deferred to R2.** Gating them needs the local-first fallback, otherwise signed-in free users could not save. In R1 they stay as they are.
+- A test asserts the gated reminder actions call the entitlement check.
 
-### Security hardening included in R1
+### Security notes for R1
 
-Split the Supabase clients: `getAdminClient()` (webhook and cron only) versus a user-scoped client; add a CI grep that the service-role key is read nowhere else. Admin check uses `AdminUser` ids only. No logging of full Stripe events; update `docs/SECURITY_PRIVACY.md` (Stripe as sub-processor).
+No logging of full Stripe events; update `docs/SECURITY_PRIVACY.md` (Stripe as sub-processor). Billing tables are read and written only through server code (Prisma).
+
+### Changes after checking the code (2026-11-02)
+
+- Splitting the service-role Supabase client is **out of R1**: every planner action in `src/actions/planner.ts` reads and writes with that key because RLS has no policies for Clerk users. Splitting it needs a different data-access design; tracked as a risk, not a task.
+- Changing the admin check to ids only is **out of R1**: it would lock out admins configured through `ADMIN_EMAILS`.
+- Per-checkout rate limiting is **out of R1** (no rate-limit package is installed). Trial abuse is limited by giving the trial only to a user who has never had a subscription.
 
 ### UI
 
