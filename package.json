@@ -17,6 +17,7 @@
     "seed:quran": "npx tsx scripts/seed-quran.ts",
     "seed:daily-content": "npx tsx scripts/seed-daily-content.ts",
     "translations:check": "node scripts/compare-translations.mjs",
+    "check:csrf": "node scripts/check-csrf.mjs",
     "vapid:generate": "node ./scripts/generateVapidKeys.mjs"
   },
   "dependencies": {
