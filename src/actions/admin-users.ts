@@ -1,97 +1,47 @@
-"use server";
+// Admin-users server functions. Each `xAction` keeps its old name, arguments and AdminUsersResult shape, and
+// calls a POST server function behind `authMiddleware` (HTTP 401 when signed out). Admin rights are checked
+// inside the Impl on every call (src/server/admin-users-impl.ts, server-only).
+import { createServerFn } from "@tanstack/react-start";
+import { authMiddleware } from "@/server/auth-middleware";
+import { callAuthed } from "@/server/call-authed";
+import {
+  addAdminUserImpl,
+  listAdminUsersImpl,
+  removeAdminUserImpl,
+} from "@/server/admin-users-impl";
+import type { AdminUsersResult } from "./admin-users-schemas";
 
-import { z } from "zod";
-import { prisma } from "@/lib/prisma";
-import { isUserAdmin } from "@/lib/admin";
-import { getAppAuthUser } from "@/lib/auth/server";
+export type { AdminUsersResult } from "./admin-users-schemas";
 
-export type AdminUsersResult<T> =
-  | { ok: true; data: T }
-  | { ok: false; error: string };
+const listAdminUsersFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .handler(({ context }) => listAdminUsersImpl(context.userId));
 
-const addSchema = z.object({ userId: z.string().uuid() });
-const removeSchema = z.object({ userId: z.string().uuid() });
+// The target id is validated INSIDE the Impl, after the admin check, as before.
+const addAdminUserFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((userId: unknown) => userId as string)
+  .handler(({ data, context }) => addAdminUserImpl(context.userId, data));
 
-async function requireAdmin(): Promise<
-  AdminUsersResult<{ userId: string; email: string | null }>
-> {
-  const user = await getAppAuthUser();
-  if (!user) {
-    return { ok: false, error: "unauthorized" };
-  }
-
-  const allowed = await isUserAdmin({ userId: user.id, email: user.email });
-  if (!allowed) {
-    return { ok: false, error: "forbidden" };
-  }
-
-  return { ok: true, data: { userId: user.id, email: user.email } };
-}
+const removeAdminUserFn = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((userId: unknown) => userId as string)
+  .handler(({ data, context }) => removeAdminUserImpl(context.userId, data));
 
 export async function listAdminUsersAction(): Promise<
   AdminUsersResult<Array<{ userId: string; createdAt: string }>>
 > {
-  const auth = await requireAdmin();
-  if (!auth.ok) return auth;
-
-  const rows = await prisma.adminUser.findMany({
-    orderBy: { createdAt: "asc" },
-    select: { userId: true, createdAt: true },
-  });
-
-  return {
-    ok: true,
-    data: rows.map((row) => ({
-      userId: row.userId,
-      createdAt: row.createdAt ? row.createdAt.toISOString() : "",
-    })),
-  };
+  return callAuthed(() => listAdminUsersFn());
 }
 
 export async function addAdminUserAction(
   userId: string,
 ): Promise<AdminUsersResult<{ userId: string }>> {
-  const auth = await requireAdmin();
-  if (!auth.ok) return auth;
-
-  const parsed = addSchema.safeParse({ userId });
-  if (!parsed.success) {
-    return { ok: false, error: "invalid_input" };
-  }
-
-  const profile = await prisma.userProfile.findUnique({
-    where: { id: parsed.data.userId },
-    select: { id: true },
-  });
-
-  if (!profile) {
-    return { ok: false, error: "user_not_found" };
-  }
-
-  await prisma.adminUser.upsert({
-    where: { userId: parsed.data.userId },
-    create: { userId: parsed.data.userId },
-    update: {},
-  });
-
-  return { ok: true, data: { userId: parsed.data.userId } };
+  return callAuthed(() => addAdminUserFn({ data: userId }));
 }
 
 export async function removeAdminUserAction(
   userId: string,
 ): Promise<AdminUsersResult<null>> {
-  const auth = await requireAdmin();
-  if (!auth.ok) return auth;
-
-  const parsed = removeSchema.safeParse({ userId });
-  if (!parsed.success) {
-    return { ok: false, error: "invalid_input" };
-  }
-
-  if (parsed.data.userId === auth.data.userId) {
-    return { ok: false, error: "cannot_remove_self" };
-  }
-
-  await prisma.adminUser.deleteMany({ where: { userId: parsed.data.userId } });
-  return { ok: true, data: null };
+  return callAuthed(() => removeAdminUserFn({ data: userId }));
 }

@@ -108,7 +108,7 @@ describe("planner server function declarations", () => {
     expect(validators).toEqual(cases.map((c) => c[4]));
   });
 
-  it("exports no `use server` style leftovers: every wrapper is an async function", () => {
+  it("every wrapper is an async function", () => {
     for (const [name] of cases) expect(typeof wrapper(name)).toBe("function");
   });
 });

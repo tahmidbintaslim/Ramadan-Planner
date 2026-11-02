@@ -28,15 +28,7 @@
     // TEMPORARY (TanStack migration Task 1): Next.js code not ported yet; Task 11 removes these.
     "src/app",
     // TEMPORARY: these import next/*, next-intl or @clerk/nextjs (directly or via another file here); ported in Tasks 2-8.
-    "src/actions/admin-users.ts",
-    "src/actions/announcements.ts",
-    "src/actions/auth.ts",
-    "src/actions/integrations.ts",
     "src/components/admin/announcements-admin-content.tsx",
-    "src/components/auth/forgot-password-form.tsx",
-    "src/components/auth/login-form.tsx",
-    "src/components/auth/sign-in-or-up-form.tsx",
-    "src/components/auth/signup-form.tsx",
     "src/components/dashboard/dashboard-content.tsx",
     "src/components/hadith/hadith-audio-controls.tsx",
     "src/components/landing/prayer-times-widget.tsx",
