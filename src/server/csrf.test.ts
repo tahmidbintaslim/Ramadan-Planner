@@ -6,6 +6,7 @@ const clerkMarker = vi.hoisted(() => ({ clerk: true }));
 vi.mock("@clerk/tanstack-react-start/server", () => ({ clerkMiddleware: () => clerkMarker }));
 
 import { startInstance } from "@/start";
+import { errorMaskMiddleware } from "@/server/error-mask-middleware";
 
 type Ctx = { request: Request; handlerType: "serverFn" | "router"; next: () => unknown };
 type Server = (ctx: Ctx) => unknown;
@@ -38,6 +39,13 @@ describe("start.ts CSRF middleware", () => {
     expect(list[0]).not.toBe(clerkMarker);
     expect(typeof list[0].options?.server).toBe("function");
     expect(list[1]).toBe(clerkMarker);
+  });
+
+  it("registers the error mask as a global FUNCTION middleware (a separate list from the request middleware)", async () => {
+    const { functionMiddleware = [] } = await startInstance.getOptions();
+    expect(functionMiddleware).toEqual([errorMaskMiddleware]);
+    const { requestMiddleware = [] } = await startInstance.getOptions();
+    expect(requestMiddleware).not.toContain(errorMaskMiddleware);
   });
 
   it("rejects a cross-origin server-function POST carrying a session cookie", async () => {

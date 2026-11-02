@@ -6,6 +6,9 @@ export const UNAUTHORIZED_MESSAGE = "Unauthorized";
 /** Message the auth middleware throws when the auth backend fails (with HTTP 503). */
 export const AUTH_UNAVAILABLE_MESSAGE = "auth_unavailable";
 
+/** Message the global error-mask middleware throws for any unexpected server error (with HTTP 500). */
+export const INTERNAL_ERROR_MESSAGE = "internal_error";
+
 /**
  * True only for the auth middleware's signed-out rejection, however Start surfaces it:
  * - a client RPC call rethrows the deserialized `Error("Unauthorized")`;

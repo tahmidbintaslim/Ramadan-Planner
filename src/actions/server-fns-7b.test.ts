@@ -12,7 +12,7 @@ const h = vi.hoisted(() => {
     call: (opts?: { data?: unknown }) => Promise<unknown>;
   }
   const state = {
-    mode: "ok" as "ok" | "unauthorized" | "unavailable",
+    mode: "ok" as "ok" | "unauthorized" | "unavailable" | "internal",
     registered: [] as Registered[],
   };
   const createServerFn = (opts: { method: string }) => {
@@ -29,6 +29,7 @@ const h = vi.hoisted(() => {
       handler(handler: Handler) {
         const call = vi.fn(async (o?: { data?: unknown }) => {
           // Mirrors Start: the auth middleware (when declared) runs first, then the validator, then the handler.
+          if (state.mode === "internal") throw new Error("internal_error");
           if ((def.middleware?.length ?? 0) > 0) {
             if (state.mode === "unauthorized") throw new Error("Unauthorized");
             if (state.mode === "unavailable") throw new Error("auth_unavailable");
@@ -163,6 +164,11 @@ describe.each(authed)("%s.%s", (mod, name, args, implName, rest) => {
   it("503 auth_unavailable is rethrown, not turned into a result", async () => {
     h.state.mode = "unavailable";
     await expect(wrapper()(...args)).rejects.toThrow("auth_unavailable");
+  });
+
+  it("an internal_error rejection (masked server error) is rethrown, not turned into unauthorized", async () => {
+    h.state.mode = "internal";
+    await expect(wrapper()(...args)).rejects.toThrow("internal_error");
   });
 });
 

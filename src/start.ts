@@ -1,4 +1,5 @@
 import { createCsrfMiddleware, createStart } from "@tanstack/react-start";
+import { errorMaskMiddleware } from "@/server/error-mask-middleware";
 import { clerkMiddleware } from "@clerk/tanstack-react-start/server";
 
 // Because this file exists, Start no longer adds its default CSRF check, so it is registered here.
@@ -8,4 +9,6 @@ const csrfMiddleware = createCsrfMiddleware({ filter: (ctx) => ctx.handlerType =
 
 export const startInstance = createStart(() => ({
   requestMiddleware: [csrfMiddleware, clerkMiddleware()],
+  // Runs around every server function (outermost): masks unexpected error text, see error-mask-middleware.ts.
+  functionMiddleware: [errorMaskMiddleware],
 }));
