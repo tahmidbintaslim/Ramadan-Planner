@@ -1,6 +1,6 @@
 import { forwardRef } from "react";
 import type { AnchorHTMLAttributes, ReactNode } from "react";
-import { Link as RouterLink, defaultParseSearch } from "@tanstack/react-router";
+import { Link as RouterLink, defaultParseSearch, defaultStringifySearch } from "@tanstack/react-router";
 
 // Drop-in replacement for `next/link` at the existing call sites: `href` is a plain string.
 // Internal paths render TanStack Router's <Link> (client navigation); external URLs, hash links,
@@ -29,17 +29,29 @@ export function isPlainHref(href: string): boolean {
   );
 }
 
-/** Split an internal href into the path, parsed search object and hash that TanStack's Link expects. */
-export function splitHref(href: string): { path: string; search?: Record<string, unknown>; hash?: string } {
+/**
+ * Split an internal href into the path, parsed search object and hash that TanStack's Link expects.
+ * Returns `null` when the split would not reproduce the original href exactly (repeated keys, values containing
+ * `?`, keys without a value, an empty `?` or `#`, ...): the caller then renders a plain <a> with the original href.
+ */
+export function splitHref(
+  href: string,
+): { path: string; search?: Record<string, unknown>; hash?: string } | null {
   const hashAt = href.indexOf("#");
   const beforeHash = hashAt === -1 ? href : href.slice(0, hashAt);
-  const hash = hashAt === -1 ? undefined : href.slice(hashAt + 1) || undefined;
+  const rawHash = hashAt === -1 ? undefined : href.slice(hashAt + 1);
+  if (rawHash === "") return null; // "/a#"
   const queryAt = beforeHash.indexOf("?");
   const path = queryAt === -1 ? beforeHash : beforeHash.slice(0, queryAt);
-  const query = queryAt === -1 ? "" : beforeHash.slice(queryAt);
-  // The router's own parser, so values round-trip to the same query string (`x=1` stays `x=1`).
-  const search = query.length > 1 ? defaultParseSearch(query) : undefined;
-  return { path, search, hash };
+  let search: Record<string, unknown> | undefined;
+  if (queryAt !== -1) {
+    const query = beforeHash.slice(queryAt);
+    if (query === "?") return null; // "/a?"
+    // The router's own parser/serializer: only accept the split when it round-trips to the same query string.
+    search = defaultParseSearch(query);
+    if (defaultStringifySearch(search) !== query) return null;
+  }
+  return { path, search, hash: rawHash };
 }
 
 export const Link = forwardRef<HTMLAnchorElement, LinkProps>(function Link(props, ref) {
@@ -48,7 +60,9 @@ export const Link = forwardRef<HTMLAnchorElement, LinkProps>(function Link(props
   const { prefetch, scroll, ...rest } = restWithNextProps;
   void prefetch;
   void scroll;
-  if (isPlainHref(href)) {
+  // A lossy split (see splitHref) also falls back to a plain <a> so the href is never altered.
+  const split = isPlainHref(href) ? null : splitHref(href);
+  if (!split) {
     return (
       <a ref={ref} href={href} {...rest}>
         {children}
@@ -56,7 +70,7 @@ export const Link = forwardRef<HTMLAnchorElement, LinkProps>(function Link(props
     );
   }
   // Call sites build dynamic paths (`/quran/${n}`), which the generated route union cannot check.
-  const { path, search, hash } = splitHref(href);
+  const { path, search, hash } = split;
   return (
     <RouterLink
       ref={ref}

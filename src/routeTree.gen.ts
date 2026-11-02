@@ -27,9 +27,13 @@ import { Route as AppZakatRouteImport } from './routes/_app.zakat'
 import { Route as AuthSignupRouteImport } from './routes/_auth.signup'
 import { Route as ApiWebhookCheckRouteImport } from './routes/api/[_]webhook-check'
 import { Route as AppAdminAnnouncementsRouteImport } from './routes/_app.admin.announcements'
+import { Route as AppHadithIndexRouteImport } from './routes/_app.hadith.index'
 import { Route as AppQuranIndexRouteImport } from './routes/_app.quran.index'
+import { Route as AppQuranSurahRouteImport } from './routes/_app.quran.$surah'
 import { Route as AuthSignInSplatRouteImport } from './routes/_auth.sign-in.$'
 import { Route as AuthSignUpSplatRouteImport } from './routes/_auth.sign-up.$'
+import { Route as AppHadithEditionIndexRouteImport } from './routes/_app.hadith.$edition.index'
+import { Route as AppHadithEditionChapterRouteImport } from './routes/_app.hadith.$edition.$chapter'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -119,9 +123,19 @@ const AppAdminAnnouncementsRoute = AppAdminAnnouncementsRouteImport.update({
   path: '/admin/announcements',
   getParentRoute: () => AppRoute,
 } as any)
+const AppHadithIndexRoute = AppHadithIndexRouteImport.update({
+  id: '/hadith/',
+  path: '/hadith/',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppQuranIndexRoute = AppQuranIndexRouteImport.update({
   id: '/quran/',
   path: '/quran/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppQuranSurahRoute = AppQuranSurahRouteImport.update({
+  id: '/quran/$surah',
+  path: '/quran/$surah',
   getParentRoute: () => AppRoute,
 } as any)
 const AuthSignInSplatRoute = AuthSignInSplatRouteImport.update({
@@ -133,6 +147,16 @@ const AuthSignUpSplatRoute = AuthSignUpSplatRouteImport.update({
   id: '/sign-up/$',
   path: '/sign-up/$',
   getParentRoute: () => AuthRoute,
+} as any)
+const AppHadithEditionIndexRoute = AppHadithEditionIndexRouteImport.update({
+  id: '/hadith/$edition/',
+  path: '/hadith/$edition/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppHadithEditionChapterRoute = AppHadithEditionChapterRouteImport.update({
+  id: '/hadith/$edition/$chapter',
+  path: '/hadith/$edition/$chapter',
+  getParentRoute: () => AppRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -152,9 +176,13 @@ export interface FileRoutesByFullPath {
   '/signup': typeof AuthSignupRoute
   '/api/_webhook-check': typeof ApiWebhookCheckRoute
   '/admin/announcements': typeof AppAdminAnnouncementsRoute
+  '/quran/$surah': typeof AppQuranSurahRoute
   '/sign-in/$': typeof AuthSignInSplatRoute
   '/sign-up/$': typeof AuthSignUpSplatRoute
+  '/hadith/': typeof AppHadithIndexRoute
   '/quran/': typeof AppQuranIndexRoute
+  '/hadith/$edition/$chapter': typeof AppHadithEditionChapterRoute
+  '/hadith/$edition/': typeof AppHadithEditionIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -173,9 +201,13 @@ export interface FileRoutesByTo {
   '/signup': typeof AuthSignupRoute
   '/api/_webhook-check': typeof ApiWebhookCheckRoute
   '/admin/announcements': typeof AppAdminAnnouncementsRoute
+  '/quran/$surah': typeof AppQuranSurahRoute
   '/sign-in/$': typeof AuthSignInSplatRoute
   '/sign-up/$': typeof AuthSignUpSplatRoute
+  '/hadith': typeof AppHadithIndexRoute
   '/quran': typeof AppQuranIndexRoute
+  '/hadith/$edition/$chapter': typeof AppHadithEditionChapterRoute
+  '/hadith/$edition': typeof AppHadithEditionIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -197,9 +229,13 @@ export interface FileRoutesById {
   '/_auth/signup': typeof AuthSignupRoute
   '/api/_webhook-check': typeof ApiWebhookCheckRoute
   '/_app/admin/announcements': typeof AppAdminAnnouncementsRoute
+  '/_app/quran/$surah': typeof AppQuranSurahRoute
   '/_auth/sign-in/$': typeof AuthSignInSplatRoute
   '/_auth/sign-up/$': typeof AuthSignUpSplatRoute
+  '/_app/hadith/': typeof AppHadithIndexRoute
   '/_app/quran/': typeof AppQuranIndexRoute
+  '/_app/hadith/$edition/$chapter': typeof AppHadithEditionChapterRoute
+  '/_app/hadith/$edition/': typeof AppHadithEditionIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -220,9 +256,13 @@ export interface FileRouteTypes {
     | '/signup'
     | '/api/_webhook-check'
     | '/admin/announcements'
+    | '/quran/$surah'
     | '/sign-in/$'
     | '/sign-up/$'
+    | '/hadith/'
     | '/quran/'
+    | '/hadith/$edition/$chapter'
+    | '/hadith/$edition/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -241,9 +281,13 @@ export interface FileRouteTypes {
     | '/signup'
     | '/api/_webhook-check'
     | '/admin/announcements'
+    | '/quran/$surah'
     | '/sign-in/$'
     | '/sign-up/$'
+    | '/hadith'
     | '/quran'
+    | '/hadith/$edition/$chapter'
+    | '/hadith/$edition'
   id:
     | '__root__'
     | '/'
@@ -264,9 +308,13 @@ export interface FileRouteTypes {
     | '/_auth/signup'
     | '/api/_webhook-check'
     | '/_app/admin/announcements'
+    | '/_app/quran/$surah'
     | '/_auth/sign-in/$'
     | '/_auth/sign-up/$'
+    | '/_app/hadith/'
     | '/_app/quran/'
+    | '/_app/hadith/$edition/$chapter'
+    | '/_app/hadith/$edition/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -406,11 +454,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAdminAnnouncementsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/hadith/': {
+      id: '/_app/hadith/'
+      path: '/hadith'
+      fullPath: '/hadith/'
+      preLoaderRoute: typeof AppHadithIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/quran/': {
       id: '/_app/quran/'
       path: '/quran'
       fullPath: '/quran/'
       preLoaderRoute: typeof AppQuranIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/quran/$surah': {
+      id: '/_app/quran/$surah'
+      path: '/quran/$surah'
+      fullPath: '/quran/$surah'
+      preLoaderRoute: typeof AppQuranSurahRouteImport
       parentRoute: typeof AppRoute
     }
     '/_auth/sign-in/$': {
@@ -427,6 +489,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthSignUpSplatRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/_app/hadith/$edition/': {
+      id: '/_app/hadith/$edition/'
+      path: '/hadith/$edition'
+      fullPath: '/hadith/$edition/'
+      preLoaderRoute: typeof AppHadithEditionIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/hadith/$edition/$chapter': {
+      id: '/_app/hadith/$edition/$chapter'
+      path: '/hadith/$edition/$chapter'
+      fullPath: '/hadith/$edition/$chapter'
+      preLoaderRoute: typeof AppHadithEditionChapterRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
@@ -442,7 +518,11 @@ interface AppRouteChildren {
   AppTodayRoute: typeof AppTodayRoute
   AppZakatRoute: typeof AppZakatRoute
   AppAdminAnnouncementsRoute: typeof AppAdminAnnouncementsRoute
+  AppQuranSurahRoute: typeof AppQuranSurahRoute
+  AppHadithIndexRoute: typeof AppHadithIndexRoute
   AppQuranIndexRoute: typeof AppQuranIndexRoute
+  AppHadithEditionChapterRoute: typeof AppHadithEditionChapterRoute
+  AppHadithEditionIndexRoute: typeof AppHadithEditionIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -457,7 +537,11 @@ const AppRouteChildren: AppRouteChildren = {
   AppTodayRoute: AppTodayRoute,
   AppZakatRoute: AppZakatRoute,
   AppAdminAnnouncementsRoute: AppAdminAnnouncementsRoute,
+  AppQuranSurahRoute: AppQuranSurahRoute,
+  AppHadithIndexRoute: AppHadithIndexRoute,
   AppQuranIndexRoute: AppQuranIndexRoute,
+  AppHadithEditionChapterRoute: AppHadithEditionChapterRoute,
+  AppHadithEditionIndexRoute: AppHadithEditionIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

@@ -105,6 +105,40 @@ describe("Link", () => {
     expect(splitHref("/a?x=hello&y=2")).toEqual({ path: "/a", search: { x: "hello", y: 2 }, hash: undefined });
     expect(splitHref("/a#y")).toEqual({ path: "/a", search: undefined, hash: "y" });
   });
+
+  it.each([["/a?x=1&x=2"], ["/a?x=1?y=2"], ["/a?x#h"], ["/a?"], ["/a#"], ["/a?x=1&y"]])(
+    "splitHref refuses the lossy href %s",
+    (href) => {
+      expect(splitHref(href)).toBeNull();
+    },
+  );
+
+  it.each([["/a?x=1&x=2"], ["/a?x=1?y=2"], ["/a?x#h"], ["/a?"], ["/a#"]])(
+    "renders the lossy href %s as a plain anchor with the exact original href",
+    async (href) => {
+      const html = await render("/", <Link href={href}>a</Link>);
+      expect(html).toContain(`href="${href.replace(/&/g, "&amp;")}"`);
+      expect(html).not.toContain("data-status");
+      expect(html).not.toContain("data-discover");
+    },
+  );
+
+  it("never turns javascript: or protocol-relative hrefs into router links", async () => {
+    const js = await render("/", <Link href="javascript:alert(1)">a</Link>);
+    // React itself neutralizes javascript: URLs on a plain <a>; what matters is that it is not a router link.
+    expect(js).toMatch(/^<!--\$--><a href="javascript:/);
+    expect(js).not.toContain("data-status");
+    expect(js).not.toContain("data-discover");
+    const evil = await render("/", <Link href="//evil.com/x">a</Link>);
+    expect(evil).toContain('href="//evil.com/x"');
+    expect(evil).not.toContain("data-status");
+    expect(evil).not.toContain("data-discover");
+  });
+
+  it("keeps an encoded dynamic path segment intact", async () => {
+    const html = await render("/", <Link href="/hadith/ara-bukhari/Book%20of%20Faith%2F1">a</Link>);
+    expect(html).toContain('href="/hadith/ara-bukhari/Book%20of%20Faith%2F1"');
+  });
 });
 
 describe("usePathname", () => {

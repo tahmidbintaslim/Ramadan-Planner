@@ -1,3 +1,4 @@
+import { cachedFetch } from "@/lib/ttl-cache";
 import type { PrayerTimes, TimingData } from "@/types/database";
 import { fetchIslamicApiPrayerTimes } from "./islamic-api";
 import { getHijriAdjustmentParams, getHijriOffsetForLocation, getCountryCodeForTimezone } from "./hijri-offsets";
@@ -124,7 +125,7 @@ export async function fetchPrayerTimes(
         const offset = getHijriOffsetForLocation(country);
         const adjustmentParams = getHijriAdjustmentParams(offset);
         const url = `${ALADHAN_BASE}/${date}?latitude=${latitude}&longitude=${longitude}&method=1&school=1&timezonestring=${encodeURIComponent(timezone)}${adjustmentParams}`;
-        const res = await fetch(url, { next: { revalidate: 86400 } }); // ISR 24h
+        const res = await cachedFetch(url, 86400); // cached 24h
         if (!res.ok) {
             throw new Error(`AlAdhan API error: ${res.status} ${res.statusText}`);
         }

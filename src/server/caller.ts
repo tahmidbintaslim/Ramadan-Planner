@@ -5,17 +5,21 @@ import { setResponseStatus } from "@tanstack/react-start/server";
 import { getAppAuthUser, type AppAuthUser } from "@/lib/auth/server";
 import { AUTH_UNAVAILABLE_MESSAGE } from "./errors";
 
-/** The current session's user (with email), or null when signed out or it is not `userId`. */
-export async function getCallerWithEmail(userId: string): Promise<AppAuthUser | null> {
-  let user: AppAuthUser | null;
+/** The current session's user (with email), or null when signed out. Auth-backend failure: HTTP 503 `auth_unavailable`. */
+export async function getCurrentUserWithEmail(): Promise<AppAuthUser | null> {
   try {
-    user = await getAppAuthUser({ withEmail: true });
+    return await getAppAuthUser({ withEmail: true });
   } catch (error) {
     // Never serialize the backend's error text (Clerk) to the client: log it, answer generically.
     console.error("[getCallerWithEmail] auth lookup failed", error);
     setResponseStatus(503);
     throw new Error(AUTH_UNAVAILABLE_MESSAGE);
   }
+}
+
+/** The current session's user (with email), or null when signed out or it is not `userId`. */
+export async function getCallerWithEmail(userId: string): Promise<AppAuthUser | null> {
+  const user = await getCurrentUserWithEmail();
   if (!user || user.id !== userId) return null;
   return user;
 }

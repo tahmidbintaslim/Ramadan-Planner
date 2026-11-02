@@ -11,9 +11,11 @@ const m = vi.hoisted(() => ({
     userProfile: { findUnique: vi.fn() },
   },
   getAppAuthUser: vi.fn(),
+  setResponseStatus: vi.fn(),
 }));
 vi.mock("@/lib/prisma", () => ({ prisma: m.prisma }));
 vi.mock("@/lib/auth/server", () => ({ getAppAuthUser: m.getAppAuthUser }));
+vi.mock("@tanstack/react-start/server", () => ({ setResponseStatus: m.setResponseStatus }));
 
 import { addAdminUserImpl, getAdminAccessImpl, listAdminUsersImpl, removeAdminUserImpl } from "./admin-users-impl";
 
@@ -31,6 +33,7 @@ function writes() {
 beforeEach(() => {
   for (const model of Object.values(m.prisma)) for (const fn of Object.values(model)) fn.mockReset();
   m.getAppAuthUser.mockReset();
+  m.setResponseStatus.mockReset();
   vi.stubEnv("ADMIN_EMAILS", "boss@example.com");
   m.prisma.adminUser.findMany.mockResolvedValue([]);
   m.prisma.userProfile.findUnique.mockResolvedValue({ id: TARGET });
@@ -153,5 +156,20 @@ describe("getAdminAccessImpl (page gate)", () => {
     expect(await getAdminAccessImpl()).toBe("ok");
     session(ADMIN_MAIL, "Boss@Example.com");
     expect(await getAdminAccessImpl()).toBe("ok");
+  });
+
+  it("Clerk throws -> 503 auth_unavailable, original text never surfaces, nothing is read", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    m.getAppAuthUser.mockRejectedValue(new Error("clerk: secret key sk_test_abc rejected at api.clerk.com"));
+    const err = await getAdminAccessImpl().then(
+      () => null,
+      (e: unknown) => e,
+    );
+    expect(err).toBeInstanceOf(Error);
+    expect((err as Error).message).toBe("auth_unavailable");
+    expect(String(err)).not.toContain("sk_test_abc");
+    expect(String(err)).not.toContain("clerk");
+    expect(m.setResponseStatus).toHaveBeenCalledWith(503);
+    expect(m.prisma.adminUser.findUnique).not.toHaveBeenCalled();
   });
 });

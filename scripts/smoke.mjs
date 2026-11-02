@@ -45,6 +45,65 @@ async function open(path, locale) {
   return { ctx, page, res, msgs };
 }
 
+// Data-backed routes. No database exists in the sandbox: surah pages fall back to quranapi.pages.dev for the
+// loader (title/meta), hadith pages must show their controlled error card (HTTP 503), never raw errors.
+const LEAK = /prisma|127\.0\.0\.1|localhost:5432|ECONNREFUSED|Can't reach database/i;
+
+console.log("/quran/1 (loader + head)");
+{
+  const { ctx, page, res, msgs } = await open("/quran/1");
+  res.status() === 200 ? ok("HTTP 200") : fail(`status ${res.status()}`);
+  const title = await page.title();
+  /Al-Faatiha/.test(title) && /সূরা 1/.test(title) ? ok(`title "${title}"`) : fail(`title "${title}"`);
+  const robots = await page.locator('meta[name="robots"]').getAttribute("content");
+  robots === "index, follow" ? ok("robots index, follow (overrides _app noindex)") : fail(`robots ${robots}`);
+  const canon = await page.locator('link[rel="canonical"]').getAttribute("href").catch(() => null);
+  (process.env.SITE_URL ? canon === `${process.env.SITE_URL.replace(/\/$/, "")}/quran/1` : canon === null)
+    ? ok(`canonical ${canon}`)
+    : fail(`canonical ${canon}`);
+  (await page.locator("main").first().isVisible()) ? ok("main rendered") : fail("no main");
+  msgs.some((m) => HYDRATION.test(m)) ? fail("hydration warning") : ok("no hydration warning");
+  await ctx.close();
+}
+
+for (const bad of ["/quran/999", "/quran/0", "/quran/abc", "/hadith/nope/does-not-exist-x"]) {
+  console.log(`${bad} (404 or controlled error)`);
+  const { ctx, page, res } = await open(bad);
+  const body = await page.content();
+  LEAK.test(body) ? fail("raw database/host text in the page") : ok("no database/host text");
+  if (bad.startsWith("/quran")) {
+    res.status() === 404 ? ok("HTTP 404") : fail(`status ${res.status()}`);
+    (await page.getByText(/পাতা পাওয়া যায়নি|Page not found/).first().isVisible()) ? ok("root not-found page") : fail("not-found page missing");
+  } else {
+    // Without a database the edition cannot be looked up: 503 with the error card (404 once a DB answers).
+    [404, 503].includes(res.status()) ? ok(`HTTP ${res.status()}`) : fail(`status ${res.status()}`);
+  }
+  await ctx.close();
+}
+
+console.log("/hadith (list, no database)");
+{
+  const { ctx, page, res } = await open("/hadith");
+  res.status() === 503 ? ok("HTTP 503") : fail(`status ${res.status()}`);
+  const body = await page.content();
+  LEAK.test(body) ? fail("raw database/host text in the page") : ok("no database/host text");
+  (await page.locator("main p").first().isVisible()) ? ok("controlled message shown") : fail("no message");
+  await ctx.close();
+}
+
+console.log("client-side navigation to /hadith (server-function RPC path)");
+{
+  const { ctx, page, msgs } = await open("/today");
+  await page.locator('a[href="/hadith"]:visible').first().click();
+  await page.waitForURL("**/hadith", { timeout: 15000 });
+  await page.getByText(/হাদিস পাঠ|Hadith/).first().waitFor({ state: "visible", timeout: 15000 });
+  const text = await page.locator("main").first().innerText();
+  LEAK.test(text) ? fail("raw database/host text after client navigation") : ok("no database/host text");
+  /পাওয়া যায়নি|ব্যর্থ|Failed|No hadith|error/i.test(text) ? ok(`controlled state "${text.replace(/\s+/g, " ").slice(0, 60)}"`) : fail(`unexpected: ${text.slice(0, 80)}`);
+  msgs.some((m) => HYDRATION.test(m)) ? fail("hydration warning") : ok("no hydration warning");
+  await ctx.close();
+}
+
 for (const route of ROUTES) {
   console.log(route);
   const { ctx, page, res, msgs } = await open(route);

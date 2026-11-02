@@ -1,3 +1,4 @@
+import { cachedFetch } from "@/lib/ttl-cache";
 import { addDays } from "date-fns";
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 
@@ -114,7 +115,7 @@ async function fetchMonthCalendar(
   timezone: string,
 ): Promise<AlAdhanCalendarDay[]> {
   const url = `${ALADHAN_BASE}/${year}/${month}?latitude=${latitude}&longitude=${longitude}&method=1&school=1&timezonestring=${encodeURIComponent(timezone)}`;
-  const res = await fetch(url, { next: { revalidate: 3600 } });
+  const res = await cachedFetch(url, 3600);
   if (!res.ok) {
     throw new Error(`Calendar API failed (${res.status})`);
   }

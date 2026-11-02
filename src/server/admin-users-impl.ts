@@ -3,8 +3,7 @@
 import "@tanstack/react-start/server-only";
 import { prisma } from "@/lib/prisma";
 import { isUserAdmin } from "@/lib/admin";
-import { getCallerWithEmail } from "@/server/caller";
-import { getAppAuthUser } from "@/lib/auth/server";
+import { getCallerWithEmail, getCurrentUserWithEmail } from "@/server/caller";
 import {
   addSchema,
   removeSchema,
@@ -103,7 +102,7 @@ export type AdminAccess = "ok" | "unauthorized" | "forbidden";
 
 /** Page gate for /admin/announcements: signed out, signed in but not an admin, or an admin. */
 export async function getAdminAccessImpl(): Promise<AdminAccess> {
-  const user = await getAppAuthUser({ withEmail: true });
+  const user = await getCurrentUserWithEmail();
   if (!user) return "unauthorized";
   return (await isUserAdmin({ userId: user.id, email: user.email })) ? "ok" : "forbidden";
 }
