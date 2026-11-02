@@ -13,7 +13,11 @@ function memDb() {
   const customers = new Map<string, string>(); // customerId -> userId
   const subs = new Map<string, SubscriptionRow>();
   const writes: string[] = [];
+  const order: string[] = []; // read/lock call order, for the per-subscription lock check
   const tx: BillingTx = {
+    async lockSubscription(id) {
+      order.push(`lock:${id}`); // transactions already run serialized here
+    },
     async recordEvent(id, type) {
       if (events.has(id)) return false;
       events.set(id, type);
@@ -31,11 +35,12 @@ function memDb() {
       subs.set(row.id, row);
     },
     async getEventCreated(id) {
+      order.push(`get:${id}`);
       return subs.get(id)?.eventCreated ?? null;
     },
     async markCanceledForUser(u, eventCreated) {
       writes.push("cancel");
-      for (const [id, s] of subs) if (s.userId === u) subs.set(id, { ...s, status: "canceled", eventCreated });
+      for (const [id, s] of subs) if (s.userId === u) subs.set(id, { ...s, status: "canceled", eventCreated: Math.max(s.eventCreated, eventCreated) });
     },
   };
   // Serialized transactions with snapshot/rollback, like a DB with a unique event id.
@@ -63,7 +68,7 @@ function memDb() {
       return result;
     },
   };
-  return { db, tx, events, customers, subs, writes };
+  return { db, tx, events, customers, subs, writes, order };
 }
 
 function sub(over: Partial<{ id: string; status: string; price: string; customer: unknown; trialEnd: number | null }> = {}) {
@@ -311,5 +316,19 @@ describe("applyStripeEvent", () => {
     const e = evt("customer.subscription.updated", sub());
     await expect(applyStripeEvent(e, s.deps)).rejects.toThrow("stripe down");
     expect(await applyStripeEvent(e, s.deps)).toBe("applied");
+  });
+
+  it("locks the subscription before reading its stored eventCreated", async () => {
+    const s = setup();
+    await applyStripeEvent(evt("customer.subscription.updated", sub()), s.deps);
+    expect(s.order).toEqual(["lock:sub_1", "get:sub_1"]);
+  });
+
+  it("a delayed cancel event older than the stored eventCreated never lowers it", async () => {
+    const s = setup();
+    await applyStripeEvent(evt("customer.subscription.created", sub(), { id: "evt_c", created: 3000 }), s.deps);
+    const charge = { object: "charge", customer: "cus_1", amount: 500, amount_refunded: 500 };
+    expect(await applyStripeEvent(evt("charge.refunded", charge, { id: "evt_r", created: 2000 }), s.deps)).toBe("applied");
+    expect(s.subs.get("sub_1")).toMatchObject({ status: "canceled", eventCreated: 3000 });
   });
 });

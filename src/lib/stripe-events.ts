@@ -18,11 +18,13 @@ export type SubscriptionRow = {
 export interface BillingTx {
   /** Inserts the event id; false if it was already recorded. */
   recordEvent(id: string, type: string): Promise<boolean>;
+  /** Serializes concurrent events for one subscription until the transaction ends. */
+  lockSubscription(subscriptionId: string): Promise<void>;
   userIdForCustomer(customerId: string): Promise<string | null>;
   linkCustomer(userId: string, customerId: string): Promise<void>;
   upsertSubscription(row: SubscriptionRow): Promise<void>;
   getEventCreated(subscriptionId: string): Promise<number | null>;
-  /** Sets status canceled and eventCreated on all of the user's subscriptions. */
+  /** Sets status canceled on all of the user's subscriptions; eventCreated only ever rises. */
   markCanceledForUser(userId: string, eventCreated: number): Promise<void>;
 }
 
@@ -67,6 +69,7 @@ async function prepare(event: Stripe.Event, retrieveSubscription: StripeEventDep
     if (!subscriptionId) return ignored;
     const sub = await retrieveSubscription(subscriptionId);
     return async (tx) => {
+      await tx.lockSubscription(sub.id);
       if (before) await before(tx);
       const item = sub.items.data[0];
       const priceId = item?.price.id ?? "";
@@ -139,6 +142,9 @@ function prismaTx(db: Prisma.TransactionClient): BillingTx {
       const { count } = await db.stripeEvent.createMany({ data: [{ id, type }], skipDuplicates: true });
       return count === 1;
     },
+    async lockSubscription(subscriptionId) {
+      await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${subscriptionId}))`;
+    },
     async userIdForCustomer(stripeCustomerId) {
       const row = await db.billingCustomer.findUnique({ where: { stripeCustomerId }, select: { userId: true } });
       return row?.userId ?? null;
@@ -155,7 +161,7 @@ function prismaTx(db: Prisma.TransactionClient): BillingTx {
       return row ? Number(row.eventCreated) : null;
     },
     async markCanceledForUser(userId, eventCreated) {
-      await db.subscription.updateMany({ where: { userId }, data: { status: "canceled", eventCreated: BigInt(eventCreated) } });
+      await db.$executeRaw`UPDATE public.subscriptions SET status = 'canceled', event_created = GREATEST(event_created, ${BigInt(eventCreated)}), updated_at = now() WHERE user_id = ${userId}::uuid`;
     },
   };
 }
