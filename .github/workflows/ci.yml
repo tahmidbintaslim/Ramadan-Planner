@@ -20,7 +20,6 @@ jobs:
     env:
       # Placeholder only: the build needs a well-formed URL but never connects.
       DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
-      NEXT_TELEMETRY_DISABLED: "1"
     steps:
       - uses: actions/checkout@v7
 
@@ -41,5 +40,5 @@ jobs:
       - name: Unit tests
         run: npm test
 
-      - name: Build
-        run: npm run build
+      - name: Build (Vercel output)
+        run: NITRO_PRESET=vercel npm run build

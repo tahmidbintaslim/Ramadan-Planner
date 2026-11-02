@@ -13,9 +13,14 @@
 # testing
 /coverage
 
-# next.js
+# next.js (until the migration finishes)
 /.next/
 /out/
+
+# TanStack Start / Vite / Nitro build output
+/.output/
+/.nitro/
+/.tanstack/
 
 # production
 /build

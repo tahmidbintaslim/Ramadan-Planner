@@ -1,1 +1,1 @@
-{"crons":[{"path":"/api/push/dispatch","schedule":"0 0 * * *"}]}
+{"framework":"tanstack-start","crons":[{"path":"/api/push/dispatch","schedule":"0 0 * * *"}]}

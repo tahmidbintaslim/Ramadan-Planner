@@ -7,7 +7,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/components/providers/auth-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { AccessibilitySidebar } from "@/components/shared/accessibility-sidebar";
-import "./globals.css";
+import "./globals.css"; // moved to src/styles/globals.css in the TanStack migration (Task 1); this file is deleted in Task 4
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("common");
