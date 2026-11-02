@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS public.subscriptions (
   user_id UUID NOT NULL REFERENCES public.user_profiles(id) ON DELETE CASCADE,
   status TEXT NOT NULL,
   price_id TEXT NOT NULL,
+  current_period_start TIMESTAMPTZ, -- past_due grace is measured from here
   current_period_end TIMESTAMPTZ,
   trial_end TIMESTAMPTZ,
   cancel_at_period_end BOOLEAN NOT NULL DEFAULT FALSE,

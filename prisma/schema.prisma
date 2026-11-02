@@ -774,16 +774,17 @@ model BillingCustomer {
 }
 
 model Subscription {
-  id                String      @id
-  userId            String      @map("user_id") @db.Uuid
-  status            String
-  priceId           String      @map("price_id")
-  currentPeriodEnd  DateTime?   @map("current_period_end") @db.Timestamptz(6)
-  trialEnd          DateTime?   @map("trial_end") @db.Timestamptz(6)
-  cancelAtPeriodEnd Boolean     @default(false) @map("cancel_at_period_end")
-  eventCreated      BigInt      @map("event_created")
-  updatedAt         DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  user              UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                 String      @id
+  userId             String      @map("user_id") @db.Uuid
+  status             String
+  priceId            String      @map("price_id")
+  currentPeriodStart DateTime?   @map("current_period_start") @db.Timestamptz(6)
+  currentPeriodEnd   DateTime?   @map("current_period_end") @db.Timestamptz(6)
+  trialEnd           DateTime?   @map("trial_end") @db.Timestamptz(6)
+  cancelAtPeriodEnd  Boolean     @default(false) @map("cancel_at_period_end")
+  eventCreated       BigInt      @map("event_created")
+  updatedAt          DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user               UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("subscriptions")

@@ -1,12 +1,16 @@
 export const FREE_REMINDER_LIMIT = 3;
 export const PAST_DUE_GRACE_DAYS = 5;
 
+/** Subscription statuses that grant Plus outright (past_due only within grace). */
+export const GRANTING_STATUSES = ["active", "trialing"] as const;
+const isGranting = (status: string) => (GRANTING_STATUSES as readonly string[]).includes(status);
+
 export type Plan = "free" | "plus";
 export type PlanSource = "grant" | "subscription" | "none";
 
 export function resolvePlan(input: {
   grant: { expiresAt: Date | null } | null;
-  subscription: { status: string; currentPeriodEnd: Date | null } | null;
+  subscription: { status: string; currentPeriodStart: Date | null } | null;
   now: Date;
 }): { plan: Plan; source: PlanSource } {
   const { grant, subscription, now } = input;
@@ -14,13 +18,14 @@ export function resolvePlan(input: {
     return { plan: "plus", source: "grant" };
   }
   if (subscription) {
-    const { status, currentPeriodEnd } = subscription;
-    const graceEnd = currentPeriodEnd && currentPeriodEnd.getTime() + PAST_DUE_GRACE_DAYS * 86_400_000;
-    if (
-      status === "active" ||
-      status === "trialing" ||
-      (status === "past_due" && graceEnd !== null && graceEnd > now.getTime())
-    ) {
+    const { status, currentPeriodStart } = subscription;
+    // Grace runs from the period START: Stripe advances the period before a renewal invoice is paid,
+    // so the period end of a past_due subscription is the end of the unpaid period.
+    const inGrace =
+      status === "past_due" &&
+      currentPeriodStart !== null &&
+      now.getTime() < currentPeriodStart.getTime() + PAST_DUE_GRACE_DAYS * 86_400_000;
+    if (isGranting(status) || inGrace) {
       return { plan: "plus", source: "subscription" };
     }
   }
@@ -30,7 +35,7 @@ export function resolvePlan(input: {
 // A user may have several subscription rows (resubscribes); any qualifying row grants plus.
 export function resolvePlanFromRows(input: {
   grant: { expiresAt: Date | null } | null;
-  subscriptions: Array<{ status: string; currentPeriodEnd: Date | null }>;
+  subscriptions: Array<{ status: string; currentPeriodStart: Date | null }>;
   now: Date;
 }): { plan: Plan; source: PlanSource } {
   const { grant, subscriptions, now } = input;

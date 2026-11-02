@@ -74,7 +74,7 @@ function sub(over: Partial<{ id: string; status: string; price: string; customer
     customer: over.customer ?? "cus_1",
     cancel_at_period_end: false,
     trial_end: over.trialEnd ?? null,
-    items: { data: [{ price: { id: over.price ?? "price_m" }, current_period_end: 1_800_000_000 }] },
+    items: { data: [{ price: { id: over.price ?? "price_m" }, current_period_start: 1_797_408_000, current_period_end: 1_800_000_000 }] },
   } as unknown as Stripe.Subscription;
 }
 
@@ -107,6 +107,7 @@ describe("applyStripeEvent", () => {
       userId: "user_1",
       status: "active",
       priceId: "price_m",
+      currentPeriodStart: new Date(1_797_408_000 * 1000),
       currentPeriodEnd: new Date(1_800_000_000 * 1000),
       trialEnd: null,
       cancelAtPeriodEnd: false,

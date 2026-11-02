@@ -7,6 +7,7 @@ export type SubscriptionRow = {
   userId: string;
   status: string;
   priceId: string;
+  currentPeriodStart: Date | null;
   currentPeriodEnd: Date | null;
   trialEnd: Date | null;
   cancelAtPeriodEnd: boolean;
@@ -81,6 +82,7 @@ async function prepare(event: Stripe.Event, retrieveSubscription: StripeEventDep
         userId,
         status: sub.status,
         priceId,
+        currentPeriodStart: item?.current_period_start ? new Date(item.current_period_start * 1000) : null,
         currentPeriodEnd: item?.current_period_end ? new Date(item.current_period_end * 1000) : null,
         trialEnd: sub.trial_end ? new Date(sub.trial_end * 1000) : null,
         cancelAtPeriodEnd: sub.cancel_at_period_end,
