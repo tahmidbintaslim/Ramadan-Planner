@@ -28,7 +28,7 @@ Sync behavior:
 
 - `GOOGLE_OAUTH_CLIENT_ID`
 - `GOOGLE_OAUTH_CLIENT_SECRET`
-- `NEXT_PUBLIC_APP_URL` (recommended in production)
+- `APP_URL` (recommended in production; the deprecated `NEXT_PUBLIC_APP_URL` is still read as a fallback)
 - `CALENDAR_TOKENS_ENCRYPTION_KEY` (32-byte key in base64 or 64-char hex)
 
 ## Google Cloud OAuth Setup

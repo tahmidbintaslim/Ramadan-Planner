@@ -82,7 +82,7 @@ describe("Link", () => {
     expect(html).not.toContain("data-status");
   });
 
-  it("ignores next/link-only props", async () => {
+  it("ignores Next.js-Link-only props", async () => {
     const html = await render("/", <Link href="/today" prefetch scroll={false}>t</Link>);
     expect(html).not.toContain("prefetch");
     expect(html).not.toContain("scroll");

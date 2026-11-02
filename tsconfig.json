@@ -24,8 +24,6 @@
     ".output",
     ".vercel",
     ".nitro",
-    ".tanstack",
-    // TEMPORARY (TanStack migration Task 1): Next.js code not ported yet; Task 11 removes these.
-    "src/app"
+    ".tanstack"
   ]
 }

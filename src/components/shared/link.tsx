@@ -2,7 +2,7 @@ import { forwardRef } from "react";
 import type { AnchorHTMLAttributes, ReactNode } from "react";
 import { Link as RouterLink, defaultParseSearch, defaultStringifySearch } from "@tanstack/react-router";
 
-// Drop-in replacement for `next/link` at the existing call sites: `href` is a plain string.
+// Drop-in replacement for the old Next.js Link component at the existing call sites: `href` is a plain string.
 // Internal paths render TanStack Router's <Link> (client navigation); external URLs, hash links,
 // mailto:/tel:, relative hrefs and /api/* (server routes, full page loads) render a plain <a>.
 // An internal href with `?query` and/or `#hash` is split into TanStack's `to`, `search` and `hash`.
@@ -10,9 +10,10 @@ export interface LinkProps
   extends Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href"> {
   href: string;
   children?: ReactNode;
-  /** Accepted for next/link compatibility; ignored. */
+  /** Accepted for compatibility with the old Next.js Link; ignored (the router preloads on intent: hover/touch,
+   *  see `defaultPreload` in src/router.tsx, instead of Next's viewport prefetch). */
   prefetch?: boolean | null;
-  /** Accepted for next/link compatibility; ignored. */
+  /** Accepted for compatibility with the old Next.js Link; ignored. */
   scroll?: boolean;
   /** Replace the history entry instead of pushing (internal links only). */
   replace?: boolean;
@@ -56,7 +57,7 @@ export function splitHref(
 
 export const Link = forwardRef<HTMLAnchorElement, LinkProps>(function Link(props, ref) {
   const { href, replace, children, ...restWithNextProps } = props;
-  // next/link-only props are accepted for compatibility and dropped here.
+  // Next.js-Link-only props are accepted for compatibility and dropped here.
   const { prefetch, scroll, ...rest } = restWithNextProps;
   void prefetch;
   void scroll;

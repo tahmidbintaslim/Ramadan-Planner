@@ -38,8 +38,12 @@ function main() {
   const subjectFromEnv = (process.env.VAPID_SUBJECT ?? "").trim();
   const subject = subjectFromArg || subjectFromEnv;
 
+  // VITE_ so Vite exposes the public key to the browser. A leftover deprecated NEXT_PUBLIC_ line is
+  // rewritten too, so it never holds a key from an older pair.
+  const existing = fs.existsSync(envPath) ? fs.readFileSync(envPath, "utf8") : "";
   const entries = {
-    NEXT_PUBLIC_VAPID_PUBLIC_KEY: vapidKeys.publicKey,
+    VITE_VAPID_PUBLIC_KEY: vapidKeys.publicKey,
+    ...(/^NEXT_PUBLIC_VAPID_PUBLIC_KEY=/m.test(existing) ? { NEXT_PUBLIC_VAPID_PUBLIC_KEY: vapidKeys.publicKey } : {}),
     VAPID_PRIVATE_KEY: vapidKeys.privateKey,
     ...(subject ? { VAPID_SUBJECT: subject } : {}),
   };

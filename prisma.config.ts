@@ -1,7 +1,7 @@
 import path from "node:path";
 import { defineConfig } from "prisma/config";
 
-// Load from .env.local (Next.js convention) with .env fallback
+// Load from .env.local (the same file Vite reads) with .env fallback
 import dotenv from "dotenv";
 dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 dotenv.config({ path: path.resolve(process.cwd(), ".env"), override: false });

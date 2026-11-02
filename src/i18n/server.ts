@@ -16,7 +16,7 @@ export async function getTranslator(locale: Locale, namespace?: string) {
     return createTranslator({ locale: safe, messages: await loadMessages(safe), namespace });
 }
 
-// Same names as next-intl/server so server pages port with an import change.
+// Same names as the old Next.js i18n server helpers so server pages port with an import change.
 export async function getLocale(): Promise<Locale> {
     return getLocaleFromRequest();
 }
