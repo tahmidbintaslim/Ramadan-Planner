@@ -11,7 +11,7 @@ export async function getCurrentUserWithEmail(): Promise<AppAuthUser | null> {
     return await getAppAuthUser({ withEmail: true });
   } catch (error) {
     // Never serialize the backend's error text (Clerk) to the client: log it, answer generically.
-    console.error("[getCallerWithEmail] auth lookup failed", error);
+    console.error("[getCurrentUserWithEmail] auth lookup failed", error);
     setResponseStatus(503);
     throw new Error(AUTH_UNAVAILABLE_MESSAGE);
   }

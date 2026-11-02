@@ -1,6 +1,7 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { getSurahPageData } from "@/actions/quran-page";
 import { QuranReader } from "@/components/quran/quran-reader";
+import { pageHead } from "@/lib/seo";
 
 // Port of src/app/(app)/quran/[surah]/page.tsx. `parseInt` as before (so "12abc" still means 12).
 function parseSurah(param: string): number | null {
@@ -16,34 +17,21 @@ export const Route = createFileRoute("/_app/quran/$surah")({
     if (!data) throw notFound();
     return data;
   },
-  head: ({ loaderData }) => {
+  head: ({ loaderData, matches }) => {
     if (!loaderData) return {};
-    const { surahNumber, surah, siteUrl } = loaderData;
+    const { surahNumber, surah } = loaderData;
     if (!surah) {
-      return {
-        meta: [
-          { title: `Surah ${surahNumber}` },
-          { name: "description", content: `Surah ${surahNumber}` },
-        ],
-      };
+      // No surah row: keep the `_app` noindex and skip the canonical.
+      return pageHead({ matches, fullTitle: `Surah ${surahNumber}`, description: `Surah ${surahNumber}` });
     }
-    const title = `${surah.nameEnglish} — সূরা ${surah.surahNo}`;
-    const description = `${surah.nameBengali} (${surah.nameEnglish}) — ${surah.totalAyah} আয়াত`;
-    const path = `/quran/${surahNumber}`;
-    const pageUrl = siteUrl ? `${siteUrl}${path}` : path;
-    return {
-      meta: [
-        { title },
-        { name: "description", content: description },
-        // Overrides the `_app` noindex (the old page did the same): surah pages are public.
-        { name: "robots", content: "index, follow" },
-        { property: "og:title", content: title },
-        { property: "og:description", content: description },
-        { property: "og:url", content: pageUrl },
-        ...(siteUrl ? [{ property: "og:image", content: `${siteUrl}/og.png` }] : []),
-      ],
-      links: siteUrl ? [{ rel: "canonical", href: pageUrl }] : [],
-    };
+    const h = pageHead({
+      matches,
+      fullTitle: `${surah.nameEnglish} — সূরা ${surah.surahNo}`,
+      description: `${surah.nameBengali} (${surah.nameEnglish}) — ${surah.totalAyah} আয়াত`,
+      canonicalPath: `/quran/${surahNumber}`,
+    });
+    // Overrides the `_app` noindex (the old page did the same): surah pages are public and in the sitemap.
+    return { ...h, meta: [...h.meta, { name: "robots", content: "index, follow" }] };
   },
   component: SurahRoute,
 });

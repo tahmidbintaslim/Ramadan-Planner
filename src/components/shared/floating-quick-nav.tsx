@@ -18,9 +18,7 @@ export function FloatingQuickNav({
   const isAuthPage =
     pathname.startsWith("/sign-in") ||
     pathname.startsWith("/sign-up") ||
-    pathname.startsWith("/login") ||
     pathname.startsWith("/signup") ||
-    pathname.startsWith("/forgot") ||
     pathname.startsWith("/auth");
 
   if (!isAuthPage) return null;

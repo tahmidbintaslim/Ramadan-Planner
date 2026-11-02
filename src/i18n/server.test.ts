@@ -13,6 +13,12 @@ describe("i18n server helpers", () => {
         expect(Object.keys(m)).toEqual(Object.keys(bn));
     });
 
+    it("loadMessages(en) loads the English file, not the Bengali one", async () => {
+        const [en, bnMsgs] = await Promise.all([loadMessages("en"), loadMessages("bn")]);
+        expect(en).not.toEqual(bnMsgs);
+        expect(en.nav).not.toEqual(bnMsgs.nav);
+    });
+
     it("renders a Bengali string with an ICU argument (digits are localized by the app, not the argument)", async () => {
         const t = (await getTranslator("bn", "landing")) as (k: string, v?: object) => string;
         expect(t("quranAyahs", { count: 286 })).toBe("286 আয়াত");
@@ -44,6 +50,8 @@ describe("i18n server helpers", () => {
         expect(parseLocale("en")).toBe("en");
         expect(parseLocale("xx")).toBe("bn");
         expect(parseLocale(undefined)).toBe("bn");
+        // Prototype keys, empty and wrong-case values never pass as a locale.
+        for (const v of ["constructor", "__proto__", "toString", "", "EN", "Bn", " en"]) expect(parseLocale(v)).toBe("bn");
         vi.mocked(getCookie).mockReturnValue("en");
         expect(await getLocaleFromRequest()).toBe("en");
         vi.mocked(getCookie).mockReturnValue("zz");

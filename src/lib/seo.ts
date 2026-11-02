@@ -22,6 +22,8 @@ type PageHeadOptions = {
   matches: readonly MatchLike[];
   /** Page name; the title becomes "<name> — <appName>" (or just appName when omitted). */
   title?: string;
+  /** Exact document title (no app-name suffix); wins over `title`. */
+  fullTitle?: string;
   description?: string;
   /** Path for canonical/og:url (public, indexable pages only). */
   canonicalPath?: string;
@@ -29,10 +31,10 @@ type PageHeadOptions = {
 };
 
 /** Tags a public page sets. Child tags override the root's title/description/og:* (same key). */
-export function pageHead({ matches, title, description, canonicalPath, scripts }: PageHeadOptions) {
+export function pageHead({ matches, title, fullTitle: exactTitle, description, canonicalPath, scripts }: PageHeadOptions) {
   const root = rootData(matches);
   const appName = msg(root, "common", "appName", "Ramadan Planner");
-  const fullTitle = title ? `${title} — ${appName}` : msg(root, "common", "metaTitle", appName);
+  const fullTitle = exactTitle ?? (title ? `${title} — ${appName}` : msg(root, "common", "metaTitle", appName));
   const desc = description ?? msg(root, "common", "metaDescription");
   const ogDesc = description ?? msg(root, "common", "metaOgDescription", desc);
   const siteUrl = root?.siteUrl ?? "";

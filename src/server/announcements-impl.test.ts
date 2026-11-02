@@ -103,10 +103,11 @@ describe("admin gate on every admin function", () => {
     for (const fn of Object.values(m.prisma.announcement)) expect(fn).not.toHaveBeenCalled();
   });
 
-  it.each(calls)("%s: a non-admin with INVALID input still gets forbidden (admin check first)", async () => {
+  it("a non-admin with INVALID input still gets forbidden (admin check first) and nothing is written", async () => {
     session(NOBODY, "nobody@example.com");
     expect(await saveAnnouncementImpl(NOBODY, { nope: 1 })).toEqual({ ok: false, error: "forbidden" });
     expect(await deleteAnnouncementImpl(NOBODY, "not-a-uuid")).toEqual({ ok: false, error: "forbidden" });
+    for (const fn of Object.values(m.prisma.announcement)) expect(fn).not.toHaveBeenCalled();
   });
 
   it.each(calls)("%s: no session, or a session for another user, is unauthorized", async (_n, call) => {

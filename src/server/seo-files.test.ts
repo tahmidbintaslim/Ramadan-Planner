@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { robotsTxt, seoBaseUrl, sitemapXml, SITEMAP_HEADERS, ROBOTS_HEADERS } from "./seo-files";
+import { robotsTxt, seoBaseUrl, sitemapXml, xmlEscape, resetSeoBaseUrlWarning, SITEMAP_HEADERS, ROBOTS_HEADERS } from "./seo-files";
 import { getSiteUrl } from "./site-url";
 
 // Copy of the logic in the deleted src/app/robots.txt/route.ts and src/app/sitemap.xml/route.ts, with the two
@@ -95,4 +95,36 @@ it("serves the right content types and caching", () => {
   expect(ROBOTS_HEADERS["Cache-Control"]).toBe("public, max-age=0, s-maxage=3600");
   expect(SITEMAP_HEADERS["Content-Type"]).toBe("application/xml");
   expect(SITEMAP_HEADERS["Cache-Control"]).toBe("public, max-age=0, s-maxage=3600");
+});
+
+describe("base URL safety", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    resetSeoBaseUrlWarning();
+  });
+
+  it("XML-escapes the base URL inside <loc>", () => {
+    expect(xmlEscape(`a&b<c>"d'`)).toBe("a&amp;b&lt;c&gt;&quot;d&apos;");
+    const xml = sitemapXml("https://x.test/?a=1&b=<2>");
+    expect(xml).toContain("<loc>https://x.test/?a=1&amp;b=&lt;2&gt;/quran</loc>");
+    expect(xml).not.toContain("&b=<2>");
+  });
+
+  it("warns once in production when falling back to localhost", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(seoBaseUrl("")).toBe("http://localhost:3000");
+    expect(seoBaseUrl("")).toBe("http://localhost:3000");
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(String(warn.mock.calls[0][0])).toMatch(/SITE_URL/);
+  });
+
+  it("does not warn outside production or when a site URL is set", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.stubEnv("NODE_ENV", "development");
+    seoBaseUrl("");
+    vi.stubEnv("NODE_ENV", "production");
+    expect(seoBaseUrl("https://site.example")).toBe("https://site.example");
+    expect(warn).not.toHaveBeenCalled();
+  });
 });
