@@ -30,6 +30,10 @@
 - Dynamic routes with a bad param (`/quran/999`, `/hadith/nope`) return a proper 404 page, not a 500.
 - Cron/push route rejects requests without the Bearer secret, accepts it with `CRON_SECRET`, and keeps `Cache-Control` headers identical to the Next.js responses listed in Task 8.
 
+## Execution order (ruling from the preflight scan)
+
+Run the tasks in this order: **1, 2, 3, 7, 4, 5, 6, 8, 9, 10, 11, 12.** Task 7 (server functions) must come before the shell and pages because client components import the action modules directly; under Vite, importing the old action files would drag Prisma, `next/headers` and other server-only code into the browser bundle. Task 7 depends only on Task 3's `authMiddleware` and Task 2's locale helpers. Tasks keep their numbers so the briefs and ledger stay stable.
+
 ---
 
 ### Task 1: Scaffold, build tooling and CI
