@@ -2,8 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { robotsTxt, seoBaseUrl, sitemapXml, SITEMAP_HEADERS, ROBOTS_HEADERS } from "./seo-files";
 import { getSiteUrl } from "./site-url";
 
-// Verbatim copy of the logic in the deleted src/app/robots.txt/route.ts and src/app/sitemap.xml/route.ts
-// (reference implementation; the new code must produce the same bytes).
+// Copy of the logic in the deleted src/app/robots.txt/route.ts and src/app/sitemap.xml/route.ts, with the two
+// deliberate changes: `Disallow: /api/` and no /plan /today /reminders /settings (signed-in, noindex).
 function oldBase(env: Record<string, string | undefined>) {
   return (
     env.NEXT_PUBLIC_SITE_URL ||
@@ -11,10 +11,10 @@ function oldBase(env: Record<string, string | undefined>) {
   );
 }
 function oldRobots(baseUrl: string) {
-  return ["User-agent: *", "Allow: /", `Sitemap: ${baseUrl}/sitemap.xml`].join("\n") + "\n";
+  return ["User-agent: *", "Allow: /", "Disallow: /api/", `Sitemap: ${baseUrl}/sitemap.xml`].join("\n") + "\n";
 }
 function oldSitemap(baseUrl: string) {
-  const staticPages = ["/", "/quran", "/hadith", "/plan", "/today", "/reminders", "/settings"];
+  const staticPages = ["/", "/quran", "/hadith"];
   const urls: string[] = [];
   for (const p of staticPages) urls.push(`<url><loc>${baseUrl}${p}</loc></url>`);
   for (let i = 1; i <= 114; i++) urls.push(`<url><loc>${baseUrl}/quran/${i}</loc></url>`);
@@ -26,7 +26,7 @@ function oldSitemap(baseUrl: string) {
 
 afterEach(() => vi.unstubAllEnvs());
 
-describe("robots.txt / sitemap.xml parity with the Next routes", () => {
+describe("robots.txt / sitemap.xml match the Next routes (plus the two deliberate changes)", () => {
   it.each([
     ["https://ramadan.example", ""],
     ["", "ramadan-planner.vercel.app"],
@@ -57,7 +57,7 @@ describe("sitemap content", () => {
   const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1].replace("https://x.test", ""));
 
   it("lists the public pages and surahs 1..114 exactly once", () => {
-    expect(locs).toHaveLength(7 + 114);
+    expect(locs).toHaveLength(3 + 114);
     expect(new Set(locs).size).toBe(locs.length);
     expect(locs).toEqual(expect.arrayContaining(["/", "/quran", "/hadith", "/quran/1", "/quran/114"]));
     expect(locs).not.toContain("/quran/0");
@@ -69,8 +69,11 @@ describe("sitemap content", () => {
     for (const f of forbidden) expect(locs.some((l) => l.startsWith(f))).toBe(false);
   });
 
-  it("keeps the Next parity entries /plan /today /reminders /settings (signed-in pages; noindex, reported as a concern)", () => {
-    expect(locs).toEqual(expect.arrayContaining(["/plan", "/today", "/reminders", "/settings"]));
+  it("does not list the signed-in noindex pages /plan /today /reminders /settings", () => {
+    for (const p of ["/plan", "/today", "/reminders", "/settings"]) {
+      expect(locs).not.toContain(p);
+      expect(xml).not.toContain(`x.test${p}<`);
+    }
   });
 
   it("has an XML declaration and urlset namespace", () => {
@@ -80,10 +83,10 @@ describe("sitemap content", () => {
 });
 
 describe("robots.txt content", () => {
-  it("allows everything (Next parity: no Disallow lines) and points at the sitemap", () => {
+  it("allows the site, disallows /api/ and points at the sitemap", () => {
     const txt = robotsTxt("https://x.test");
-    expect(txt).toBe("User-agent: *\nAllow: /\nSitemap: https://x.test/sitemap.xml\n");
-    expect(txt).not.toMatch(/Disallow/);
+    expect(txt).toBe("User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: https://x.test/sitemap.xml\n");
+    expect(txt.split("\n")).toContain("Disallow: /api/");
   });
 });
 

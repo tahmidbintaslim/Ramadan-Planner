@@ -1,4 +1,4 @@
-// robots.txt and sitemap.xml bodies. Ported 1:1 from src/app/robots.txt/route.ts and src/app/sitemap.xml/route.ts
+// robots.txt and sitemap.xml bodies. Ported from src/app/robots.txt/route.ts and src/app/sitemap.xml/route.ts
 // (same URLs, same lines, same whitespace). Pure functions so tests can pin the output.
 
 /** Old order: NEXT_PUBLIC_SITE_URL, then https://VERCEL_PROJECT_PRODUCTION_URL, then http://localhost:3000.
@@ -8,11 +8,12 @@ export function seoBaseUrl(siteUrl: string): string {
 }
 
 export function robotsTxt(baseUrl: string): string {
-  return ["User-agent: *", "Allow: /", `Sitemap: ${baseUrl}/sitemap.xml`].join("\n") + "\n";
+  return ["User-agent: *", "Allow: /", "Disallow: /api/", `Sitemap: ${baseUrl}/sitemap.xml`].join("\n") + "\n";
 }
 
-// Parity: the Next sitemap listed these (including the signed-in /today, /plan, /reminders, /settings).
-export const SITEMAP_STATIC_PAGES = ["/", "/quran", "/hadith", "/plan", "/today", "/reminders", "/settings"];
+// Public pages only. The Next sitemap also listed the signed-in noindex pages /plan, /today, /reminders,
+// /settings; they were dropped deliberately (Task 10 fix round 1).
+export const SITEMAP_STATIC_PAGES = ["/", "/quran", "/hadith"];
 export const SURAH_COUNT = 114;
 
 export function sitemapXml(baseUrl: string): string {
