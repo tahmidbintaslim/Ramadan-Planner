@@ -27,6 +27,8 @@ function memDb() {
       return customers.get(c) ?? null;
     },
     async linkCustomer(u, c) {
+      // Create-if-absent on both keys (user and customer), like createMany skipDuplicates.
+      if (customers.has(c) || [...customers.values()].includes(u)) return;
       writes.push("link");
       customers.set(c, u);
     },
@@ -90,6 +92,8 @@ function sub(over: Partial<{ id: string; status: string; price: string; customer
 function evt(type: string, object: unknown, over: { id?: string; created?: number } = {}) {
   return { id: over.id ?? "evt_1", type, created: over.created ?? 1000, data: { object } } as unknown as Stripe.Event;
 }
+
+const U9 = "9b2f0c1e-5d4a-4c3b-8a19-000000000009";
 
 function setup(subscription = sub()) {
   const m = memDb();
@@ -160,24 +164,60 @@ describe("applyStripeEvent", () => {
 
   it("checkout.session.completed links client_reference_id then upserts the re-fetched subscription", async () => {
     const s = setup(sub({ customer: "cus_new" }));
-    const session = { object: "checkout.session", client_reference_id: "user_9", customer: "cus_new", subscription: "sub_1" };
+    const session = { object: "checkout.session", client_reference_id: U9, customer: "cus_new", subscription: "sub_1" };
     expect(await applyStripeEvent(evt("checkout.session.completed", session), s.deps)).toBe("applied");
-    expect(s.customers.get("cus_new")).toBe("user_9");
+    expect(s.customers.get("cus_new")).toBe(U9);
     expect(s.writes).toEqual(["link", "upsert"]);
-    expect(s.subs.get("sub_1")?.userId).toBe("user_9");
+    expect(s.subs.get("sub_1")?.userId).toBe(U9);
   });
 
   it("checkout.session.completed accepts expanded customer and subscription objects", async () => {
     const s = setup(sub({ customer: "cus_new" }));
     const session = {
       object: "checkout.session",
-      client_reference_id: "user_9",
+      client_reference_id: U9,
       customer: { id: "cus_new" },
       subscription: { id: "sub_1", status: "incomplete" },
     };
     expect(await applyStripeEvent(evt("checkout.session.completed", session), s.deps)).toBe("applied");
     expect(s.deps.retrieveSubscription).toHaveBeenCalledWith("sub_1");
     expect(s.subs.get("sub_1")?.status).toBe("active");
+  });
+
+  it("checkout.session.completed never overwrites a user's existing customer link", async () => {
+    const s = setup(sub({ customer: "cus_new" }));
+    s.customers.set("cus_old", U9);
+    const session = { object: "checkout.session", client_reference_id: U9, customer: "cus_new", subscription: "sub_1" };
+    expect(await applyStripeEvent(evt("checkout.session.completed", session), s.deps)).toBe("ignored");
+    expect(s.customers.get("cus_old")).toBe(U9);
+    expect(s.customers.has("cus_new")).toBe(false);
+    expect(s.subs.size).toBe(0);
+  });
+
+  it("checkout.session.completed does not re-point a customer linked to another user", async () => {
+    const s = setup();
+    const session = { object: "checkout.session", client_reference_id: U9, customer: "cus_1", subscription: "sub_1" };
+    expect(await applyStripeEvent(evt("checkout.session.completed", session), s.deps)).toBe("applied");
+    expect(s.customers.get("cus_1")).toBe("user_1");
+    expect(s.subs.get("sub_1")?.userId).toBe("user_1");
+  });
+
+  it.each([
+    ["non-UUID", "user_9"],
+    ["missing", null],
+  ])("checkout.session.completed with a %s client_reference_id skips linking without throwing", async (_, ref) => {
+    const s = setup(sub({ customer: "cus_new" }));
+    const session = { object: "checkout.session", client_reference_id: ref, customer: "cus_new", subscription: "sub_1" };
+    expect(await applyStripeEvent(evt("checkout.session.completed", session), s.deps)).toBe("ignored");
+    expect(s.customers.has("cus_new")).toBe(false);
+    expect(s.writes).toEqual([]);
+  });
+
+  it("checkout.session.completed without client_reference_id still syncs an already linked customer", async () => {
+    const s = setup();
+    const session = { object: "checkout.session", client_reference_id: null, customer: "cus_1", subscription: "sub_1" };
+    expect(await applyStripeEvent(evt("checkout.session.completed", session), s.deps)).toBe("applied");
+    expect(s.subs.get("sub_1")?.userId).toBe("user_1");
   });
 
   it("checkout.session.completed without a subscription is ignored", async () => {
@@ -285,7 +325,7 @@ describe("applyStripeEvent", () => {
   it("a failed checkout rolls back the customer link too", async () => {
     const s = setup(sub({ customer: "cus_new" }));
     s.tx.upsertSubscription = vi.fn().mockRejectedValue(new Error("db down"));
-    const session = { object: "checkout.session", client_reference_id: "user_9", customer: "cus_new", subscription: "sub_1" };
+    const session = { object: "checkout.session", client_reference_id: U9, customer: "cus_new", subscription: "sub_1" };
     await expect(applyStripeEvent(evt("checkout.session.completed", session), s.deps)).rejects.toThrow("db down");
     expect(s.customers.has("cus_new")).toBe(false);
     expect(s.events.size).toBe(0);

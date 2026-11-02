@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import type Stripe from "stripe";
+import { GRANTING_STATUSES } from "@/lib/entitlements";
 import { isAllowedPrice } from "@/lib/stripe";
 
 export type SubscriptionRow = {
@@ -21,6 +22,7 @@ export interface BillingTx {
   /** Serializes concurrent events for one subscription until the transaction ends. */
   lockSubscription(subscriptionId: string): Promise<void>;
   userIdForCustomer(customerId: string): Promise<string | null>;
+  /** Creates the link if neither the user nor the customer is linked yet; never overwrites or throws on a conflict. */
   linkCustomer(userId: string, customerId: string): Promise<void>;
   /** Deletes the link for this customer; no-op if absent. */
   unlinkCustomer(customerId: string): Promise<void>;
@@ -46,7 +48,8 @@ type Step = (tx: BillingTx) => Promise<ApplyResult>;
 
 const idOf = (v: string | { id: string } | null | undefined): string | null => (typeof v === "string" ? v : (v?.id ?? null));
 
-const GRANTING = new Set(["active", "trialing"]);
+const GRANTING = new Set<string>(GRANTING_STATUSES);
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * Applies a verified Stripe event. Any Stripe fetch happens first, outside the transaction
@@ -110,7 +113,9 @@ async function prepare(event: Stripe.Event, retrieveSubscription: StripeEventDep
     case "checkout.session.completed": {
       const session = event.data.object;
       const customerId = idOf(session.customer);
-      const userId = session.client_reference_id;
+      const ref = session.client_reference_id;
+      // A bad reference skips linking; sync then trusts whatever link already exists (or ignores).
+      const userId = ref && UUID_RE.test(ref) ? ref : null;
       return sync(
         idOf(session.subscription),
         userId && customerId ? (tx) => tx.linkCustomer(userId, customerId) : undefined,
@@ -159,7 +164,7 @@ function prismaTx(db: Prisma.TransactionClient): BillingTx {
       return row?.userId ?? null;
     },
     async linkCustomer(userId, stripeCustomerId) {
-      await db.billingCustomer.upsert({ where: { userId }, create: { userId, stripeCustomerId }, update: { stripeCustomerId } });
+      await db.billingCustomer.createMany({ data: [{ userId, stripeCustomerId }], skipDuplicates: true });
     },
     async unlinkCustomer(stripeCustomerId) {
       await db.billingCustomer.deleteMany({ where: { stripeCustomerId } });
