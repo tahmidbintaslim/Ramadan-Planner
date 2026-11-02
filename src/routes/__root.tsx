@@ -27,8 +27,13 @@ export const Route = createRootRoute({
         { property: "og:title", content: title },
         { property: "og:description", content: common?.metaOgDescription ?? "" },
         { property: "og:type", content: "website" },
+        { name: "theme-color", content: "#006c40" },
       ],
-      links: [{ rel: "stylesheet", href: appCss }],
+      links: [
+        { rel: "stylesheet", href: appCss },
+        { rel: "manifest", href: "/manifest.webmanifest" },
+        { rel: "apple-touch-icon", href: "/icons/apple-touch-icon.png" },
+      ],
     };
   },
   shellComponent: RootDocument,
