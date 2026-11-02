@@ -14,6 +14,8 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as ForgotRouteImport } from './routes/forgot'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AppBooksRouteImport } from './routes/_app.books'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppDuasRouteImport } from './routes/_app.duas'
@@ -67,6 +69,16 @@ const ForgotRoute = ForgotRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
+  id: '/robots.txt',
+  path: '/robots.txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppBooksRoute = AppBooksRouteImport.update({
@@ -231,6 +243,8 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/forgot': typeof ForgotRoute
   '/login': typeof LoginRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/books': typeof AppBooksRoute
   '/dashboard': typeof AppDashboardRoute
   '/duas': typeof AppDuasRoute
@@ -267,6 +281,8 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/forgot': typeof ForgotRoute
   '/login': typeof LoginRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/books': typeof AppBooksRoute
   '/dashboard': typeof AppDashboardRoute
   '/duas': typeof AppDuasRoute
@@ -306,6 +322,8 @@ export interface FileRoutesById {
   '/_auth': typeof AuthRouteWithChildren
   '/forgot': typeof ForgotRoute
   '/login': typeof LoginRoute
+  '/robots.txt': typeof RobotsDottxtRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_app/books': typeof AppBooksRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/duas': typeof AppDuasRoute
@@ -344,6 +362,8 @@ export interface FileRouteTypes {
     | '/'
     | '/forgot'
     | '/login'
+    | '/robots.txt'
+    | '/sitemap.xml'
     | '/books'
     | '/dashboard'
     | '/duas'
@@ -380,6 +400,8 @@ export interface FileRouteTypes {
     | '/'
     | '/forgot'
     | '/login'
+    | '/robots.txt'
+    | '/sitemap.xml'
     | '/books'
     | '/dashboard'
     | '/duas'
@@ -418,6 +440,8 @@ export interface FileRouteTypes {
     | '/_auth'
     | '/forgot'
     | '/login'
+    | '/robots.txt'
+    | '/sitemap.xml'
     | '/_app/books'
     | '/_app/dashboard'
     | '/_app/duas'
@@ -457,6 +481,8 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRouteWithChildren
   ForgotRoute: typeof ForgotRoute
   LoginRoute: typeof LoginRoute
+  RobotsDottxtRoute: typeof RobotsDottxtRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ApiDailyContentRoute: typeof ApiDailyContentRoute
   ApiQuranRoute: typeof ApiQuranRoute
   ApiRamadanRoute: typeof ApiRamadanRoute
@@ -506,6 +532,20 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/robots.txt': {
+      id: '/robots.txt'
+      path: '/robots.txt'
+      fullPath: '/robots.txt'
+      preLoaderRoute: typeof RobotsDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/books': {
@@ -788,6 +828,8 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRouteWithChildren,
   ForgotRoute: ForgotRoute,
   LoginRoute: LoginRoute,
+  RobotsDottxtRoute: RobotsDottxtRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   ApiDailyContentRoute: ApiDailyContentRoute,
   ApiQuranRoute: ApiQuranRoute,
   ApiRamadanRoute: ApiRamadanRoute,

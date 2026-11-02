@@ -40,6 +40,7 @@ export const Route = createFileRoute("/_app/quran/$surah")({
         { property: "og:title", content: title },
         { property: "og:description", content: description },
         { property: "og:url", content: pageUrl },
+        ...(siteUrl ? [{ property: "og:image", content: `${siteUrl}/og.png` }] : []),
       ],
       links: siteUrl ? [{ rel: "canonical", href: pageUrl }] : [],
     };
