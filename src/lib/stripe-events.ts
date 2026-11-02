@@ -22,6 +22,8 @@ export interface BillingTx {
   lockSubscription(subscriptionId: string): Promise<void>;
   userIdForCustomer(customerId: string): Promise<string | null>;
   linkCustomer(userId: string, customerId: string): Promise<void>;
+  /** Deletes the link for this customer; no-op if absent. */
+  unlinkCustomer(customerId: string): Promise<void>;
   upsertSubscription(row: SubscriptionRow): Promise<void>;
   getEventCreated(subscriptionId: string): Promise<number | null>;
   /** Sets status canceled on all of the user's subscriptions; eventCreated only ever rises. */
@@ -129,8 +131,15 @@ async function prepare(event: Stripe.Event, retrieveSubscription: StripeEventDep
       // cancels the subscription in Stripe when refunding (sends customer.subscription.deleted).
       return cancelForCustomer(idOf(charge.customer));
     }
-    case "customer.deleted":
-      return cancelForCustomer(event.data.object.id);
+    case "customer.deleted": {
+      const customerId = event.data.object.id;
+      // Unlink so checkout/portal create a fresh customer; subscription rows stay (no second trial).
+      return async (tx) => {
+        const result = await cancelForCustomer(customerId)(tx);
+        await tx.unlinkCustomer(customerId);
+        return result;
+      };
+    }
     default:
       return ignored;
   }
@@ -151,6 +160,9 @@ function prismaTx(db: Prisma.TransactionClient): BillingTx {
     },
     async linkCustomer(userId, stripeCustomerId) {
       await db.billingCustomer.upsert({ where: { userId }, create: { userId, stripeCustomerId }, update: { stripeCustomerId } });
+    },
+    async unlinkCustomer(stripeCustomerId) {
+      await db.billingCustomer.deleteMany({ where: { stripeCustomerId } });
     },
     async upsertSubscription({ eventCreated, ...row }) {
       const data = { ...row, eventCreated: BigInt(eventCreated) };

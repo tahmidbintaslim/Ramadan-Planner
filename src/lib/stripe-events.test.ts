@@ -30,6 +30,10 @@ function memDb() {
       writes.push("link");
       customers.set(c, u);
     },
+    async unlinkCustomer(c) {
+      writes.push("unlink");
+      customers.delete(c);
+    },
     async upsertSubscription(row) {
       writes.push("upsert");
       subs.set(row.id, row);
@@ -227,6 +231,15 @@ describe("applyStripeEvent", () => {
       "applied",
     );
     expect(s.subs.get("sub_1")?.status).toBe("canceled");
+  });
+
+  it("customer.deleted unlinks the customer and keeps the canceled subscription rows", async () => {
+    const s = setup();
+    await applyStripeEvent(evt("customer.subscription.created", sub(), { id: "evt_c" }), s.deps);
+    await applyStripeEvent(evt("customer.deleted", { id: "cus_1", object: "customer" }, { id: "evt_d" }), s.deps);
+    expect(await s.tx.userIdForCustomer("cus_1")).toBeNull();
+    expect(s.subs.get("sub_1")).toMatchObject({ userId: "user_1", status: "canceled" });
+    expect(s.writes).toEqual(["upsert", "cancel", "unlink"]);
   });
 
   it("unknown type is ignored", async () => {
