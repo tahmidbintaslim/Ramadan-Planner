@@ -33,15 +33,15 @@ requirePlus(userId) -> called by every Plus action/route
 ### Data (`supabase/migrations/005_billing.sql` plus Prisma models)
 
 - `billing_customers(user_id pk -> user_profiles, stripe_customer_id unique)`
-- `subscriptions(id pk, user_id, status, price_id, current_period_end, trial_end, cancel_at_period_end, event_created, updated_at)`
+- `subscriptions(id pk, user_id, status, price_id, current_period_start, current_period_end, trial_end, cancel_at_period_end, event_created, updated_at)`
 - `stripe_events(id pk, type, processed_at)` for idempotency
 - `entitlement_grants(user_id pk, source, expires_at)` for grandfathering and comps
 
-RLS is enabled with no policies (Clerk is used, so `auth.uid()` never matches); all access goes through server code. The grandfather migration inserts a `legacy_signup` grant for every `user_profiles` row created before the launch date, as a one-time snapshot.
+RLS is enabled with no policies (Clerk is used, so `auth.uid()` never matches); all access goes through server code. Grandfathering is a ONE-TIME manual script, not part of the migration: `supabase/manual/grandfather_legacy_users.sql` inserts a `legacy_signup` grant for every `user_profiles` row created before an explicit `launch_cutoff` (a NULL `created_at` counts as legacy). It is run once at cutover and must never be re-run in an environment seeded from production.
 
 ### Entitlement rule (`src/lib/entitlements.ts`)
 
-Plus if: a valid grant exists, or the subscription status is `active` or `trialing`, or `past_due` within a 5-day grace window. Otherwise Free. Constant `FREE_REMINDER_LIMIT = 3`.
+Plus if: a valid grant exists, or the subscription status is `active` or `trialing`, or `past_due` within a 5-day grace window measured from the CURRENT PERIOD START (`current_period_start + 5 days`, strict; Stripe moves the period forward before a renewal invoice fails, so measuring from the period end would keep Plus for a whole extra period). A `past_due` row with no period start is Free. A user with several subscription rows is Plus if ANY row qualifies. Otherwise Free. Constant `FREE_REMINDER_LIMIT = 3`.
 
 ### Stripe (`src/lib/stripe.ts`, `src/actions/billing.ts`)
 

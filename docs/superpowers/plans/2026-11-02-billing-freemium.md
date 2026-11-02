@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Plus price: $3/month and $24/year, 7-day trial, card required (`payment_method_collection: "always"`, `trial_settings.end_behavior.missing_payment_method = "cancel"`).
-- Plus = grant, or status `active`/`trialing`, or `past_due` within a 5-day grace window. `FREE_REMINDER_LIMIT = 3`.
+- Plus = grant, or status `active`/`trialing`, or `past_due` within a 5-day grace window measured from `current_period_start`. `FREE_REMINDER_LIMIT = 3`.
 - The server enforces everything; the client sends only `interval: "month" | "year"`. Price IDs come from env (`STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY`); redirect URLs come from `NEXT_PUBLIC_APP_URL` (renamed in Part B if the framework needs a different prefix).
 - Stripe test mode only; no live keys in the repo; tag Stripe objects `metadata.app=ramadan-planner`.
 - Part A modules live in `src/lib/` and must not import `next/*`, `@clerk/nextjs`, or any TanStack package.
@@ -31,6 +31,10 @@
 
 ---
 
+## Status (2026-11-02)
+
+**Part A (Tasks 1-5) is built, reviewed and pushed** (commits 61bae1c..6ae8f32; 114 tests pass, `tsc`, lint and `prisma validate` clean). It went through per-task reviews, a whole-range review and one fix wave. Changes versus the original text of Tasks 1-5: `subscriptions.current_period_start` added and grace measured from it; per-subscription advisory lock and transactional event recording in the webhook processor; `customer.deleted` unlinks the customer; `linkCustomer` is create-if-absent; the webhook throws (so Stripe retries) when the price env vars are missing; the grandfather grant moved out of the migration into a one-time manual script. Known open item: the refund and `customer.deleted` cancel paths do not take the per-subscription lock (narrow race, accepted).
+
 ## Part A: framework-free billing core (weeks 1-2, on the current branch)
 
 ### Task 1 (A1): Dependency, migration, Prisma models
@@ -40,7 +44,7 @@
 **Interfaces:** Produces Prisma models `BillingCustomer {userId @id, stripeCustomerId @unique}`, `Subscription {id @id, userId, status, priceId, currentPeriodEnd?, trialEnd?, cancelAtPeriodEnd, eventCreated}`, `StripeEvent {id @id, type, processedAt}`, `EntitlementGrant {userId @id, source, expiresAt?}`, all in the `public` schema with snake_case `@map`; relations on `UserProfile`.
 
 - [ ] **Step 1:** `npm i stripe`; commit the lockfile with the code.
-- [ ] **Step 2:** Write `005_billing.sql`: four tables with `user_id uuid references public.user_profiles(id) on delete cascade`, RLS enabled with no policies, an index on `subscriptions(user_id)`, and a final `insert into public.entitlement_grants (user_id, source) select id, 'legacy_signup' from public.user_profiles on conflict do nothing` (the one-time grandfather snapshot).
+- [ ] **Step 2:** Write `005_billing.sql`: four tables with `user_id uuid references public.user_profiles(id) on delete cascade`, RLS enabled with no policies, an index on `subscriptions(user_id)`. (Superseded by the final review: the grandfather insert is NOT in the migration; see `supabase/manual/grandfather_legacy_users.sql`.)
 - [ ] **Step 3:** Add the Prisma models; run `npx prisma validate` and `npx prisma generate`. Expected: both succeed.
 - [ ] **Step 4:** `npx tsc --noEmit`. Expected: no errors. Commit `feat(billing): billing tables and grandfather snapshot`.
 
@@ -135,6 +139,18 @@ Each adapter is thin: authenticate, validate, call a Part A function. Names belo
 - [ ] **Step 1:** Add the four Stripe env vars to `.env.example`; document billing, the webhook and grandfathering in `docs/ARCHITECTURE.md` and `docs/SECURITY_PRIVACY.md`.
 - [ ] **Step 2:** **Founder confirmation first, and the Stripe connector must be re-authorized:** create the test-mode product "Ramadan Planner Plus", two prices ($3/month, $24/year, lookup keys `rp_plus_monthly`/`rp_plus_yearly`) and the portal configuration.
 - [ ] **Step 3:** With test keys and `stripe listen`, complete Checkout with `4242 4242 4242 4242`, then `4000 0000 0000 0341`, then cancel in the portal; confirm entitlement flips match the spec. Run the whole suite and a production build.
+
+### Part C additions from the final review (must be done in Tasks 9-13)
+
+- Create the Stripe webhook endpoint with the API version pinned in `src/lib/stripe.ts` (currently `2026-10-28.endive`); otherwise invoice events lack `parent.subscription_details` and are ignored.
+- The webhook adapter returns 5xx for any thrown error (including missing price env) and 200 for applied/duplicate/ignored; log only event id and type.
+- Pass `appUrl` from env, never from the request Host header; pass only the authenticated user id; validate `interval` with `intervalSchema`.
+- Account deletion must cancel the user's Stripe subscription first (billing rows cascade but Stripe keeps billing). No deletion code exists yet.
+- UI: hide checkout for users with a grant; send `already_subscribed` and past-due users to the portal; restrict the portal configuration to the two allowlisted prices; keep legacy price ids on the allowlist when prices rotate.
+- Idempotency-key edge: after `customer.deleted`, `startCheckout` reuses the key `cust-<userId>`; within Stripe's ~24h key window it can replay the deleted customer. Use a key that changes when the customer row is absent.
+- Operator runbook: a refund must be paired with cancelling the subscription in Stripe; do not create Payment Links on the account; never use `prisma db push` for billing tables; apply `005_billing.sql` once at cutover and run the grandfather script with an explicit cutoff.
+- End-to-end run (Task 13) must exercise `prismaBillingDb` and `prismaCustomerDb` against a real test database (the advisory-lock and `GREATEST` raw SQL has never run), a declined renewal (confirms the grace fix) and a deleted customer who resubscribes.
+- Gated routes call `getEntitlement` on every request; ICS returns 403 with `Cache-Control: no-store`.
 
 ---
 
