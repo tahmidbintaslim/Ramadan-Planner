@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useRouter } from "@tanstack/react-router";
 import {
   Moon,
   Globe,
@@ -55,11 +56,14 @@ export function AppHeader() {
   const tAuth = useTranslations("auth");
   const tNav = useTranslations("nav");
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
   const pathname = usePathname();
 
   const handleLocaleSwitch = () => {
-    startTransition(() => {
-      switchLocaleAction();
+    startTransition(async () => {
+      await switchLocaleAction();
+      // Re-run the root loader so the new locale's messages render (Next refreshed automatically).
+      await router.invalidate();
     });
   };
 

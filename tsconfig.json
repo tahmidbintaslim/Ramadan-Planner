@@ -32,7 +32,6 @@
     "src/actions/announcements.ts",
     "src/actions/auth.ts",
     "src/actions/integrations.ts",
-    "src/actions/planner.ts",
     "src/components/admin/announcements-admin-content.tsx",
     "src/components/auth/forgot-password-form.tsx",
     "src/components/auth/login-form.tsx",
@@ -65,7 +64,6 @@
     "src/components/today/today-content.tsx",
     "src/components/ui/dialog.tsx",
     "src/components/ui/sheet.tsx",
-    "src/hooks/use-guest-data.ts",
-    "src/lib/supabase/server.ts"
+    "src/hooks/use-guest-data.ts"
   ]
 }

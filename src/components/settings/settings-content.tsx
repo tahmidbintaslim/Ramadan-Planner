@@ -5,6 +5,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useClerk } from "@clerk/tanstack-react-start";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
+import { useRouter } from "@tanstack/react-router";
 import { Bell, CalendarClock, Globe, LogIn, LogOut, UserPlus } from "lucide-react";
 import { switchLocaleAction } from "@/actions/locale";
 import { getUserProfileAction, updateUserProfileAction } from "@/actions/planner";
@@ -47,6 +48,7 @@ export function SettingsContent() {
   const { signOut } = useClerk();
 
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
   const { user, isGuest, loading } = useAuth();
 
   const [displayName, setDisplayName] = useState("");
@@ -104,8 +106,10 @@ export function SettingsContent() {
       : null;
 
   const handleLocaleSwitch = () => {
-    startTransition(() => {
-      switchLocaleAction();
+    startTransition(async () => {
+      await switchLocaleAction();
+      // Re-run the root loader so the new locale's messages render (Next refreshed automatically).
+      await router.invalidate();
     });
   };
 
