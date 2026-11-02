@@ -1,7 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import type Stripe from "stripe";
 import { GRANTING_STATUSES } from "@/lib/entitlements";
-import { isAllowedPrice } from "@/lib/stripe";
+import { isAllowedPrice, pricesConfigured } from "@/lib/stripe";
 
 export type SubscriptionRow = {
   id: string;
@@ -49,6 +49,15 @@ type Step = (tx: BillingTx) => Promise<ApplyResult>;
 const idOf = (v: string | { id: string } | null | undefined): string | null => (typeof v === "string" ? v : (v?.id ?? null));
 
 const GRANTING = new Set<string>(GRANTING_STATUSES);
+// Every subscription-syncing type runs the price allowlist check.
+const PRICE_CHECKED_TYPES = new Set([
+  "checkout.session.completed",
+  "customer.subscription.created",
+  "customer.subscription.updated",
+  "customer.subscription.deleted",
+  "invoice.paid",
+  "invoice.payment_failed",
+]);
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
@@ -59,6 +68,8 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
  * first transaction commits ("duplicate") or rolls back (processed).
  */
 export async function applyStripeEvent(event: Stripe.Event, deps: StripeEventDeps): Promise<ApplyResult> {
+  // Throw before recording so the webhook answers 5xx and Stripe retries once the config is fixed.
+  if (PRICE_CHECKED_TYPES.has(event.type) && !pricesConfigured()) throw new Error("stripe price configuration missing");
   const step = await prepare(event, deps.retrieveSubscription);
   return deps.db.runInTransaction(async (tx) => {
     if (!(await tx.recordEvent(event.id, event.type))) return "duplicate";

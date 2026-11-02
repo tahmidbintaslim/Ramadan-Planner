@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getStripe, intervalSchema, isAllowedPrice, priceIdForInterval, trialDaysFor } from "./stripe";
+import { getStripe, intervalSchema, isAllowedPrice, priceIdForInterval, pricesConfigured, trialDaysFor } from "./stripe";
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -28,6 +28,28 @@ describe("prices", () => {
     expect(isAllowedPrice("price_m")).toBe(false);
     expect(() => priceIdForInterval("month")).toThrow();
     expect(() => priceIdForInterval("year")).toThrow();
+    expect(pricesConfigured()).toBe(false);
+  });
+  it("whitespace-only env counts as unset", () => {
+    vi.stubEnv("STRIPE_PRICE_MONTHLY", "  \n");
+    vi.stubEnv("STRIPE_PRICE_YEARLY", "price_y");
+    expect(pricesConfigured()).toBe(false);
+    expect(isAllowedPrice("  \n")).toBe(false);
+    expect(() => priceIdForInterval("month")).toThrow();
+  });
+  it("truly undefined env counts as unset", () => {
+    vi.stubEnv("STRIPE_PRICE_MONTHLY", undefined);
+    vi.stubEnv("STRIPE_PRICE_YEARLY", "price_y");
+    expect(pricesConfigured()).toBe(false);
+    expect(isAllowedPrice("price_y")).toBe(true);
+  });
+  it("trims surrounding whitespace and newlines", () => {
+    vi.stubEnv("STRIPE_PRICE_MONTHLY", " price_m\n");
+    vi.stubEnv("STRIPE_PRICE_YEARLY", "\tprice_y ");
+    expect(pricesConfigured()).toBe(true);
+    expect(isAllowedPrice("price_m")).toBe(true);
+    expect(isAllowedPrice("price_y")).toBe(true);
+    expect(priceIdForInterval("month")).toBe("price_m");
   });
 });
 

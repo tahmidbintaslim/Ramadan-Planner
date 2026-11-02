@@ -384,4 +384,31 @@ describe("applyStripeEvent", () => {
     expect(await applyStripeEvent(evt("charge.refunded", charge, { id: "evt_r", created: 2000 }), s.deps)).toBe("applied");
     expect(s.subs.get("sub_1")).toMatchObject({ status: "canceled", eventCreated: 3000 });
   });
+
+  describe("price configuration", () => {
+    it.each(["", "   ", undefined])("with STRIPE_PRICE_MONTHLY=%j subscription events throw and record nothing", async (value) => {
+      vi.stubEnv("STRIPE_PRICE_MONTHLY", value);
+      const s = setup();
+      const invoice = { object: "invoice", parent: { subscription_details: { subscription: "sub_1" } } };
+      const session = { object: "checkout.session", client_reference_id: U9, customer: "cus_1", subscription: "sub_1" };
+      for (const e of [
+        evt("customer.subscription.updated", sub()),
+        evt("invoice.paid", invoice),
+        evt("checkout.session.completed", session),
+      ]) {
+        await expect(applyStripeEvent(e, s.deps)).rejects.toThrow("stripe price configuration missing");
+      }
+      expect(s.events.size).toBe(0);
+      expect(s.deps.retrieveSubscription).not.toHaveBeenCalled();
+    });
+
+    it("unrelated event types are unaffected when prices are unset", async () => {
+      vi.stubEnv("STRIPE_PRICE_MONTHLY", undefined);
+      vi.stubEnv("STRIPE_PRICE_YEARLY", undefined);
+      const s = setup();
+      expect(await applyStripeEvent(evt("payment_intent.created", {}), s.deps)).toBe("ignored");
+      const charge = { object: "charge", customer: "cus_1", amount: 500, amount_refunded: 500 };
+      expect(await applyStripeEvent(evt("charge.refunded", charge, { id: "evt_r" }), s.deps)).toBe("applied");
+    });
+  });
 });
