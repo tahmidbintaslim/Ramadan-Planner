@@ -1,8 +1,10 @@
 // Live CSRF / auth-boundary check for the Task 12 go/no-go. It does not start a server.
-// Usage: npm run check:csrf -- <baseUrl> <serverFnId> [webhookPath]
+// Usage: npm run check:csrf -- <baseUrl> <serverFnId|--auto> [webhookPath]
 //   baseUrl     e.g. http://localhost:3000 or a Vercel preview URL
 //   serverFnId  id of a POST server function behind authMiddleware (the id after /_serverFn/ in the
-//               browser's network tab; in dev, the createClientRpc("...") argument of the module source)
+//               browser's network tab; in dev, the createClientRpc("...") argument of the module source).
+//               `--auto` (CI) reads every server-function id from the built client bundle (ASSETS_DIR, default
+//               .output/public/assets) and uses the first one that answers a signed-out same-origin POST with 401.
 //   webhookPath optional extra CSRF-exempt POST route to probe (e.g. /api/stripe/webhook once it exists);
 //               it must answer anything but 403 to a cross-site, cookieless POST.
 // Server routes probed (real ones): POST /api/push/subscribe and PATCH/DELETE /api/announcements/<id>
@@ -11,15 +13,39 @@
 // The target server needs Clerk env vars (VITE_CLERK_PUBLISHABLE_KEY, CLERK_SECRET_KEY) set in ITS env;
 // for local runs use development keys or clearly fake well-formed ones. Never commit keys. Do not set a real
 // CRON_SECRET/PUSH_DISPATCH_SECRET in a shell you run this from: the script never sends one.
-const [base, fnId, webhookPath] = process.argv.slice(2);
-if (!base || !fnId) {
-  console.error("usage: check-csrf.mjs <baseUrl> <serverFnId> [webhookPath]");
+import fs from "node:fs";
+import path from "node:path";
+
+const [base, fnArg, webhookPath] = process.argv.slice(2);
+if (!base || !fnArg) {
+  console.error("usage: check-csrf.mjs <baseUrl> <serverFnId|--auto> [webhookPath]");
   process.exit(2);
 }
-const fn = `${base}/_serverFn/${fnId}`;
 // Seroval-framed `{ data: undefined }`; the function's input does not matter for these checks.
 const body = '{"t":{"t":10,"i":0,"p":{"k":[],"v":[]},"o":0},"f":127,"m":[]}';
 const rpc = { "x-tsr-serverfn": "true", "content-type": "application/json" };
+
+async function discoverFnId() {
+  const dir = process.env.ASSETS_DIR ?? ".output/public/assets";
+  const ids = new Set();
+  for (const file of fs.readdirSync(dir).filter((f) => f.endsWith(".js"))) {
+    // Production bundles call the client RPC factory with the id as a string literal of 30+ hex chars.
+    for (const m of fs.readFileSync(path.join(dir, file), "utf8").matchAll(/\(\s*[`"']([0-9a-f]{30,})[`"']\s*\)/g)) ids.add(m[1]);
+  }
+  for (const id of ids) {
+    const res = await fetch(`${base}/_serverFn/${id}`, { method: "POST", headers: { ...rpc, Origin: base }, body, redirect: "manual" });
+    await res.text();
+    if (res.status === 401) {
+      console.log(`using server function ${id} (first of ${ids.size} ids in ${dir} that answers 401 signed out)`);
+      return id;
+    }
+  }
+  console.error(`no server function in ${dir} answered 401 signed out (${ids.size} ids tried)`);
+  process.exit(1);
+}
+
+const fnId = fnArg === "--auto" ? await discoverFnId() : fnArg;
+const fn = `${base}/_serverFn/${fnId}`;
 const cookie = { Cookie: "__session=eyJhbGciOiJSUzI1NiJ9.e30.sig; __client_uat=1700000000" };
 const evil = { Origin: "https://evil.example" };
 const json = { "content-type": "application/json" };

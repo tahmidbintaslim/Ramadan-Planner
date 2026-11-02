@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-expressions -- terse ok/fail ternaries in a script */
-// PWA check against a BUILT server (see scripts/smoke.mjs for how to start one):
+// PWA check against a BUILT server (`npm run build`, then `npm start` with the placeholder env from
+// .github/workflows/ci.yml):
 //   BASE_URL=http://localhost:3001 PWCHROME=/usr/bin/google-chrome node scripts/pwa-check.mjs
 import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
@@ -69,6 +70,15 @@ cached.some((c) => c.url.startsWith("/assets/")) ? ok("hashed assets cached") : 
 cached.filter((c) => !c.url.startsWith("/assets/") && !["/offline.html", "/manifest.webmanifest"].includes(c.url) && !c.url.startsWith("/icons/")).length
   ? fail("unexpected cached entries (page HTML?)") : ok("only static shell + assets cached");
 new Set(cached.map((c) => c.name)).size === 1 && /^ramadan-planner-v\d+$/.test(cached[0].name) ? ok(`versioned cache ${cached[0].name}`) : fail("cache naming");
+
+console.log("offline page re-cached lazily");
+// The install step tolerates a failed precache; an online navigation must put the offline page back.
+await page.evaluate(async () => { for (const n of await caches.keys()) await (await caches.open(n)).delete("/offline.html"); });
+await page.goto(`${BASE}/duas`, { waitUntil: "load" });
+const recached = await page
+  .waitForFunction(async () => !!(await caches.match("/offline.html")), null, { timeout: 10000 })
+  .then(() => true, () => false);
+recached ? ok("offline.html back in the cache after an online navigation") : fail("offline.html not re-cached");
 
 console.log("offline");
 // context.setOffline blocks the navigation before the worker sees it, so cut the network behind the worker

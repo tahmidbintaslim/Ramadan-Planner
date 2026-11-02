@@ -16,10 +16,16 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     env:
       # Placeholder only: the build needs a well-formed URL but never connects.
       DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+      # FAKE Clerk keys so the built server boots for the e2e checks. The publishable key is just
+      # "pk_test_" + base64("fake-test-instance.clerk.accounts.dev$"); the tests block that host. Never put
+      # real keys here: real ones live in the Vercel project settings only.
+      VITE_CLERK_PUBLISHABLE_KEY: pk_test_ZmFrZS10ZXN0LWluc3RhbmNlLmNsZXJrLmFjY291bnRzLmRldiQ=
+      CLERK_SECRET_KEY: sk_test_fake_ci_placeholder
+      CLERK_TELEMETRY_DISABLED: "1"
     steps:
       - uses: actions/checkout@v7
 
@@ -37,8 +43,51 @@ jobs:
       - name: Type check
         run: npx tsc --noEmit
 
+      - name: Translations
+        run: npm run translations:check
+
       - name: Unit tests
         run: npm test
 
       - name: Build (Vercel output)
         run: NITRO_PRESET=vercel npm run build
+
+      # End-to-end checks against the built Node server (placeholder database, fake Clerk keys).
+      - name: Build (Node server for e2e)
+        run: npm run build
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Start server
+        run: |
+          PORT=3001 nohup node .output/server/index.mjs > server.log 2>&1 &
+          for i in $(seq 1 60); do
+            curl --silent --fail --output /dev/null http://localhost:3001/robots.txt && exit 0
+            sleep 1
+          done
+          cat server.log
+          exit 1
+
+      - name: E2E smoke (Playwright)
+        run: npx playwright test
+
+      - name: PWA check
+        run: node scripts/pwa-check.mjs
+        env:
+          BASE_URL: http://localhost:3001
+
+      - name: CSRF / auth boundary check
+        run: node scripts/check-csrf.mjs http://localhost:3001 --auto
+
+      - name: Server log
+        if: failure()
+        run: cat server.log || true
+
+      - name: Upload Playwright traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: test-results/
+          retention-days: 7
