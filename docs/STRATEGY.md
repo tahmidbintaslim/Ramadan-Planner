@@ -69,6 +69,16 @@ Rule: never gate prayer times, Quran reading, core tracking, or a user's existin
 - Targets *(est., unsourced)*: 1,500-3,000 waitlist, 150-400 paid, $1.5-4k first season. Replace with beta data.
 - Risks: religious content accuracy (scholar review, cite sources, error-report link); no charity-linked claims without a registered partner; no fake urgency.
 
+## 8. Tech stack decision (founder, 2026-11-02): TanStack Start
+
+- **Why:** a lighter, more explicit stack than Next.js, while keeping React so components, shadcn/Radix and Tailwind carry over. SvelteKit was considered and rejected for now: it needs a full UI rewrite and has only community Clerk packages, which is too much risk for a Ramadan deadline.
+- **Evidence checked:** TanStack Start declared 1.0 stable on 13 Oct 2026; Vercel deploys it through Nitro; server functions with auth middleware and server routes (`request.text()`) cover billing's needs. Clerk's TanStack SDK is still **beta**, and a TanStack security advisory (CVE-2026-102989, 13 Oct 2026) is unread; both are checked in the week-1 spike.
+- **Not verified:** the claim that top brands are moving to Svelte or TanStack, i18n under TanStack SSR (`use-intl` vs Paraglide), and the Clerk beta's stability.
+- **Safeguards:** billing core is framework-free; production stays on Next.js until cutover; a go/no-go checkpoint at the end of week 4 falls back to Next.js if the port slips.
+- **Timeline shift:** a 4-6 week migration phase pushes the closed beta from December to mid-January; public launch stays in early February; SEO pages are built in the new framework (server-rendered). Marketing channels, positioning and pricing are unchanged.
+- **TanStack showcase (founder idea):** after cutover and a stable production release, submit the site at https://tanstack.com/showcase/submit and announce it on the TanStack and developer channels. The submission page lists no criteria ("projects selected by the TanStack team"), so selection is not guaranteed; email support@tanstack.com if the form is unclear. This is a developer-audience, low-cost, English-side bump, not a driver of Bengali-speaking users. Do not submit before the site actually runs on TanStack Start.
+- **New marketing asset:** a smaller JavaScript payload on low-end Android phones and slow mobile networks in Bangladesh. Measure it with Lighthouse and WebPageTest in the spike, and only advertise it if the numbers hold.
+
 ## 7. Launch blockers found in the repo
 
 - Auth runs on a Clerk **development** instance; production Clerk is required.

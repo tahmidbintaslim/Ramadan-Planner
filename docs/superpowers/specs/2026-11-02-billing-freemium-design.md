@@ -14,6 +14,10 @@ Add a Free/Plus plan to Ramadan Planner, paid through Stripe, with every Plus fe
 - The business entity is in a Stripe-supported country. Stripe test mode only until launch.
 - Never gated: prayer times, Quran, core tracking, or a user's existing data. After a downgrade, data stays readable and new Plus writes are blocked.
 
+## Framework update (2026-11-02)
+
+The founder chose to move the app from Next.js to **TanStack Start** (see `docs/STRATEGY.md` section 8 and the phased plan). This spec stays valid with these substitutions: server actions become server functions behind an auth middleware; the webhook becomes a TanStack server route at `src/routes/api/stripe/webhook.ts` (reads `request.text()` for the signature check); `NEXT_PUBLIC_APP_URL` is renamed if the new build tool needs a different public prefix. All billing logic lives in framework-free modules in `src/lib/` so it is identical on either framework.
+
 ## Architecture
 
 Server is the only source of truth for plan status. UI locks are cosmetic.
