@@ -105,6 +105,8 @@ Run the tasks in this order: **1, 2, 3, 7, 4, 5, 6, 8, 9, 10, 11, 12.** Task 7 (
 
 ### Task 7: Server actions to server functions
 
+**Added from the Task 3 review (mandatory):** wrap `getAppAuthUser` failures in a generic error so Clerk error text is not serialized to clients; add a server-only marker to `src/lib/auth/server.ts` (`createServerOnlyFn` or equivalent) so client imports fail the build; consider `getAppAuthUser({ ensureProfile, withEmail: false })` to avoid a Clerk Backend call on every server function; call `router.invalidate()` after the locale action.
+
 **Files:** Modify `src/actions/planner.ts` (15 actions; 901 lines), `src/actions/integrations.ts` (6), `src/actions/announcements.ts` (4), `src/actions/admin-users.ts` (3), `src/actions/locale.ts` (2), `src/actions/auth.ts` (delete the legacy Supabase password actions `loginAction`, `signupAction`, `forgotPasswordAction`, `logoutAction` and the forms that call them, after confirming `/login`, `/signup` and `/forgot` only redirect to Clerk; record the decision in the PR). Remove `"use server"`; each action becomes a `createServerFn({ method: 'POST' }).middleware([authMiddleware]).validator(schema).handler(...)` plus an exported wrapper `xAction(input)` calling `fn({ data: input })`, so callers do not change. Admin-only actions check `isUserAdmin` inside the handler exactly as before. Update the Supabase server client `src/lib/supabase/server.ts` to read cookies via the Start helpers.
 
 **Interfaces:**
@@ -116,6 +118,8 @@ Run the tasks in this order: **1, 2, 3, 7, 4, 5, 6, 8, 9, 10, 11, 12.** Task 7 (
 - [ ] **Step 3:** Acceptance: all new action tests pass; `rg "use server" src` is empty; a Playwright run shows signed-out calls get 401; guest-mode pages never call server functions. Commit per file; final commit `feat(migrate): server functions replace server actions`.
 
 ### Task 8: API routes
+
+**Added from the Task 3 review (mandatory checkboxes):** (a) widen `src/start.ts` CSRF filter so mutating `/api/*` routes (non GET/HEAD/OPTIONS) are covered, exempting only the Stripe webhook and the Bearer-secret `push/dispatch` route (or attach `createCsrfMiddleware()` per mutating route), with regression tests extending `src/server/csrf.test.ts`; (b) delete `src/routes/api/[_]webhook-check.ts` and `src/server/ping.ts`; affected routes: `push/subscribe` POST, `announcements` POST, `announcements/$id` PATCH/DELETE.
 
 **Files:** Create server routes (file routes with `server.handlers`) for: `GET/POST /api/announcements` (`Cache-Control: no-store`), `PATCH/DELETE /api/announcements/$id`, `GET /api/calendar/google/connect` and `/callback` (state cookie, redirect using the request origin, `secure` cookie flag by `NODE_ENV`), `GET /api/calendar/ics/$secret` (`Cache-Control: public, s-maxage=3600`), `GET /api/daily-content` (public cache 3600 with stale-while-revalidate as today), `GET/POST /api/push/dispatch` (Bearer `CRON_SECRET` or `PUSH_DISPATCH_SECRET`, same logic, `maxDuration` set in the Vercel function config), `POST /api/push/subscribe`, `GET /api/quran` (`s-maxage=604800`), `GET /api/ramadan-timetable` (86400), `GET /api/ramadan` (3600), `GET /api/timings` (3600). Extract each handler's logic into a plain function taking a `Request` and returning a `Response` (e.g. `handleTimings(request)` in `src/server/api/*.ts`) so Vitest can call it without a framework; the route file only wires it.
 
