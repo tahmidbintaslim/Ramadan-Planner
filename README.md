@@ -105,7 +105,7 @@ Open http://localhost:3000. Clerk needs keys even in development (the TanStack S
 
 ### Full setup
 
-Fill in `.env.local`. [`.env.example`](.env.example) lists every variable the app and scripts read, with a comment for each. The minimum for signed-in use is `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `VITE_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY`. Only `VITE_*` variables reach the browser; the Next.js-era `NEXT_PUBLIC_*` names are deprecated but still read as fallbacks (the table at the top of `.env.example` maps old to new). `npm start` and Vercel deployments fail on every page without real Clerk keys.
+Fill in `.env.local`. [`.env.example`](.env.example) lists every variable the app and scripts read, with a comment for each. The minimum for signed-in use is `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `VITE_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY`. Only `VITE_*` variables reach the browser; the Next.js-era `NEXT_PUBLIC_*` names are deprecated but still read as fallbacks (the table at the top of `.env.example` maps old to new). Without Clerk keys the server fails on every page. Clearly fake, well-formed keys (as in `.github/workflows/ci.yml`) are enough to render the signed-out pages for tests, as long as the browser carries Clerk's dev-browser cookie (the e2e fixtures set it); signing in needs real keys.
 
 #### Database
 

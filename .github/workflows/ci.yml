@@ -3,14 +3,16 @@ name: CI
 on:
   push:
     branches: [main]
+  # Every pull request, whatever its base (the migration PR targets a feature branch).
   pull_request:
-    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
+  # One run per PR (head ref) or per pushed/dispatched ref; a newer run cancels the older one.
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:

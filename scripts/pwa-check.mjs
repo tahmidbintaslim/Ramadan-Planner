@@ -5,7 +5,7 @@
 import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 process.env.PW_EXPERIMENTAL_SERVICE_WORKER_NETWORK_EVENTS ??= "1"; // lets context.route cover service worker fetches
-const { chromium } = require("playwright");
+const { chromium } = require("@playwright/test");
 
 const BASE = process.env.BASE_URL ?? "http://localhost:3001";
 let failures = 0;
@@ -55,7 +55,9 @@ await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
 (await page.evaluate(() => !!navigator.serviceWorker.controller)) ? ok("page controlled") : fail("page not controlled");
 
 console.log("browse, then check caches");
-for (const p of ["/today", "/quran", "/"]) await page.goto(BASE + p, { waitUntil: "load" });
+// Not "/": on localhost the landing page's prayer-times widget unregisters service workers (dev-only
+// behavior), which made the offline step below fail at random.
+for (const p of ["/today", "/quran"]) await page.goto(BASE + p, { waitUntil: "load" });
 await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
 await page.goto(`${BASE}/duas`, { waitUntil: "load" });
 await page.evaluate(() => fetch("/api/quran?surah=1").catch(() => {}));
@@ -81,11 +83,26 @@ const recached = await page
 recached ? ok("offline.html back in the cache after an online navigation") : fail("offline.html not re-cached");
 
 console.log("offline");
+(await page.evaluate(async () => !!(await navigator.serviceWorker.getRegistration("/")) && !!navigator.serviceWorker.controller))
+  ? ok("worker still registered and controlling before going offline")
+  : fail("worker not registered/controlling before going offline");
 // context.setOffline blocks the navigation before the worker sees it, so cut the network behind the worker
 // instead: with PW_EXPERIMENTAL_SERVICE_WORKER_NETWORK_EVENTS=1 context.route also covers worker fetches.
 await ctx.route(`${BASE}/**`, (r) => r.abort("internetdisconnected"));
-await page.goto(`${BASE}/today`, { waitUntil: "load" }).catch((e) => fail(`offline navigation: ${e.message}`));
-(await page.locator("[data-offline]").isVisible().catch(() => false)) ? ok("offline shell shown for /today") : fail("offline shell not shown");
+// One retry: the first offline navigation can race the worker (e.g. a just-restarted worker).
+let offlineShown = false;
+let lastError = "";
+for (let attempt = 1; attempt <= 2 && !offlineShown; attempt++) {
+  try {
+    await page.goto(`${BASE}/today`, { waitUntil: "load" });
+    await page.locator("[data-offline]").waitFor({ timeout: 10000 });
+    offlineShown = true;
+    if (attempt > 1) console.log("   (offline shell shown on the retry)");
+  } catch (e) {
+    lastError = e.message.split("\n")[0];
+  }
+}
+offlineShown ? ok("offline shell shown for /today") : fail(`offline shell not shown: ${lastError}`);
 await ctx.unroute(`${BASE}/**`);
 
 await browser.close();

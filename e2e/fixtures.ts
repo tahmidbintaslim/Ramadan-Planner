@@ -1,4 +1,4 @@
-import { test as base, expect, type Page } from "@playwright/test";
+import { test as base, expect, type BrowserContext, type Page } from "@playwright/test";
 
 // Console noise that does not come from the app: the Clerk dev-keys banner, and failed requests to hosts the
 // test blocks (Clerk, Vercel) or external APIs. A failed same-origin request is NOT ignored unless it is an
@@ -33,18 +33,23 @@ type Fixtures = {
   appErrors: () => ConsoleEntry[];
 };
 
+/** Signed-out Clerk dev-browser cookies (+ optional NEXT_LOCALE) and blocked Clerk/Vercel hosts. */
+export async function prepareContext(context: BrowserContext, baseURL: string, appLocale?: "bn" | "en") {
+  // Pretend a dev-browser, signed-out Clerk client so the fake-key server skips the Clerk handshake redirect.
+  const cookies = [
+    { name: "__clerk_db_jwt", value: "dvb_fake", url: baseURL },
+    { name: "__client_uat", value: "0", url: baseURL },
+  ];
+  if (appLocale) cookies.push({ name: "NEXT_LOCALE", value: appLocale, url: baseURL });
+  await context.addCookies(cookies);
+  // No network to Clerk/Vercel (fake keys): fail those requests fast.
+  await context.route(BLOCKED_HOSTS, (r) => r.abort());
+}
+
 export const test = base.extend<Fixtures>({
   appLocale: [undefined, { option: true }],
   context: async ({ context, baseURL, appLocale }, provide) => {
-    // Pretend a dev-browser, signed-out Clerk client so the fake-key server skips the Clerk handshake redirect.
-    const cookies = [
-      { name: "__clerk_db_jwt", value: "dvb_fake", url: baseURL! },
-      { name: "__client_uat", value: "0", url: baseURL! },
-    ];
-    if (appLocale) cookies.push({ name: "NEXT_LOCALE", value: appLocale, url: baseURL! });
-    await context.addCookies(cookies);
-    // No network to Clerk/Vercel (fake keys): fail those requests fast.
-    await context.route(BLOCKED_HOSTS, (r) => r.abort());
+    await prepareContext(context, baseURL!, appLocale);
     await provide(context);
   },
   consoleEntries: async ({ page }, provide) => {

@@ -44,6 +44,12 @@ async function discoverFnId() {
   process.exit(1);
 }
 
+// --auto POSTs (signed out, empty input) to EVERY server function it finds until one answers 401. That is
+// harmless against a local CI server with a placeholder database, but must never hit a shared deployment.
+if (fnArg === "--auto" && !["localhost", "127.0.0.1"].includes(new URL(base).hostname)) {
+  console.error("--auto only runs against localhost/127.0.0.1; pass an explicit serverFnId for other hosts");
+  process.exit(2);
+}
 const fnId = fnArg === "--auto" ? await discoverFnId() : fnArg;
 const fn = `${base}/_serverFn/${fnId}`;
 const cookie = { Cookie: "__session=eyJhbGciOiJSUzI1NiJ9.e30.sig; __client_uat=1700000000" };
