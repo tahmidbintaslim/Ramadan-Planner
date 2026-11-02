@@ -46,6 +46,25 @@ describe("getAppAuthUser", () => {
     expect(upsert).toHaveBeenCalledWith({ where: { id: UUID }, create: { id: UUID }, update: {} });
   });
 
+  it("withEmail: false skips the Clerk Backend lookup (email null) but still maps and upserts", async () => {
+    auth.mockResolvedValue({ isAuthenticated: true, userId: CLERK_ID });
+    await expect(getAppAuthUser({ ensureProfile: true, withEmail: false })).resolves.toEqual({
+      id: UUID,
+      clerkId: CLERK_ID,
+      email: null,
+    });
+    expect(clerkClient).not.toHaveBeenCalled();
+    expect(getUser).not.toHaveBeenCalled();
+    expect(upsert).toHaveBeenCalledTimes(1);
+  });
+
+  it("withEmail defaults to true and can be set explicitly", async () => {
+    auth.mockResolvedValue({ isAuthenticated: true, userId: CLERK_ID });
+    expect((await getAppAuthUser({ withEmail: true }))?.email).toBe("a@example.com");
+    expect((await getAppAuthUser({ ensureProfile: false }))?.email).toBe("a@example.com");
+    expect(getUser).toHaveBeenCalledTimes(2);
+  });
+
   it("falls back to the first email address, then null", async () => {
     auth.mockResolvedValue({ isAuthenticated: true, userId: CLERK_ID });
     getUser.mockResolvedValueOnce({ primaryEmailAddress: null, emailAddresses: [{ emailAddress: "b@example.com" }] });

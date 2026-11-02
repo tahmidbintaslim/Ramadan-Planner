@@ -42,4 +42,50 @@ describe("authMiddleware", () => {
     expect(upsert).toHaveBeenCalledTimes(1);
     expect(setResponseStatus).not.toHaveBeenCalled();
   });
+
+  it("does not call the Clerk Backend API per call (getAppAuthUser withEmail: false)", async () => {
+    auth.mockResolvedValue({ isAuthenticated: true, userId: "user_123" });
+    await run(vi.fn().mockResolvedValue("ok"));
+    expect(getUser).not.toHaveBeenCalled();
+  });
+
+  it("passes { ensureProfile: true, withEmail: false } to getAppAuthUser", async () => {
+    vi.resetModules();
+    const getAppAuthUser = vi.fn().mockResolvedValue({ id: "u", clerkId: "c", email: null });
+    vi.doMock("@/lib/auth/server", () => ({ getAppAuthUser }));
+    const mod = await import("./auth-middleware");
+    const next = vi.fn().mockResolvedValue("ok");
+    await (mod.authMiddleware.options.server as unknown as ServerFn)({ next });
+    expect(getAppAuthUser).toHaveBeenCalledWith({ ensureProfile: true, withEmail: false });
+    vi.doUnmock("@/lib/auth/server");
+  });
+
+  it("auth backend failure: HTTP 503 and a generic error; the backend's message never reaches the client", async () => {
+    const secretish = "Clerk: Unable to authenticate request (sk_test_xxx, instance fake-test-instance) 500";
+    auth.mockRejectedValue(new Error(secretish));
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const next = vi.fn();
+    const error = await run(next).then(
+      () => null,
+      (e: unknown) => e,
+    );
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toBe("auth_unavailable");
+    expect(String((error as Error).stack ?? "")).not.toContain("sk_test_xxx");
+    expect(JSON.stringify(error, Object.getOwnPropertyNames(error))).not.toContain(secretish);
+    expect((error as Error).cause).toBeUndefined();
+    expect(setResponseStatus).toHaveBeenCalledWith(503);
+    expect(setResponseStatus).not.toHaveBeenCalledWith(401);
+    expect(next).not.toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+
+  it("Prisma upsert failure is also wrapped (503, generic message)", async () => {
+    auth.mockResolvedValue({ isAuthenticated: true, userId: "user_123" });
+    upsert.mockRejectedValue(new Error("PrismaClientInitializationError: Can't reach database server at db.internal:5432"));
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    await expect(run(vi.fn())).rejects.toThrow(/^auth_unavailable$/);
+    expect(setResponseStatus).toHaveBeenCalledWith(503);
+    consoleError.mockRestore();
+  });
 });
