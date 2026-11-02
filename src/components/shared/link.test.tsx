@@ -10,7 +10,7 @@ import {
   createRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { Link, isPlainHref } from "@/components/shared/link";
+import { Link, isPlainHref, splitHref } from "@/components/shared/link";
 import { usePathname } from "@/hooks/use-pathname";
 
 async function render(initialPath: string, node: ReactNode): Promise<string> {
@@ -37,8 +37,23 @@ describe("Link", () => {
     expect(html).toContain('class="nav"');
     expect(html).toContain('aria-label="Quran"');
     expect(html).toContain("Quran</a>");
-    // TanStack's Link marks the anchor with its own data attributes only when active; no full URL.
-    expect(html).not.toContain("http");
+  });
+
+  it("keeps ?query and #hash of an internal href (split into search + hash, same URL out)", async () => {
+    const html = await render("/", <Link href="/a?x=1&y=two#sec">a</Link>);
+    expect(html).toContain('href="/a?x=1&amp;y=two#sec"');
+    expect((await render("/", <Link href="/a?x=1">a</Link>))).toContain('href="/a?x=1"');
+    expect((await render("/", <Link href="/a#y">a</Link>))).toContain('href="/a#y"');
+    expect((await render("/", <Link href="/settings?google=connected">a</Link>))).toContain(
+      'href="/settings?google=connected"',
+    );
+  });
+
+  it("renders a relative href as a plain anchor (the router would resolve it against the route)", async () => {
+    const html = await render("/quran/2", <Link href="foo/bar?x=1">r</Link>);
+    expect(html).toContain('href="foo/bar?x=1"');
+    expect(html).not.toContain("data-status");
+    expect(html).not.toContain("data-discover");
   });
 
   it("marks the link for the current path as active", async () => {
@@ -78,6 +93,17 @@ describe("Link", () => {
     expect(isPlainHref("/quran/12")).toBe(false);
     expect(isPlainHref("//cdn.example.com/x")).toBe(true);
     expect(isPlainHref("#top")).toBe(true);
+    expect(isPlainHref("foo")).toBe(true);
+    expect(isPlainHref("./foo")).toBe(true);
+    expect(isPlainHref("../foo")).toBe(true);
+    expect(isPlainHref("/api/x")).toBe(true);
+  });
+
+  it("splits internal hrefs into path, search and hash", () => {
+    expect(splitHref("/a")).toEqual({ path: "/a", search: undefined, hash: undefined });
+    expect(splitHref("/a?x=1#y")).toEqual({ path: "/a", search: { x: 1 }, hash: "y" });
+    expect(splitHref("/a?x=hello&y=2")).toEqual({ path: "/a", search: { x: "hello", y: 2 }, hash: undefined });
+    expect(splitHref("/a#y")).toEqual({ path: "/a", search: undefined, hash: "y" });
   });
 });
 

@@ -14,9 +14,20 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as ForgotRouteImport } from './routes/forgot'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as AppBooksRouteImport } from './routes/_app.books'
+import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
+import { Route as AppDuasRouteImport } from './routes/_app.duas'
+import { Route as AppPlanRouteImport } from './routes/_app.plan'
+import { Route as AppQuizRouteImport } from './routes/_app.quiz'
+import { Route as AppRemindersRouteImport } from './routes/_app.reminders'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
+import { Route as AppTasbihRouteImport } from './routes/_app.tasbih'
+import { Route as AppTodayRouteImport } from './routes/_app.today'
+import { Route as AppZakatRouteImport } from './routes/_app.zakat'
 import { Route as AuthSignupRouteImport } from './routes/_auth.signup'
 import { Route as ApiWebhookCheckRouteImport } from './routes/api/[_]webhook-check'
+import { Route as AppAdminAnnouncementsRouteImport } from './routes/_app.admin.announcements'
+import { Route as AppQuranIndexRouteImport } from './routes/_app.quran.index'
 import { Route as AuthSignInSplatRouteImport } from './routes/_auth.sign-in.$'
 import { Route as AuthSignUpSplatRouteImport } from './routes/_auth.sign-up.$'
 
@@ -43,9 +54,54 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppBooksRoute = AppBooksRouteImport.update({
+  id: '/books',
+  path: '/books',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDashboardRoute = AppDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDuasRoute = AppDuasRouteImport.update({
+  id: '/duas',
+  path: '/duas',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPlanRoute = AppPlanRouteImport.update({
+  id: '/plan',
+  path: '/plan',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppQuizRoute = AppQuizRouteImport.update({
+  id: '/quiz',
+  path: '/quiz',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppRemindersRoute = AppRemindersRouteImport.update({
+  id: '/reminders',
+  path: '/reminders',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppSettingsRoute = AppSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTasbihRoute = AppTasbihRouteImport.update({
+  id: '/tasbih',
+  path: '/tasbih',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTodayRoute = AppTodayRouteImport.update({
+  id: '/today',
+  path: '/today',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppZakatRoute = AppZakatRouteImport.update({
+  id: '/zakat',
+  path: '/zakat',
   getParentRoute: () => AppRoute,
 } as any)
 const AuthSignupRoute = AuthSignupRouteImport.update({
@@ -57,6 +113,16 @@ const ApiWebhookCheckRoute = ApiWebhookCheckRouteImport.update({
   id: '/api/_webhook-check',
   path: '/api/_webhook-check',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AppAdminAnnouncementsRoute = AppAdminAnnouncementsRouteImport.update({
+  id: '/admin/announcements',
+  path: '/admin/announcements',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppQuranIndexRoute = AppQuranIndexRouteImport.update({
+  id: '/quran/',
+  path: '/quran/',
+  getParentRoute: () => AppRoute,
 } as any)
 const AuthSignInSplatRoute = AuthSignInSplatRouteImport.update({
   id: '/sign-in/$',
@@ -73,21 +139,43 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/forgot': typeof ForgotRoute
   '/login': typeof LoginRoute
+  '/books': typeof AppBooksRoute
+  '/dashboard': typeof AppDashboardRoute
+  '/duas': typeof AppDuasRoute
+  '/plan': typeof AppPlanRoute
+  '/quiz': typeof AppQuizRoute
+  '/reminders': typeof AppRemindersRoute
   '/settings': typeof AppSettingsRoute
+  '/tasbih': typeof AppTasbihRoute
+  '/today': typeof AppTodayRoute
+  '/zakat': typeof AppZakatRoute
   '/signup': typeof AuthSignupRoute
   '/api/_webhook-check': typeof ApiWebhookCheckRoute
+  '/admin/announcements': typeof AppAdminAnnouncementsRoute
   '/sign-in/$': typeof AuthSignInSplatRoute
   '/sign-up/$': typeof AuthSignUpSplatRoute
+  '/quran/': typeof AppQuranIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/forgot': typeof ForgotRoute
   '/login': typeof LoginRoute
+  '/books': typeof AppBooksRoute
+  '/dashboard': typeof AppDashboardRoute
+  '/duas': typeof AppDuasRoute
+  '/plan': typeof AppPlanRoute
+  '/quiz': typeof AppQuizRoute
+  '/reminders': typeof AppRemindersRoute
   '/settings': typeof AppSettingsRoute
+  '/tasbih': typeof AppTasbihRoute
+  '/today': typeof AppTodayRoute
+  '/zakat': typeof AppZakatRoute
   '/signup': typeof AuthSignupRoute
   '/api/_webhook-check': typeof ApiWebhookCheckRoute
+  '/admin/announcements': typeof AppAdminAnnouncementsRoute
   '/sign-in/$': typeof AuthSignInSplatRoute
   '/sign-up/$': typeof AuthSignUpSplatRoute
+  '/quran': typeof AppQuranIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -96,11 +184,22 @@ export interface FileRoutesById {
   '/_auth': typeof AuthRouteWithChildren
   '/forgot': typeof ForgotRoute
   '/login': typeof LoginRoute
+  '/_app/books': typeof AppBooksRoute
+  '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/duas': typeof AppDuasRoute
+  '/_app/plan': typeof AppPlanRoute
+  '/_app/quiz': typeof AppQuizRoute
+  '/_app/reminders': typeof AppRemindersRoute
   '/_app/settings': typeof AppSettingsRoute
+  '/_app/tasbih': typeof AppTasbihRoute
+  '/_app/today': typeof AppTodayRoute
+  '/_app/zakat': typeof AppZakatRoute
   '/_auth/signup': typeof AuthSignupRoute
   '/api/_webhook-check': typeof ApiWebhookCheckRoute
+  '/_app/admin/announcements': typeof AppAdminAnnouncementsRoute
   '/_auth/sign-in/$': typeof AuthSignInSplatRoute
   '/_auth/sign-up/$': typeof AuthSignUpSplatRoute
+  '/_app/quran/': typeof AppQuranIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -108,21 +207,43 @@ export interface FileRouteTypes {
     | '/'
     | '/forgot'
     | '/login'
+    | '/books'
+    | '/dashboard'
+    | '/duas'
+    | '/plan'
+    | '/quiz'
+    | '/reminders'
     | '/settings'
+    | '/tasbih'
+    | '/today'
+    | '/zakat'
     | '/signup'
     | '/api/_webhook-check'
+    | '/admin/announcements'
     | '/sign-in/$'
     | '/sign-up/$'
+    | '/quran/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/forgot'
     | '/login'
+    | '/books'
+    | '/dashboard'
+    | '/duas'
+    | '/plan'
+    | '/quiz'
+    | '/reminders'
     | '/settings'
+    | '/tasbih'
+    | '/today'
+    | '/zakat'
     | '/signup'
     | '/api/_webhook-check'
+    | '/admin/announcements'
     | '/sign-in/$'
     | '/sign-up/$'
+    | '/quran'
   id:
     | '__root__'
     | '/'
@@ -130,11 +251,22 @@ export interface FileRouteTypes {
     | '/_auth'
     | '/forgot'
     | '/login'
+    | '/_app/books'
+    | '/_app/dashboard'
+    | '/_app/duas'
+    | '/_app/plan'
+    | '/_app/quiz'
+    | '/_app/reminders'
     | '/_app/settings'
+    | '/_app/tasbih'
+    | '/_app/today'
+    | '/_app/zakat'
     | '/_auth/signup'
     | '/api/_webhook-check'
+    | '/_app/admin/announcements'
     | '/_auth/sign-in/$'
     | '/_auth/sign-up/$'
+    | '/_app/quran/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -183,11 +315,74 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/books': {
+      id: '/_app/books'
+      path: '/books'
+      fullPath: '/books'
+      preLoaderRoute: typeof AppBooksRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/dashboard': {
+      id: '/_app/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AppDashboardRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/duas': {
+      id: '/_app/duas'
+      path: '/duas'
+      fullPath: '/duas'
+      preLoaderRoute: typeof AppDuasRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/plan': {
+      id: '/_app/plan'
+      path: '/plan'
+      fullPath: '/plan'
+      preLoaderRoute: typeof AppPlanRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/quiz': {
+      id: '/_app/quiz'
+      path: '/quiz'
+      fullPath: '/quiz'
+      preLoaderRoute: typeof AppQuizRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/reminders': {
+      id: '/_app/reminders'
+      path: '/reminders'
+      fullPath: '/reminders'
+      preLoaderRoute: typeof AppRemindersRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/settings': {
       id: '/_app/settings'
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/tasbih': {
+      id: '/_app/tasbih'
+      path: '/tasbih'
+      fullPath: '/tasbih'
+      preLoaderRoute: typeof AppTasbihRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/today': {
+      id: '/_app/today'
+      path: '/today'
+      fullPath: '/today'
+      preLoaderRoute: typeof AppTodayRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/zakat': {
+      id: '/_app/zakat'
+      path: '/zakat'
+      fullPath: '/zakat'
+      preLoaderRoute: typeof AppZakatRouteImport
       parentRoute: typeof AppRoute
     }
     '/_auth/signup': {
@@ -203,6 +398,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/_webhook-check'
       preLoaderRoute: typeof ApiWebhookCheckRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_app/admin/announcements': {
+      id: '/_app/admin/announcements'
+      path: '/admin/announcements'
+      fullPath: '/admin/announcements'
+      preLoaderRoute: typeof AppAdminAnnouncementsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/quran/': {
+      id: '/_app/quran/'
+      path: '/quran'
+      fullPath: '/quran/'
+      preLoaderRoute: typeof AppQuranIndexRouteImport
+      parentRoute: typeof AppRoute
     }
     '/_auth/sign-in/$': {
       id: '/_auth/sign-in/$'
@@ -222,11 +431,33 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
+  AppBooksRoute: typeof AppBooksRoute
+  AppDashboardRoute: typeof AppDashboardRoute
+  AppDuasRoute: typeof AppDuasRoute
+  AppPlanRoute: typeof AppPlanRoute
+  AppQuizRoute: typeof AppQuizRoute
+  AppRemindersRoute: typeof AppRemindersRoute
   AppSettingsRoute: typeof AppSettingsRoute
+  AppTasbihRoute: typeof AppTasbihRoute
+  AppTodayRoute: typeof AppTodayRoute
+  AppZakatRoute: typeof AppZakatRoute
+  AppAdminAnnouncementsRoute: typeof AppAdminAnnouncementsRoute
+  AppQuranIndexRoute: typeof AppQuranIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppBooksRoute: AppBooksRoute,
+  AppDashboardRoute: AppDashboardRoute,
+  AppDuasRoute: AppDuasRoute,
+  AppPlanRoute: AppPlanRoute,
+  AppQuizRoute: AppQuizRoute,
+  AppRemindersRoute: AppRemindersRoute,
   AppSettingsRoute: AppSettingsRoute,
+  AppTasbihRoute: AppTasbihRoute,
+  AppTodayRoute: AppTodayRoute,
+  AppZakatRoute: AppZakatRoute,
+  AppAdminAnnouncementsRoute: AppAdminAnnouncementsRoute,
+  AppQuranIndexRoute: AppQuranIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

@@ -15,7 +15,7 @@ const m = vi.hoisted(() => ({
 vi.mock("@/lib/prisma", () => ({ prisma: m.prisma }));
 vi.mock("@/lib/auth/server", () => ({ getAppAuthUser: m.getAppAuthUser }));
 
-import { addAdminUserImpl, listAdminUsersImpl, removeAdminUserImpl } from "./admin-users-impl";
+import { addAdminUserImpl, getAdminAccessImpl, listAdminUsersImpl, removeAdminUserImpl } from "./admin-users-impl";
 
 function session(id: string, email: string | null, adminRows: string[] = []) {
   m.getAppAuthUser.mockResolvedValue({ id, clerkId: "user_x", email });
@@ -133,5 +133,25 @@ describe("admin operations", () => {
     session(ADMIN_MAIL, "boss@example.com");
     expect(await removeAdminUserImpl(ADMIN_MAIL, ADMIN_MAIL)).toEqual({ ok: false, error: "cannot_remove_self" });
     expect(m.prisma.adminUser.deleteMany).not.toHaveBeenCalled();
+  });
+});
+
+describe("getAdminAccessImpl (page gate)", () => {
+  it("signed out -> unauthorized, no database read", async () => {
+    m.getAppAuthUser.mockResolvedValue(null);
+    expect(await getAdminAccessImpl()).toBe("unauthorized");
+    expect(m.prisma.adminUser.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("signed in but not an admin -> forbidden", async () => {
+    session(NOBODY, "nobody@example.com");
+    expect(await getAdminAccessImpl()).toBe("forbidden");
+  });
+
+  it("admin by table row or by ADMIN_EMAILS -> ok", async () => {
+    session(ADMIN_TABLE, "x@example.com", [ADMIN_TABLE]);
+    expect(await getAdminAccessImpl()).toBe("ok");
+    session(ADMIN_MAIL, "Boss@Example.com");
+    expect(await getAdminAccessImpl()).toBe("ok");
   });
 });
