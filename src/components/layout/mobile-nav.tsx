@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { Link } from "@/components/shared/link";
+import { usePathname } from "@/hooks/use-pathname";
+import { useTranslations } from "@/i18n/use-intl";
 import {
   LayoutDashboard,
   CalendarDays,

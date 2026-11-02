@@ -3,7 +3,7 @@
 import * as React from "react"
 import { XIcon } from "lucide-react"
 import { Dialog as SheetPrimitive } from "radix-ui"
-import { useTranslations } from "next-intl"
+import { useTranslations } from "@/i18n/use-intl"
 
 import { cn } from "@/lib/utils"
 

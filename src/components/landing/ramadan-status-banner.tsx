@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useLocale, useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "@/i18n/use-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { CalendarDays, Moon, Star } from "lucide-react";
 import type { RamadanStatus } from "@/lib/ramadan-date";

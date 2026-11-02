@@ -26,36 +26,6 @@
     ".nitro",
     ".tanstack",
     // TEMPORARY (TanStack migration Task 1): Next.js code not ported yet; Task 11 removes these.
-    "src/app",
-    // TEMPORARY: these import next/*, next-intl or @clerk/nextjs (directly or via another file here); ported in Tasks 2-8.
-    "src/components/admin/announcements-admin-content.tsx",
-    "src/components/dashboard/dashboard-content.tsx",
-    "src/components/hadith/hadith-audio-controls.tsx",
-    "src/components/landing/prayer-times-widget.tsx",
-    "src/components/landing/quran-preview.tsx",
-    "src/components/landing/ramadan-status-banner.tsx",
-    "src/components/landing/ramadan-timetable.tsx",
-    "src/components/layout/app-header.tsx",
-    "src/components/layout/app-shell.tsx",
-    "src/components/layout/desktop-sidebar.tsx",
-    "src/components/layout/mobile-nav.tsx",
-    "src/components/plan/plan-content.tsx",
-    "src/components/quran/quran-reader.tsx",
-    "src/components/quran/quran-surah-list.tsx",
-    "src/components/reminders/reminders-content.tsx",
-    "src/components/settings/settings-content.tsx",
-    "src/components/shared/accessibility-sidebar.tsx",
-    "src/components/shared/announcements-strip.tsx",
-    "src/components/shared/daily-ibadah-tracker.tsx",
-    "src/components/shared/floating-quick-nav.tsx",
-    "src/components/shared/signup-prompt.tsx",
-    "src/components/today/daily-checklist.tsx",
-    "src/components/today/journal-section.tsx",
-    "src/components/today/quran-tracker.tsx",
-    "src/components/today/salah-tracker.tsx",
-    "src/components/today/today-content.tsx",
-    "src/components/ui/dialog.tsx",
-    "src/components/ui/sheet.tsx",
-    "src/hooks/use-guest-data.ts"
+    "src/app"
   ]
 }

@@ -1,9 +1,9 @@
 "use client";
 
 import { useTransition } from "react";
-import { useTranslations } from "next-intl";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useTranslations } from "@/i18n/use-intl";
+import { Link } from "@/components/shared/link";
+import { usePathname } from "@/hooks/use-pathname";
 import { useRouter } from "@tanstack/react-router";
 import {
   Moon,

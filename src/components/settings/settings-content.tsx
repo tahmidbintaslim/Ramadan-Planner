@@ -1,11 +1,10 @@
 "use client";
 
-import Link from "next/link";
+import { Link } from "@/components/shared/link";
 import { useEffect, useState, useTransition } from "react";
 import { useClerk } from "@clerk/tanstack-react-start";
-import { useLocale, useTranslations } from "next-intl";
-import { useSearchParams } from "next/navigation";
-import { useRouter } from "@tanstack/react-router";
+import { useLocale, useTranslations } from "@/i18n/use-intl";
+import { useRouter, useSearch } from "@tanstack/react-router";
 import { Bell, CalendarClock, Globe, LogIn, LogOut, UserPlus } from "lucide-react";
 import { switchLocaleAction } from "@/actions/locale";
 import { getUserProfileAction, updateUserProfileAction } from "@/actions/planner";
@@ -44,7 +43,8 @@ export function SettingsContent() {
   const tAuth = useTranslations("auth");
   const tCommon = useTranslations("common");
   const locale = useLocale();
-  const searchParams = useSearchParams();
+  // Only the `google` result param is read (set by the Google OAuth callback redirect).
+  const search = useSearch({ strict: false }) as { google?: unknown };
   const { signOut } = useClerk();
 
   const [isPending, startTransition] = useTransition();
@@ -97,7 +97,8 @@ export function SettingsContent() {
     });
   }, [isGuest, loading, t]);
 
-  const googleStatusParam = searchParams.get("google");
+  const googleStatusParam =
+    search.google === undefined || search.google === null ? "" : String(search.google);
   const googleInlineStatus =
     googleStatusParam === "connected" ? t("googleConnected") : null;
   const googleInlineError =

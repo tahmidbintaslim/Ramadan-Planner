@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useLocale, useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "@/i18n/use-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BookOpen, ChevronRight } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@/components/shared/link";
 import type { SurahInfo } from "@/lib/quran";
 import { formatLocalizedNumber } from "@/lib/locale-number";
 
