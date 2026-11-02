@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cachedFetch, clearTtlCache, ttlCache } from "./ttl-cache";
+import { FETCH_TIMEOUT_MS, FetchTimeoutError, cachedFetch, clearTtlCache, ttlCache } from "./ttl-cache";
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -143,5 +143,64 @@ describe("cachedFetch", () => {
     vi.stubGlobal("fetch", fetchFn);
     await expect(cachedFetch("https://x/y", 10)).rejects.toThrow("net");
     expect((await cachedFetch("https://x/y", 10)).ok).toBe(true);
+  });
+
+  it("passes an abort signal to fetch and keeps the caller's init", async () => {
+    const fetchFn = vi.fn().mockResolvedValue({ ok: true, status: 200, statusText: "OK", json: async () => 1 });
+    vi.stubGlobal("fetch", fetchFn);
+    await cachedFetch("https://x/y", 10, { headers: { a: "b" } });
+    const init = fetchFn.mock.calls[0][1] as RequestInit;
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+    expect(init.headers).toEqual({ a: "b" });
+  });
+
+  it("times out a hung upstream that honours the signal: rejects, aborts, and does not cache", async () => {
+    let seen: AbortSignal | undefined;
+    const hang = (_url: string, init: RequestInit) =>
+      new Promise((_resolve, reject) => {
+        seen = init.signal!;
+        init.signal!.addEventListener("abort", () => reject(init.signal!.reason));
+      });
+    const fetchFn = vi
+      .fn()
+      .mockImplementationOnce(hang)
+      .mockResolvedValueOnce({ ok: true, status: 200, statusText: "OK", json: async () => "fresh" });
+    vi.stubGlobal("fetch", fetchFn);
+
+    const first = cachedFetch("https://x/hang", 3600);
+    const concurrent = cachedFetch("https://x/hang", 3600); // shares the in-flight entry
+    const settled = Promise.allSettled([first, concurrent]);
+    await vi.advanceTimersByTimeAsync(FETCH_TIMEOUT_MS - 1);
+    expect(seen?.aborted).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    const [a, b] = await settled;
+    expect(a.status).toBe("rejected");
+    expect((a as PromiseRejectedResult).reason).toBeInstanceOf(FetchTimeoutError);
+    expect(b.status).toBe("rejected");
+    expect(seen?.aborted).toBe(true);
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+
+    // Not cached: the next call goes upstream again and succeeds.
+    expect(await (await cachedFetch("https://x/hang", 3600)).json()).toBe("fresh");
+    expect(fetchFn).toHaveBeenCalledTimes(2);
+  });
+
+  it("times out even when the upstream ignores the abort signal (e.g. a body that never ends)", async () => {
+    const fetchFn = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, statusText: "OK", json: () => new Promise(() => {}) })
+      .mockResolvedValueOnce({ ok: true, status: 200, statusText: "OK", json: async () => 2 });
+    vi.stubGlobal("fetch", fetchFn);
+
+    const pending = cachedFetch("https://x/slow-body", 3600);
+    const check = expect(pending).rejects.toBeInstanceOf(FetchTimeoutError);
+    await vi.advanceTimersByTimeAsync(FETCH_TIMEOUT_MS);
+    await check;
+    expect(await (await cachedFetch("https://x/slow-body", 3600)).json()).toBe(2);
+  });
+
+  it("FETCH_TIMEOUT_MS is a sensible bound (seconds, not minutes)", () => {
+    expect(FETCH_TIMEOUT_MS).toBeGreaterThanOrEqual(5_000);
+    expect(FETCH_TIMEOUT_MS).toBeLessThanOrEqual(15_000);
   });
 });

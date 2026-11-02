@@ -41,8 +41,17 @@ async function open(path, locale) {
   const msgs = [];
   page.on("console", (m) => { if (["error", "warning"].includes(m.type())) msgs.push(`${m.type()}: ${m.text()}`); });
   page.on("pageerror", (e) => msgs.push(`pageerror: ${e.message}`));
-  const res = await page.goto(BASE + path, { waitUntil: "networkidle" });
-  return { ctx, page, res, msgs };
+  // Same-origin /api/* responses the page's widgets fetched (path+query -> status).
+  const apis = [];
+  page.on("response", (r) => {
+    const u = new URL(r.url());
+    if (u.origin === new URL(BASE).origin && u.pathname.startsWith("/api/")) apis.push({ url: u.pathname + u.search, status: r.status() });
+  });
+  const res = await page.goto(BASE + path, { waitUntil: "load" });
+  // Bounded idle wait: Chromium never reports a fetch with `Cache-Control: no-store` as finished while its body
+  // is unread, and the announcements strip skips the body of a non-OK answer (the 503 without a database).
+  await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
+  return { ctx, page, res, msgs, apis };
 }
 
 // Data-backed routes. No database exists in the sandbox: surah pages fall back to quranapi.pages.dev for the
@@ -63,6 +72,59 @@ console.log("/quran/1 (loader + head)");
     : fail(`canonical ${canon}`);
   (await page.locator("main").first().isVisible()) ? ok("main rendered") : fail("no main");
   msgs.some((m) => HYDRATION.test(m)) ? fail("hydration warning") : ok("no hydration warning");
+  await ctx.close();
+}
+
+// API-backed widgets (Task 8 server routes). quran/timings/ramadan need outbound HTTPS to quranapi.pages.dev
+// and api.aladhan.com; without network they show their own error states and these checks report it.
+const apiOk = (apis, prefix) => apis.find((a) => a.url.startsWith(prefix) && a.status === 200);
+
+console.log("/quran/1 verse text (GET /api/quran?surah=1)");
+{
+  const { ctx, page, apis } = await open("/quran/1");
+  await page.locator("main [dir=rtl].font-arabic").nth(6).waitFor({ state: "visible", timeout: 20000 }).catch(() => {});
+  apiOk(apis, "/api/quran?surah=1") ? ok("GET /api/quran?surah=1 -> 200") : fail(`api calls ${JSON.stringify(apis)}`);
+  const verses = page.locator("main [dir=rtl].font-arabic");
+  const n = await verses.count();
+  const first = n ? (await verses.nth(1).innerText()).trim() : "";
+  n >= 7 && /[\u0600-\u06FF]{3,}/.test(first) ? ok(`${n} Arabic blocks, e.g. "${first.slice(0, 30)}"`) : fail(`verses not rendered (${n})`);
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/quran-1-verses.png` });
+  await ctx.close();
+}
+
+console.log("/quran surah list (GET /api/quran)");
+{
+  const { ctx, page, apis } = await open("/quran");
+  apiOk(apis, "/api/quran") ? ok("GET /api/quran -> 200") : fail(`api calls ${JSON.stringify(apis)}`);
+  (await page.getByText(/Al-Baqara|আল-বাকারা/).first().isVisible().catch(() => false)) ? ok("surah list rendered") : fail("surah list missing");
+  await ctx.close();
+}
+
+console.log("landing widgets (GET /api/timings, /api/quran, /api/ramadan-timetable)");
+{
+  const { ctx, page, apis, msgs } = await open("/");
+  // The timetable sits further down; scroll so lazily mounted widgets fetch too.
+  await page.mouse.wheel(0, 20000);
+  await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
+  for (const prefix of ["/api/timings", "/api/quran", "/api/ramadan-timetable"]) {
+    const hit = apiOk(apis, prefix);
+    hit ? ok(`${hit.url.slice(0, 70)} -> 200`) : fail(`${prefix}: ${JSON.stringify(apis.filter((a) => a.url.startsWith(prefix)))}`);
+  }
+  const text = await page.locator("main").first().innerText();
+  /[০-৯0-9]{1,2}:[০-৯0-9]{2}/.test(text) ? ok("prayer/sehri/iftar times rendered") : fail("no times on the landing page");
+  const relevant = msgs.filter((m) => !IGNORE.some((r) => r.test(m)));
+  relevant.length ? fail(`console: ${relevant.join(" | ")}`) : ok("no console errors");
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/home-widgets.png`, fullPage: true });
+  await ctx.close();
+}
+
+for (const path of ["/today", "/dashboard"]) {
+  console.log(`${path} Ramadan status / timings (GET /api/ramadan${path === "/dashboard" ? ", /api/timings" : ""})`);
+  const { ctx, apis } = await open(path);
+  for (const prefix of path === "/dashboard" ? ["/api/ramadan?", "/api/timings"] : ["/api/ramadan?"]) {
+    const hit = apiOk(apis, prefix);
+    hit ? ok(`${hit.url.slice(0, 70)} -> 200`) : fail(`${prefix}: ${JSON.stringify(apis.filter((a) => a.url.startsWith(prefix.replace("?", ""))))}`);
+  }
   await ctx.close();
 }
 
@@ -154,7 +216,8 @@ console.log("guest Today persistence");
   const boxAfter = await box.isChecked();
   after !== before ? ok(`Fajr toggled ${before} -> ${after}`) : fail("Fajr did not toggle");
   boxAfter !== boxBefore ? ok(`checklist checkbox toggled ${boxBefore} -> ${boxAfter}`) : fail("checkbox did not toggle");
-  await page.reload({ waitUntil: "networkidle" });
+  await page.reload({ waitUntil: "load" });
+  await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
   const fajr2 = page.getByRole("button", { name: /^(ফজর|Fajr)/ }).first();
   await fajr2.waitFor({ state: "visible", timeout: 15000 });
   const box2 = page.getByRole("checkbox").first();

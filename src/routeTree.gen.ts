@@ -25,15 +25,26 @@ import { Route as AppTasbihRouteImport } from './routes/_app.tasbih'
 import { Route as AppTodayRouteImport } from './routes/_app.today'
 import { Route as AppZakatRouteImport } from './routes/_app.zakat'
 import { Route as AuthSignupRouteImport } from './routes/_auth.signup'
-import { Route as ApiWebhookCheckRouteImport } from './routes/api/[_]webhook-check'
+import { Route as ApiDailyContentRouteImport } from './routes/api/daily-content'
+import { Route as ApiQuranRouteImport } from './routes/api/quran'
+import { Route as ApiRamadanRouteImport } from './routes/api/ramadan'
+import { Route as ApiRamadanTimetableRouteImport } from './routes/api/ramadan-timetable'
+import { Route as ApiTimingsRouteImport } from './routes/api/timings'
 import { Route as AppAdminAnnouncementsRouteImport } from './routes/_app.admin.announcements'
 import { Route as AppHadithIndexRouteImport } from './routes/_app.hadith.index'
 import { Route as AppQuranIndexRouteImport } from './routes/_app.quran.index'
 import { Route as AppQuranSurahRouteImport } from './routes/_app.quran.$surah'
 import { Route as AuthSignInSplatRouteImport } from './routes/_auth.sign-in.$'
 import { Route as AuthSignUpSplatRouteImport } from './routes/_auth.sign-up.$'
+import { Route as ApiAnnouncementsIndexRouteImport } from './routes/api/announcements.index'
+import { Route as ApiAnnouncementsIdRouteImport } from './routes/api/announcements.$id'
+import { Route as ApiPushDispatchRouteImport } from './routes/api/push.dispatch'
+import { Route as ApiPushSubscribeRouteImport } from './routes/api/push.subscribe'
 import { Route as AppHadithEditionIndexRouteImport } from './routes/_app.hadith.$edition.index'
 import { Route as AppHadithEditionChapterRouteImport } from './routes/_app.hadith.$edition.$chapter'
+import { Route as ApiCalendarGoogleCallbackRouteImport } from './routes/api/calendar.google.callback'
+import { Route as ApiCalendarGoogleConnectRouteImport } from './routes/api/calendar.google.connect'
+import { Route as ApiCalendarIcsSecretRouteImport } from './routes/api/calendar.ics.$secret'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -113,9 +124,29 @@ const AuthSignupRoute = AuthSignupRouteImport.update({
   path: '/signup',
   getParentRoute: () => AuthRoute,
 } as any)
-const ApiWebhookCheckRoute = ApiWebhookCheckRouteImport.update({
-  id: '/api/_webhook-check',
-  path: '/api/_webhook-check',
+const ApiDailyContentRoute = ApiDailyContentRouteImport.update({
+  id: '/api/daily-content',
+  path: '/api/daily-content',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiQuranRoute = ApiQuranRouteImport.update({
+  id: '/api/quran',
+  path: '/api/quran',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiRamadanRoute = ApiRamadanRouteImport.update({
+  id: '/api/ramadan',
+  path: '/api/ramadan',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiRamadanTimetableRoute = ApiRamadanTimetableRouteImport.update({
+  id: '/api/ramadan-timetable',
+  path: '/api/ramadan-timetable',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiTimingsRoute = ApiTimingsRouteImport.update({
+  id: '/api/timings',
+  path: '/api/timings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppAdminAnnouncementsRoute = AppAdminAnnouncementsRouteImport.update({
@@ -148,6 +179,26 @@ const AuthSignUpSplatRoute = AuthSignUpSplatRouteImport.update({
   path: '/sign-up/$',
   getParentRoute: () => AuthRoute,
 } as any)
+const ApiAnnouncementsIndexRoute = ApiAnnouncementsIndexRouteImport.update({
+  id: '/api/announcements/',
+  path: '/api/announcements/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAnnouncementsIdRoute = ApiAnnouncementsIdRouteImport.update({
+  id: '/api/announcements/$id',
+  path: '/api/announcements/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPushDispatchRoute = ApiPushDispatchRouteImport.update({
+  id: '/api/push/dispatch',
+  path: '/api/push/dispatch',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPushSubscribeRoute = ApiPushSubscribeRouteImport.update({
+  id: '/api/push/subscribe',
+  path: '/api/push/subscribe',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppHadithEditionIndexRoute = AppHadithEditionIndexRouteImport.update({
   id: '/hadith/$edition/',
   path: '/hadith/$edition/',
@@ -157,6 +208,23 @@ const AppHadithEditionChapterRoute = AppHadithEditionChapterRouteImport.update({
   id: '/hadith/$edition/$chapter',
   path: '/hadith/$edition/$chapter',
   getParentRoute: () => AppRoute,
+} as any)
+const ApiCalendarGoogleCallbackRoute =
+  ApiCalendarGoogleCallbackRouteImport.update({
+    id: '/api/calendar/google/callback',
+    path: '/api/calendar/google/callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiCalendarGoogleConnectRoute =
+  ApiCalendarGoogleConnectRouteImport.update({
+    id: '/api/calendar/google/connect',
+    path: '/api/calendar/google/connect',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiCalendarIcsSecretRoute = ApiCalendarIcsSecretRouteImport.update({
+  id: '/api/calendar/ics/$secret',
+  path: '/api/calendar/ics/$secret',
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -174,14 +242,25 @@ export interface FileRoutesByFullPath {
   '/today': typeof AppTodayRoute
   '/zakat': typeof AppZakatRoute
   '/signup': typeof AuthSignupRoute
-  '/api/_webhook-check': typeof ApiWebhookCheckRoute
+  '/api/daily-content': typeof ApiDailyContentRoute
+  '/api/quran': typeof ApiQuranRoute
+  '/api/ramadan': typeof ApiRamadanRoute
+  '/api/ramadan-timetable': typeof ApiRamadanTimetableRoute
+  '/api/timings': typeof ApiTimingsRoute
   '/admin/announcements': typeof AppAdminAnnouncementsRoute
   '/quran/$surah': typeof AppQuranSurahRoute
   '/sign-in/$': typeof AuthSignInSplatRoute
   '/sign-up/$': typeof AuthSignUpSplatRoute
+  '/api/announcements/$id': typeof ApiAnnouncementsIdRoute
+  '/api/push/dispatch': typeof ApiPushDispatchRoute
+  '/api/push/subscribe': typeof ApiPushSubscribeRoute
   '/hadith/': typeof AppHadithIndexRoute
   '/quran/': typeof AppQuranIndexRoute
+  '/api/announcements/': typeof ApiAnnouncementsIndexRoute
   '/hadith/$edition/$chapter': typeof AppHadithEditionChapterRoute
+  '/api/calendar/google/callback': typeof ApiCalendarGoogleCallbackRoute
+  '/api/calendar/google/connect': typeof ApiCalendarGoogleConnectRoute
+  '/api/calendar/ics/$secret': typeof ApiCalendarIcsSecretRoute
   '/hadith/$edition/': typeof AppHadithEditionIndexRoute
 }
 export interface FileRoutesByTo {
@@ -199,14 +278,25 @@ export interface FileRoutesByTo {
   '/today': typeof AppTodayRoute
   '/zakat': typeof AppZakatRoute
   '/signup': typeof AuthSignupRoute
-  '/api/_webhook-check': typeof ApiWebhookCheckRoute
+  '/api/daily-content': typeof ApiDailyContentRoute
+  '/api/quran': typeof ApiQuranRoute
+  '/api/ramadan': typeof ApiRamadanRoute
+  '/api/ramadan-timetable': typeof ApiRamadanTimetableRoute
+  '/api/timings': typeof ApiTimingsRoute
   '/admin/announcements': typeof AppAdminAnnouncementsRoute
   '/quran/$surah': typeof AppQuranSurahRoute
   '/sign-in/$': typeof AuthSignInSplatRoute
   '/sign-up/$': typeof AuthSignUpSplatRoute
+  '/api/announcements/$id': typeof ApiAnnouncementsIdRoute
+  '/api/push/dispatch': typeof ApiPushDispatchRoute
+  '/api/push/subscribe': typeof ApiPushSubscribeRoute
   '/hadith': typeof AppHadithIndexRoute
   '/quran': typeof AppQuranIndexRoute
+  '/api/announcements': typeof ApiAnnouncementsIndexRoute
   '/hadith/$edition/$chapter': typeof AppHadithEditionChapterRoute
+  '/api/calendar/google/callback': typeof ApiCalendarGoogleCallbackRoute
+  '/api/calendar/google/connect': typeof ApiCalendarGoogleConnectRoute
+  '/api/calendar/ics/$secret': typeof ApiCalendarIcsSecretRoute
   '/hadith/$edition': typeof AppHadithEditionIndexRoute
 }
 export interface FileRoutesById {
@@ -227,14 +317,25 @@ export interface FileRoutesById {
   '/_app/today': typeof AppTodayRoute
   '/_app/zakat': typeof AppZakatRoute
   '/_auth/signup': typeof AuthSignupRoute
-  '/api/_webhook-check': typeof ApiWebhookCheckRoute
+  '/api/daily-content': typeof ApiDailyContentRoute
+  '/api/quran': typeof ApiQuranRoute
+  '/api/ramadan': typeof ApiRamadanRoute
+  '/api/ramadan-timetable': typeof ApiRamadanTimetableRoute
+  '/api/timings': typeof ApiTimingsRoute
   '/_app/admin/announcements': typeof AppAdminAnnouncementsRoute
   '/_app/quran/$surah': typeof AppQuranSurahRoute
   '/_auth/sign-in/$': typeof AuthSignInSplatRoute
   '/_auth/sign-up/$': typeof AuthSignUpSplatRoute
+  '/api/announcements/$id': typeof ApiAnnouncementsIdRoute
+  '/api/push/dispatch': typeof ApiPushDispatchRoute
+  '/api/push/subscribe': typeof ApiPushSubscribeRoute
   '/_app/hadith/': typeof AppHadithIndexRoute
   '/_app/quran/': typeof AppQuranIndexRoute
+  '/api/announcements/': typeof ApiAnnouncementsIndexRoute
   '/_app/hadith/$edition/$chapter': typeof AppHadithEditionChapterRoute
+  '/api/calendar/google/callback': typeof ApiCalendarGoogleCallbackRoute
+  '/api/calendar/google/connect': typeof ApiCalendarGoogleConnectRoute
+  '/api/calendar/ics/$secret': typeof ApiCalendarIcsSecretRoute
   '/_app/hadith/$edition/': typeof AppHadithEditionIndexRoute
 }
 export interface FileRouteTypes {
@@ -254,14 +355,25 @@ export interface FileRouteTypes {
     | '/today'
     | '/zakat'
     | '/signup'
-    | '/api/_webhook-check'
+    | '/api/daily-content'
+    | '/api/quran'
+    | '/api/ramadan'
+    | '/api/ramadan-timetable'
+    | '/api/timings'
     | '/admin/announcements'
     | '/quran/$surah'
     | '/sign-in/$'
     | '/sign-up/$'
+    | '/api/announcements/$id'
+    | '/api/push/dispatch'
+    | '/api/push/subscribe'
     | '/hadith/'
     | '/quran/'
+    | '/api/announcements/'
     | '/hadith/$edition/$chapter'
+    | '/api/calendar/google/callback'
+    | '/api/calendar/google/connect'
+    | '/api/calendar/ics/$secret'
     | '/hadith/$edition/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -279,14 +391,25 @@ export interface FileRouteTypes {
     | '/today'
     | '/zakat'
     | '/signup'
-    | '/api/_webhook-check'
+    | '/api/daily-content'
+    | '/api/quran'
+    | '/api/ramadan'
+    | '/api/ramadan-timetable'
+    | '/api/timings'
     | '/admin/announcements'
     | '/quran/$surah'
     | '/sign-in/$'
     | '/sign-up/$'
+    | '/api/announcements/$id'
+    | '/api/push/dispatch'
+    | '/api/push/subscribe'
     | '/hadith'
     | '/quran'
+    | '/api/announcements'
     | '/hadith/$edition/$chapter'
+    | '/api/calendar/google/callback'
+    | '/api/calendar/google/connect'
+    | '/api/calendar/ics/$secret'
     | '/hadith/$edition'
   id:
     | '__root__'
@@ -306,14 +429,25 @@ export interface FileRouteTypes {
     | '/_app/today'
     | '/_app/zakat'
     | '/_auth/signup'
-    | '/api/_webhook-check'
+    | '/api/daily-content'
+    | '/api/quran'
+    | '/api/ramadan'
+    | '/api/ramadan-timetable'
+    | '/api/timings'
     | '/_app/admin/announcements'
     | '/_app/quran/$surah'
     | '/_auth/sign-in/$'
     | '/_auth/sign-up/$'
+    | '/api/announcements/$id'
+    | '/api/push/dispatch'
+    | '/api/push/subscribe'
     | '/_app/hadith/'
     | '/_app/quran/'
+    | '/api/announcements/'
     | '/_app/hadith/$edition/$chapter'
+    | '/api/calendar/google/callback'
+    | '/api/calendar/google/connect'
+    | '/api/calendar/ics/$secret'
     | '/_app/hadith/$edition/'
   fileRoutesById: FileRoutesById
 }
@@ -323,7 +457,18 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRouteWithChildren
   ForgotRoute: typeof ForgotRoute
   LoginRoute: typeof LoginRoute
-  ApiWebhookCheckRoute: typeof ApiWebhookCheckRoute
+  ApiDailyContentRoute: typeof ApiDailyContentRoute
+  ApiQuranRoute: typeof ApiQuranRoute
+  ApiRamadanRoute: typeof ApiRamadanRoute
+  ApiRamadanTimetableRoute: typeof ApiRamadanTimetableRoute
+  ApiTimingsRoute: typeof ApiTimingsRoute
+  ApiAnnouncementsIdRoute: typeof ApiAnnouncementsIdRoute
+  ApiPushDispatchRoute: typeof ApiPushDispatchRoute
+  ApiPushSubscribeRoute: typeof ApiPushSubscribeRoute
+  ApiAnnouncementsIndexRoute: typeof ApiAnnouncementsIndexRoute
+  ApiCalendarGoogleCallbackRoute: typeof ApiCalendarGoogleCallbackRoute
+  ApiCalendarGoogleConnectRoute: typeof ApiCalendarGoogleConnectRoute
+  ApiCalendarIcsSecretRoute: typeof ApiCalendarIcsSecretRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -440,11 +585,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthSignupRouteImport
       parentRoute: typeof AuthRoute
     }
-    '/api/_webhook-check': {
-      id: '/api/_webhook-check'
-      path: '/api/_webhook-check'
-      fullPath: '/api/_webhook-check'
-      preLoaderRoute: typeof ApiWebhookCheckRouteImport
+    '/api/daily-content': {
+      id: '/api/daily-content'
+      path: '/api/daily-content'
+      fullPath: '/api/daily-content'
+      preLoaderRoute: typeof ApiDailyContentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/quran': {
+      id: '/api/quran'
+      path: '/api/quran'
+      fullPath: '/api/quran'
+      preLoaderRoute: typeof ApiQuranRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ramadan': {
+      id: '/api/ramadan'
+      path: '/api/ramadan'
+      fullPath: '/api/ramadan'
+      preLoaderRoute: typeof ApiRamadanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ramadan-timetable': {
+      id: '/api/ramadan-timetable'
+      path: '/api/ramadan-timetable'
+      fullPath: '/api/ramadan-timetable'
+      preLoaderRoute: typeof ApiRamadanTimetableRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/timings': {
+      id: '/api/timings'
+      path: '/api/timings'
+      fullPath: '/api/timings'
+      preLoaderRoute: typeof ApiTimingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/admin/announcements': {
@@ -489,6 +662,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthSignUpSplatRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/api/announcements/': {
+      id: '/api/announcements/'
+      path: '/api/announcements'
+      fullPath: '/api/announcements/'
+      preLoaderRoute: typeof ApiAnnouncementsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/announcements/$id': {
+      id: '/api/announcements/$id'
+      path: '/api/announcements/$id'
+      fullPath: '/api/announcements/$id'
+      preLoaderRoute: typeof ApiAnnouncementsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/push/dispatch': {
+      id: '/api/push/dispatch'
+      path: '/api/push/dispatch'
+      fullPath: '/api/push/dispatch'
+      preLoaderRoute: typeof ApiPushDispatchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/push/subscribe': {
+      id: '/api/push/subscribe'
+      path: '/api/push/subscribe'
+      fullPath: '/api/push/subscribe'
+      preLoaderRoute: typeof ApiPushSubscribeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_app/hadith/$edition/': {
       id: '/_app/hadith/$edition/'
       path: '/hadith/$edition'
@@ -502,6 +703,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/hadith/$edition/$chapter'
       preLoaderRoute: typeof AppHadithEditionChapterRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/api/calendar/google/callback': {
+      id: '/api/calendar/google/callback'
+      path: '/api/calendar/google/callback'
+      fullPath: '/api/calendar/google/callback'
+      preLoaderRoute: typeof ApiCalendarGoogleCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/calendar/google/connect': {
+      id: '/api/calendar/google/connect'
+      path: '/api/calendar/google/connect'
+      fullPath: '/api/calendar/google/connect'
+      preLoaderRoute: typeof ApiCalendarGoogleConnectRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/calendar/ics/$secret': {
+      id: '/api/calendar/ics/$secret'
+      path: '/api/calendar/ics/$secret'
+      fullPath: '/api/calendar/ics/$secret'
+      preLoaderRoute: typeof ApiCalendarIcsSecretRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -566,7 +788,18 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRouteWithChildren,
   ForgotRoute: ForgotRoute,
   LoginRoute: LoginRoute,
-  ApiWebhookCheckRoute: ApiWebhookCheckRoute,
+  ApiDailyContentRoute: ApiDailyContentRoute,
+  ApiQuranRoute: ApiQuranRoute,
+  ApiRamadanRoute: ApiRamadanRoute,
+  ApiRamadanTimetableRoute: ApiRamadanTimetableRoute,
+  ApiTimingsRoute: ApiTimingsRoute,
+  ApiAnnouncementsIdRoute: ApiAnnouncementsIdRoute,
+  ApiPushDispatchRoute: ApiPushDispatchRoute,
+  ApiPushSubscribeRoute: ApiPushSubscribeRoute,
+  ApiAnnouncementsIndexRoute: ApiAnnouncementsIndexRoute,
+  ApiCalendarGoogleCallbackRoute: ApiCalendarGoogleCallbackRoute,
+  ApiCalendarGoogleConnectRoute: ApiCalendarGoogleConnectRoute,
+  ApiCalendarIcsSecretRoute: ApiCalendarIcsSecretRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

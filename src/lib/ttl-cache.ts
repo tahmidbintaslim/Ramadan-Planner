@@ -83,6 +83,45 @@ export interface CachedResponse {
   json<T = any>(): Promise<T>;
 }
 
+/**
+ * Upper bound for one upstream request (headers AND body). Without it a hung upstream would keep the shared
+ * in-flight entry, and every caller waiting on it, until the runtime's own socket timeout (minutes).
+ */
+export const FETCH_TIMEOUT_MS = 10_000;
+
+/** Thrown (and never cached) when an upstream request exceeds FETCH_TIMEOUT_MS. */
+export class FetchTimeoutError extends Error {
+  constructor(ms: number) {
+    super(`fetch timed out after ${ms} ms`);
+    this.name = "FetchTimeoutError";
+  }
+}
+
+function mergeSignals(a: AbortSignal | null | undefined, b: AbortSignal): AbortSignal {
+  return a ? AbortSignal.any([a, b]) : b;
+}
+
+/**
+ * Run `work` with an abort signal that fires after `ms`, and reject at that point even if `work` ignores the
+ * signal (e.g. a body stream that never ends), so the caller is never held longer than `ms`.
+ */
+async function withTimeout<T>(ms: number, work: (signal: AbortSignal) => Promise<T>): Promise<T> {
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      const error = new FetchTimeoutError(ms);
+      controller.abort(error);
+      reject(error);
+    }, ms);
+  });
+  try {
+    return await Promise.race([work(controller.signal), timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 class NotOk extends Error {
   constructor(readonly response: CachedResponse) {
     super(`HTTP ${response.status}`);
@@ -92,7 +131,8 @@ class NotOk extends Error {
 /**
  * `fetch(url)` + body parse, cached for `ttlSeconds` (the old `next.revalidate` value). Only a successful JSON
  * response is cached; a non-2xx answer is returned to the caller (as before) but not remembered, and a network
- * or parse error rejects as `fetch`/`res.json()` did.
+ * or parse error rejects as `fetch`/`res.json()` did. A request slower than FETCH_TIMEOUT_MS is aborted and
+ * rejects with FetchTimeoutError (not cached either).
  */
 export async function cachedFetch(
   url: string,
@@ -103,18 +143,19 @@ export async function cachedFetch(
     const body = await ttlCache<{ status: number; statusText: string; data: unknown }>(
       `fetch:${url}`,
       ttlSeconds * 1000,
-      async () => {
-        const res = await fetch(url, init ?? {});
-        if (!res.ok) {
-          throw new NotOk({
-            ok: false,
-            status: res.status,
-            statusText: res.statusText,
-            json: () => res.json(),
-          });
-        }
-        return { status: res.status, statusText: res.statusText, data: await res.json() };
-      },
+      () =>
+        withTimeout(FETCH_TIMEOUT_MS, async (signal) => {
+          const res = await fetch(url, { ...init, signal: mergeSignals(init?.signal, signal) });
+          if (!res.ok) {
+            throw new NotOk({
+              ok: false,
+              status: res.status,
+              statusText: res.statusText,
+              json: () => res.json(),
+            });
+          }
+          return { status: res.status, statusText: res.statusText, data: await res.json() };
+        }),
     );
     return {
       ok: true,
