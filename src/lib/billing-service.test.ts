@@ -71,6 +71,15 @@ describe("startCheckout", () => {
     expect(sd).toEqual({ metadata: { app: "ramadan-planner", user_id: "u1" } });
   });
 
+  it("a returning user without a customer row gets a new customer and no trial", async () => {
+    const { stripe, db, deps } = fakes({ had: true });
+    expect(await startCheckout("u1", "month", deps)).toEqual({ url: "https://stripe.test/c" });
+    expect(db.saveCustomer).toHaveBeenCalledWith("u1", "cus_new");
+    const arg = stripe.checkout.sessions.create.mock.calls[0][0];
+    expect(arg.customer).toBe("cus_new");
+    expect(arg.subscription_data).toEqual({ metadata: { app: "ramadan-planner", user_id: "u1" } });
+  });
+
   it("returns already_subscribed without any Stripe call", async () => {
     const { stripe, deps } = fakes({ active: true });
     expect(await startCheckout("u1", "month", deps)).toEqual({ error: "already_subscribed" });

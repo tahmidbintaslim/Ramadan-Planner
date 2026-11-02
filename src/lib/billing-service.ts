@@ -1,4 +1,5 @@
 import type Stripe from "stripe";
+import { GRANTING_STATUSES } from "./entitlements";
 import { priceIdForInterval, trialDaysFor, type Interval } from "./stripe";
 
 export interface CustomerDb {
@@ -39,7 +40,7 @@ export const prismaCustomerDb: CustomerDb = {
     const { prisma } = await import("@/lib/prisma");
     return (
       (await prisma.subscription.count({
-        where: { userId, status: { in: ["active", "trialing", "past_due"] } },
+        where: { userId, status: { in: [...GRANTING_STATUSES, "past_due"] } },
       })) > 0
     );
   },
@@ -64,7 +65,7 @@ export async function startCheckout(
     await db.saveCustomer(userId, customer);
   }
 
-  const trial = trialDaysFor(await db.hasHadSubscription(userId)) > 0;
+  const trialDays = trialDaysFor(await db.hasHadSubscription(userId));
   const base = baseUrl(appUrl);
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
@@ -74,8 +75,8 @@ export async function startCheckout(
     payment_method_collection: "always",
     subscription_data: {
       metadata: { app: APP, user_id: userId },
-      ...(trial && {
-        trial_period_days: trialDaysFor(false),
+      ...(trialDays > 0 && {
+        trial_period_days: trialDays,
         trial_settings: { end_behavior: { missing_payment_method: "cancel" as const } },
       }),
     },
