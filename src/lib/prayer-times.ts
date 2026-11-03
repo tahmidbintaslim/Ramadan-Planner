@@ -1,3 +1,4 @@
+import { cachedFetch } from "@/lib/ttl-cache";
 import type { PrayerTimes, TimingData } from "@/types/database";
 import { fetchIslamicApiPrayerTimes } from "./islamic-api";
 import { getHijriAdjustmentParams, getHijriOffsetForLocation, getCountryCodeForTimezone } from "./hijri-offsets";
@@ -65,9 +66,10 @@ const HIJRI_MONTHS_BN: Record<number, string> = {
 const cache = new Map<string, { data: TimingData; expiresAt: number }>();
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-function cacheKey(lat: number, lng: number, date: string): string {
-    // Round to 2 decimal places for sensible cache hits
-    return `${lat.toFixed(2)},${lng.toFixed(2)},${date}`;
+function cacheKey(lat: number, lng: number, date: string, timezone: string): string {
+    // Round to 2 decimal places for sensible cache hits. The timezone is part of the key: the upstream answers
+    // in that zone's wall-clock times, so the same coordinates asked with another tz must not share an entry.
+    return `${lat.toFixed(2)},${lng.toFixed(2)},${date},${timezone}`;
 }
 
 function getFromCache(key: string): TimingData | null {
@@ -101,13 +103,14 @@ export async function fetchPrayerTimes(
     timezone: string,
     locationLabel: string
 ): Promise<TimingData> {
-    const key = cacheKey(latitude, longitude, date);
+    const key = cacheKey(latitude, longitude, date, timezone);
     const cached = getFromCache(key);
     if (cached) return cached;
 
     // Try IslamicAPI (if key present) then fall back to AlAdhan
     let timings: AlAdhanTiming | null = null;
     let dateInfo: AlAdhanDate | null = null;
+    let source: TimingData["source"] = "islamicapi";
     try {
         const ia = await fetchIslamicApiPrayerTimes(latitude, longitude, date, timezone);
         // Map IslamicAPI v1 response to our expected shape if possible
@@ -120,11 +123,12 @@ export async function fetchPrayerTimes(
     }
 
     if (!timings || !dateInfo) {
+        source = "aladhan";
         const country = getCountryCodeForTimezone(timezone) ?? "DEFAULT";
         const offset = getHijriOffsetForLocation(country);
         const adjustmentParams = getHijriAdjustmentParams(offset);
         const url = `${ALADHAN_BASE}/${date}?latitude=${latitude}&longitude=${longitude}&method=1&school=1&timezonestring=${encodeURIComponent(timezone)}${adjustmentParams}`;
-        const res = await fetch(url, { next: { revalidate: 86400 } }); // ISR 24h
+        const res = await cachedFetch(url, 86400); // cached 24h
         if (!res.ok) {
             throw new Error(`AlAdhan API error: ${res.status} ${res.statusText}`);
         }
@@ -166,6 +170,7 @@ export async function fetchPrayerTimes(
         gregorianDate: dateInfo.gregorian.date,
         timezone,
         location: locationLabel,
+        source,
     };
 
     setCache(key, timingData);

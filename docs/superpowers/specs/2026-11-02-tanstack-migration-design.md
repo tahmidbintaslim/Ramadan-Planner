@@ -43,3 +43,24 @@ Go on to cutover only if: every page and API route above works on a Vercel previ
 2. Nitro 3 beta behaviour in production on Vercel (cold starts, logs).
 3. Whether the root loader refetches messages on every client navigation.
 4. Real Lighthouse and bundle numbers for equivalent pages.
+
+## Live Vercel results (separate throwaway project, 2026-11-02)
+
+The spike was deployed to its own Vercel project (`ramadan-planner-tanstack-spike`, no secrets, protection off) and tested at its public URL. Evidence is kept in the session scratchpad.
+
+| Check | Result |
+|---|---|
+| Build on Vercel (Nitro preset) | READY first try, 41 s, versions as local spike |
+| Bengali SSR | Correct text and digits, no hydration warnings, no missing glyphs |
+| Webhook raw body | 400 without header, 200 with it; sha256 of an 89-byte CRLF/Bengali/emoji body identical to the sent body (Stripe signature safe) |
+| Signed-out server function | HTTP 401; cross-origin, no-Origin and GET requests rejected (403) while the webhook path stays open |
+| Warm latency | server time min 64 / median 74 / max 166 ms through the session proxy (not real-user numbers); cold start never observed (UNVERIFIED) |
+| Service worker + manifest | correct content types; worker registers |
+| Lighthouse 13.6 mobile (spike page) | performance 100, accessibility 100, best practices 96, SEO 90; LCP 1.0 s, TBT 40 ms, CLS 0, 124.9 KiB JS (not an equivalent page: no marketing claim yet) |
+| Clerk on Vercel | UNVERIFIED: not wired into the spike; needs a Clerk development instance |
+
+Findings to carry into the migration:
+- **Function region defaults to `iad1` (Washington).** Bangladesh users would be better served from `bom1` (Mumbai) or `sin1`; decide the production region (and the database region) in Task 12.
+- **New Vercel projects default to Node 26.x**; the spike pinned `22.x`. Pin the Node version for the real project.
+- The spike's own Clerk example used the unfiltered CSRF middleware, which returns 403 to the webhook: use only the filtered form in `src/start.ts`.
+- The throwaway project is public with protection off: delete it (or re-enable protection) when done.

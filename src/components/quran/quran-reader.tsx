@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { useLocale, useTranslations } from "next-intl";
-import Link from "next/link";
+import { useLocale, useTranslations } from "@/i18n/use-intl";
+import { Link } from "@/components/shared/link";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import type { SurahDetail, QuranAyah, ReciterInfo } from "@/lib/quran";
 import { cn } from "@/lib/utils";
+import { writeLastRead } from "@/lib/quran-last-read";
 import { formatLocalizedNumber } from "@/lib/locale-number";
 
 interface QuranReaderProps {
@@ -38,6 +39,12 @@ interface QuranReaderProps {
 
 // Default reciter id (Mishary Rashid Al Afasy)
 const DEFAULT_RECITER = "1";
+
+// Below 1024px the audio controls float 16px above the floating bottom nav (16px gap + 72px bar, safe-area aware),
+// leaving the right 72px free for the accessibility button; from 1024px (side nav, no bottom nav) they sit in flow.
+// The wrapper's pb-32 below 1024px keeps the last ayahs clear of the floating bar.
+export const AUDIO_BAR_CLASS =
+  "fixed left-4 right-[4.5rem] bottom-[calc(6.5rem+env(safe-area-inset-bottom))] z-30 mx-auto max-w-[900px] lg:static lg:inset-auto lg:w-auto";
 
 export function QuranReader({ surahNumber }: QuranReaderProps) {
   const t = useTranslations("quranReader");
@@ -130,6 +137,47 @@ export function QuranReader({ surahNumber }: QuranReaderProps) {
       el.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }, []);
+
+  // Remember where the reader is, on this device only, and only on real progress: the ayah being recited, or the
+  // furthest-down ayah in view once the reader has scrolled. Merely opening a surah never overwrites the saved
+  // position. The Quran list's "last read" card reads this.
+  const surahLoaded = surah !== null;
+  useEffect(() => {
+    if (!surahLoaded || typeof IntersectionObserver === "undefined") return;
+    let scrolled = false;
+    const onScroll = () => {
+      scrolled = true;
+    };
+    window.addEventListener("scroll", onScroll, { passive: true, once: true });
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!scrolled) return;
+        let best = 0;
+        for (const e of entries) {
+          if (!e.isIntersecting) continue;
+          const n = Number(e.target.id.replace("ayah-", ""));
+          if (Number.isInteger(n) && n > best) best = n;
+        }
+        if (best > 0) writeLastRead({ surah: surahNumber, ayah: best });
+      },
+      { threshold: 0.6 },
+    );
+    document.querySelectorAll('[id^="ayah-"]').forEach((el) => observer.observe(el));
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      observer.disconnect();
+    };
+  }, [surahLoaded, surahNumber]);
+  useEffect(() => {
+    if (audioAyah !== null) writeLastRead({ surah: surahNumber, ayah: audioAyah });
+  }, [audioAyah, surahNumber]);
+
+  // "#ayah-N" (from the last-read card) scrolls to that ayah once the surah has rendered.
+  useEffect(() => {
+    if (!surahLoaded) return;
+    const m = /^#ayah-(\d+)$/.exec(window.location.hash);
+    if (m) scrollToAyah(Number(m[1]));
+  }, [surahLoaded, scrollToAyah]);
 
   // Text-to-Speech implementation temporarily removed from runtime.
   // To re-enable, uncomment the state above and the functions below.
@@ -308,7 +356,7 @@ export function QuranReader({ surahNumber }: QuranReaderProps) {
   }
 
   return (
-    <div className="space-y-6 max-w-3xl mx-auto pb-32 sm:pb-0">
+    <div className="space-y-6 max-w-3xl mx-auto pb-32 lg:pb-0">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-center gap-2">
         <Button variant="ghost" size="icon" asChild>
@@ -385,10 +433,7 @@ export function QuranReader({ surahNumber }: QuranReaderProps) {
       </div>
 
       {/* Audio controls (mobile-friendly) */}
-      <Card
-        className="sm:static fixed bottom-4 inset-x-4 sm:inset-auto sm:w-auto max-w-[900px] z-40"
-        style={{ bottom: "calc(1rem + env(safe-area-inset-bottom))" }}
-      >
+      <Card data-quran-audio-bar="" className={AUDIO_BAR_CLASS}>
         <CardContent className="py-3">
           <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
             <div className="flex items-center gap-2">
@@ -525,6 +570,7 @@ export function QuranReader({ surahNumber }: QuranReaderProps) {
           return (
             <Card
               key={ayah.ayahNo}
+              id={`ayah-${ayah.ayahNo}`}
               ref={(el) => {
                 if (el) ayahRefs.current.set(ayah.ayahNo, el);
               }}

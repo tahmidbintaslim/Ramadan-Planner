@@ -1,10 +1,10 @@
 "use client";
 
-import Link from "next/link";
+import { Link } from "@/components/shared/link";
 import { useEffect, useState, useTransition } from "react";
-import { useClerk } from "@clerk/nextjs";
-import { useLocale, useTranslations } from "next-intl";
-import { useSearchParams } from "next/navigation";
+import { useClerk } from "@clerk/tanstack-react-start";
+import { useLocale, useTranslations } from "@/i18n/use-intl";
+import { useRouter, useSearch } from "@tanstack/react-router";
 import { Bell, CalendarClock, Globe, LogIn, LogOut, UserPlus } from "lucide-react";
 import { switchLocaleAction } from "@/actions/locale";
 import { getUserProfileAction, updateUserProfileAction } from "@/actions/planner";
@@ -43,10 +43,12 @@ export function SettingsContent() {
   const tAuth = useTranslations("auth");
   const tCommon = useTranslations("common");
   const locale = useLocale();
-  const searchParams = useSearchParams();
+  // Only the `google` result param is read (set by the Google OAuth callback redirect).
+  const search = useSearch({ strict: false }) as { google?: unknown };
   const { signOut } = useClerk();
 
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
   const { user, isGuest, loading } = useAuth();
 
   const [displayName, setDisplayName] = useState("");
@@ -95,7 +97,8 @@ export function SettingsContent() {
     });
   }, [isGuest, loading, t]);
 
-  const googleStatusParam = searchParams.get("google");
+  const googleStatusParam =
+    search.google === undefined || search.google === null ? "" : String(search.google);
   const googleInlineStatus =
     googleStatusParam === "connected" ? t("googleConnected") : null;
   const googleInlineError =
@@ -104,8 +107,10 @@ export function SettingsContent() {
       : null;
 
   const handleLocaleSwitch = () => {
-    startTransition(() => {
-      switchLocaleAction();
+    startTransition(async () => {
+      await switchLocaleAction();
+      // Re-run the root loader so the new locale's messages render (Next refreshed automatically).
+      await router.invalidate();
     });
   };
 
@@ -229,7 +234,7 @@ export function SettingsContent() {
         return;
       }
 
-      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
       if (!vapidPublicKey) {
         setError(t("pushMissingKey"));
         return;

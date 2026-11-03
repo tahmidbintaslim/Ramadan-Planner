@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations } from "@/i18n/use-intl";
 import { Bell } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/components/providers/auth-provider";
-import { getTodayKey, useGuestData } from "@/hooks/use-guest-data";
+import { useGuestReminderRules } from "@/lib/guest-reminders";
 import {
   createReminderRuleAction,
   deleteReminderRuleAction,
@@ -41,7 +41,7 @@ export function RemindersContent() {
   const {
     data: guestRules,
     updateData: updateGuestRules,
-  } = useGuestData<ReminderRuleDTO[]>(getTodayKey("reminder_rules"), []);
+  } = useGuestReminderRules();
   const [newType, setNewType] = useState<ReminderRuleDTO["type"]>("fajr");
   const [newLabel, setNewLabel] = useState("");
   const [newOffset, setNewOffset] = useState("-15");

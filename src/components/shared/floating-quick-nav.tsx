@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { Link } from "@/components/shared/link";
+import { usePathname } from "@/hooks/use-pathname";
+import { useTranslations } from "@/i18n/use-intl";
 import { Home, LayoutDashboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -18,9 +18,7 @@ export function FloatingQuickNav({
   const isAuthPage =
     pathname.startsWith("/sign-in") ||
     pathname.startsWith("/sign-up") ||
-    pathname.startsWith("/login") ||
     pathname.startsWith("/signup") ||
-    pathname.startsWith("/forgot") ||
     pathname.startsWith("/auth");
 
   if (!isAuthPage) return null;

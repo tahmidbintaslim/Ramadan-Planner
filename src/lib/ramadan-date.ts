@@ -10,6 +10,7 @@
 
 const ALADHAN_BASE = "https://api.aladhan.com/v1";
 
+import { cachedFetch } from "@/lib/ttl-cache";
 import {
     getConfiguredHijriOffset,
     getCountryCodeForTimezone,
@@ -145,7 +146,7 @@ export async function getRamadanStatus(
                 const base = (process.env.RAMADAN_OFFICIAL_API || "https://ramadan.munafio.com").replace(/\/$/, "");
                 const dateParam = getTodayDate(timezone); // DD-MM-YYYY in target timezone
                 const url = `${base}/api/check?date=${encodeURIComponent(dateParam)}`;
-                const r = await fetch(url, { next: { revalidate: 1800 } });
+                const r = await cachedFetch(url, 1800);
                 if (r.ok) {
                     const j = await r.json();
                     if (j?.status === "success" && j?.data) {
@@ -200,10 +201,7 @@ export async function getRamadanStatus(
         // Step 1: Get today's Hijri date
         const today = getTodayDate(timezone);
         const gToHUrl = `${ALADHAN_BASE}/gToH/${today}?calendarMethod=MATHEMATICAL&adjustment=${adj}`;
-        const hijriRes = await fetch(
-            gToHUrl,
-            { next: { revalidate: 86400 } }
-        );
+        const hijriRes = await cachedFetch(gToHUrl, 86400);
 
         if (!hijriRes.ok) {
             throw new Error(`AlAdhan gToH error: ${hijriRes.status}`);
@@ -303,10 +301,7 @@ async function getRamadanGregorianDates(
         // later, as the timetable does.
         const hToGUrl = `${ALADHAN_BASE}/hToGCalendar/9/${hijriYear}?calendarMethod=MATHEMATICAL&adjustment=${-adjustment}`;
         // Try hToGCalendar first
-        const res = await fetch(
-            hToGUrl,
-            { next: { revalidate: 604800 } } // 7 days
-        );
+        const res = await cachedFetch(hToGUrl, 604800); // 7 days
 
         if (res.ok) {
             const json: HijriCalendarResponse = await res.json();
@@ -350,9 +345,9 @@ async function getRamadanDatesFromGregorian(adjustment: number): Promise<{
         const allRamadanDays: Array<{ gregDate: string }> = [];
 
         for (const m of monthsToCheck) {
-            const res = await fetch(
+            const res = await cachedFetch(
                 `${ALADHAN_BASE}/calendar/${year}/${m}?latitude=23.8103&longitude=90.4125&method=1&calendarMethod=MATHEMATICAL&adjustment=${adjustment}`,
-                { next: { revalidate: 604800 } }
+                604800,
             );
             if (!res.ok) continue;
 

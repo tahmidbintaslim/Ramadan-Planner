@@ -4,9 +4,9 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   resolve: {
     // Mirror the "@/*" path alias from tsconfig.json
-    alias: { "@": path.resolve(__dirname, "src") },
+    alias: { "@": path.resolve(import.meta.dirname, "src") },
   },
   test: {
-    include: ["src/**/*.test.ts"],
+    include: ["src/**/*.test.{ts,tsx}"],
   },
 });

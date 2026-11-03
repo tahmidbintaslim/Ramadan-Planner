@@ -41,12 +41,12 @@ Not built yet: Islamic books, a duas collection and a quiz (their pages say "com
 
 | Layer | What it uses |
 | --- | --- |
-| App | Next.js 16 (App Router), React 19, TypeScript |
-| UI | Tailwind CSS 4, shadcn/ui, next-intl (Bengali default, English) |
-| Auth | Clerk (`src/proxy.ts`, `src/lib/auth/server.ts`) |
+| App | TanStack Start (TanStack Router, Vite, Nitro), React 19, TypeScript |
+| UI | Tailwind CSS 4, shadcn/ui, use-intl (Bengali default, English) |
+| Auth | Clerk (`clerkMiddleware()` in `src/start.ts`, `src/lib/auth/server.ts`, `src/server/auth-middleware.ts`) |
 | Database | PostgreSQL hosted on Supabase |
-| Data access | Prisma 7 with the `pg` adapter for content, Quran, hadith, announcements, push and calendar data; `supabase-js` with the service role key, on the server only, for planner data (daily logs, goals, plan tasks, reminder rules, profile) in `src/actions/planner.ts` |
-| Tests | Vitest |
+| Data access | Prisma 7 with the `pg` adapter for content, Quran, hadith, announcements, push and calendar data; `supabase-js` with the service role key, on the server only, for planner data (daily logs, goals, plan tasks, reminder rules, profile) in `src/server/planner-impl.ts` |
+| Tests | Vitest (unit), Playwright (e2e smoke against the built server) |
 | Hosting | Vercel |
 
 ## Architecture
@@ -54,7 +54,7 @@ Not built yet: Islamic books, a duas collection and a quiz (their pages say "com
 ```mermaid
 flowchart LR
   browser["Browser<br/>guest data in localStorage<br/>service worker for push"]
-  app["Next.js app on Vercel<br/>pages, server actions, API routes"]
+  app["TanStack Start app on Vercel<br/>pages, server functions, API routes"]
   clerk["Clerk<br/>sign-in"]
   db[("Supabase Postgres")]
   prayer["AlAdhan API<br/>(IslamicAPI when a key is set)"]
@@ -99,13 +99,13 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Open http://localhost:3000. With the Clerk keys empty, `npm run dev` starts Clerk in keyless mode with temporary keys. Prayer times, the timetable, the Quran reader (through its fallback), the guest tracker, plan, reminders list, tasbih and zakat work. Daily content, hadith, announcements and anything saved to an account need the database.
+Open http://localhost:3000. Clerk needs keys even in development (the TanStack SDK has no keyless mode): set `VITE_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` from a Clerk development instance. Prayer times, the timetable, the Quran reader (through its fallback), the guest tracker, plan, reminders list, tasbih and zakat work. Daily content, hadith, announcements and anything saved to an account need the database.
 
-`npm run dev` first runs `scripts/generateVapidKeys.mjs`, which writes new VAPID keys into `.env.local` on every start (other lines and comments are kept). That breaks existing push subscriptions. If you rely on push locally, run `npx next dev --turbopack` instead.
+`npm run dev` first runs `scripts/generateVapidKeys.mjs`, which writes new VAPID keys into `.env.local` on every start (other lines and comments are kept). That breaks existing push subscriptions. If you rely on push locally, run `npx vite dev --port 3000` instead.
 
 ### Full setup
 
-Fill in `.env.local`. [`.env.example`](.env.example) lists every variable the app and scripts read, with a comment for each. The minimum for signed-in use is `DATABASE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY`. `npm start` and Vercel deployments fail on every page without real Clerk keys.
+Fill in `.env.local`. [`.env.example`](.env.example) lists every variable the app and scripts read, with a comment for each. The minimum for signed-in use is `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `VITE_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY`. Only `VITE_*` variables reach the browser; the Next.js-era `NEXT_PUBLIC_*` names are deprecated but still read as fallbacks (the table at the top of `.env.example` maps old to new). Without Clerk keys the server fails on every page. Clearly fake, well-formed keys (as in `.github/workflows/ci.yml`) are enough to render the signed-out pages for tests, as long as the browser carries Clerk's dev-browser cookie (the e2e fixtures set it); signing in needs real keys.
 
 #### Database
 
@@ -126,8 +126,18 @@ These are the steps CI runs (`.github/workflows/ci.yml`):
 ```bash
 npm run lint
 npx tsc --noEmit
+npm run translations:check
 npm test        # Vitest unit tests
-npm run build   # prisma generate + next build; needs DATABASE_URL set, any well-formed URL works
+NITRO_PRESET=vercel npm run build   # Vercel output in .vercel/output; needs DATABASE_URL set, any well-formed URL works
+```
+
+CI then builds the Node server (`npm run build`, output in `.output/`), starts it with a placeholder `DATABASE_URL` and fake Clerk keys, and runs the Playwright smoke tests (`npm run test:e2e`, specs in `e2e/`), `scripts/pwa-check.mjs` and `scripts/check-csrf.mjs --auto`. Locally, export the same placeholder variables, then:
+
+```bash
+npm run build && PORT=3001 npm start &
+npm run test:e2e              # E2E_NETWORK=1 also runs the checks that call third-party APIs
+BASE_URL=http://localhost:3001 npm run check:pwa
+npm run check:csrf -- http://localhost:3001 --auto
 ```
 
 ### Scripts
@@ -135,17 +145,19 @@ npm run build   # prisma generate + next build; needs DATABASE_URL set, any well
 | Command | What it does |
 | --- | --- |
 | `npm run dev` | Generate VAPID keys, then start the dev server |
-| `npm run build` | `prisma generate` and `next build` |
+| `npm run build` | `prisma generate` and `vite build` (Node server in `.output/`; `NITRO_PRESET=vercel` writes `.vercel/output/`) |
 | `npm start` | Serve the production build |
 | `npm run lint` | ESLint |
 | `npm test` | Vitest unit tests |
+| `npm run test:e2e` | Playwright smoke tests against a running built server |
+| `npm run check:pwa` / `npm run check:csrf` | PWA and CSRF/auth-boundary checks against a running server |
 | `npm run translations:check` | List keys missing from `src/messages/en.json` or `bn.json` |
 | `npm run seed:quran` / `npm run seed:daily-content` | Seed content tables |
 | `npm run vapid:generate` | Write a new VAPID key pair to `.env.local` |
 
 ## Deployment
 
-The app is deployed on Vercel through its GitHub integration: each pull request gets a preview deployment and `main` deploys to production at [ramadan-planner-puce.vercel.app](https://ramadan-planner-puce.vercel.app). Set the variables from `.env.example` in the Vercel project settings, including `NEXT_PUBLIC_SITE_URL` (for this deployment, `https://ramadan-planner-puce.vercel.app`): robots.txt, sitemap.xml and surah page metadata use it, and without it they fall back to Vercel's `VERCEL_PROJECT_PRODUCTION_URL`. Next.js inlines `NEXT_PUBLIC_*` values at build time, so redeploy after changing them. `vercel.json` schedules one daily call to the push dispatcher; [Push reminders](#push-reminders) explains what else has to call it.
+The app is deployed on Vercel through its GitHub integration: each pull request gets a preview deployment and `main` deploys to production at [ramadan-planner-puce.vercel.app](https://ramadan-planner-puce.vercel.app). Set the variables from `.env.example` in the Vercel project settings, including `SITE_URL` (for this deployment, `https://ramadan-planner-puce.vercel.app`): robots.txt, sitemap.xml, canonical links and Open Graph URLs use it, and without it they fall back to the deprecated `NEXT_PUBLIC_SITE_URL`, then Vercel's `VERCEL_PROJECT_PRODUCTION_URL`. Vite inlines `VITE_*` values at build time, so redeploy after changing them. `vercel.json` schedules one daily call to the push dispatcher; [Push reminders](#push-reminders) explains what else has to call it.
 
 ## Push reminders
 
@@ -164,17 +176,21 @@ Known blocker: in this repo's schema, `push_delivery_logs.user_id` (like `admin_
 
 ```text
 src/
-  app/          App Router pages ((app), (auth)) and API routes (api/)
-  actions/      Server actions: planner data, announcements, integrations, locale
+  routes/       File-based routes: pages (_app.* signed-in shell, _auth.* Clerk pages),
+                API server routes (api/), robots.txt and sitemap.xml
+  actions/      Server-function wrappers called by components (planner, announcements, ...)
+  server/       Server-only implementations, auth/CSRF/error middleware, API handlers
   components/   UI grouped by feature; shadcn/ui primitives in ui/
   lib/          Prayer times, Ramadan dates and timetable, Quran, push schedule,
                 calendar, auth, Prisma and Supabase clients (unit tests sit next to them)
-  messages/     bn.json and en.json for next-intl
-  proxy.ts      Clerk middleware
+  i18n/         use-intl provider and locale loader
+  messages/     bn.json and en.json
+  start.ts      Request middleware (CSRF, Clerk) and global server-function middleware
 prisma/         schema.prisma (introspected from the live database)
 supabase/       SQL migrations, written for Supabase Auth (see Database)
 scripts/        Content seeding, VAPID key generation, translation check
-public/sw.js    Service worker that shows push notifications
+public/sw.js    Service worker: push notifications, offline page, cached build assets
+e2e/            Playwright smoke tests (run in CI against the built server)
 docs/           Architecture, API, data model, reminders, security, product spec
 ```
 

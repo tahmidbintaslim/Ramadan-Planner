@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Pause, Play, Square, Volume2, VolumeX } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useTranslations } from "@/i18n/use-intl";
 import { Button } from "@/components/ui/button";
 
 interface HadithAudioControlsProps {

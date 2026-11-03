@@ -3,6 +3,7 @@
 // query fails (database paused, unreachable or misconfigured).
 
 import { prisma } from "@/lib/prisma";
+import { cachedFetch } from "@/lib/ttl-cache";
 
 // ── Public types ─────────────────────────────────────────
 
@@ -255,9 +256,7 @@ export interface ExtSurahDetail extends ExtSurah {
 
 async function fetchSurahListExternal(): Promise<SurahInfo[]> {
     try {
-        const res = await fetch(`${QURAN_API_BASE}/surah.json`, {
-            next: { revalidate: 604800 },
-        });
+        const res = await cachedFetch(`${QURAN_API_BASE}/surah.json`, 604800);
         if (!res.ok) return [];
         const data: ExtSurah[] = await res.json();
         return data.map((s, i) => ({
@@ -316,9 +315,7 @@ export function mapExternalSurah(
 
 async function fetchSurahExternal(surahNumber: number): Promise<SurahDetail | null> {
     try {
-        const res = await fetch(`${QURAN_API_BASE}/${surahNumber}.json`, {
-            next: { revalidate: 604800 },
-        });
+        const res = await cachedFetch(`${QURAN_API_BASE}/${surahNumber}.json`, 604800);
         if (!res.ok) return null;
         const data: ExtSurahDetail = await res.json();
         return mapExternalSurah(surahNumber, data);
@@ -329,9 +326,7 @@ async function fetchSurahExternal(surahNumber: number): Promise<SurahDetail | nu
 
 async function fetchRecitersExternal(): Promise<ReciterInfo[]> {
     try {
-        const res = await fetch(`${QURAN_API_BASE}/reciters.json`, {
-            next: { revalidate: 604800 },
-        });
+        const res = await cachedFetch(`${QURAN_API_BASE}/reciters.json`, 604800);
         if (!res.ok) return [];
         const data: Record<string, string> = await res.json();
         return Object.entries(data)

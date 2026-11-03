@@ -2,15 +2,15 @@
 
 ## Project Overview: Ramadan Planner (BD-first)
 
-Goal: A high-performance Next.js 16 (App Router) website for Bangladeshi Muslims (primary language Bengali) with secondary English for expats. Users can sign up/login (social login), plan Ramadan goals, track daily Ramadan activity, and receive reminders/announcements with calendar sync and dynamic date/time by location/timezone.
+Goal: A high-performance TanStack Start (React 19) website for Bangladeshi Muslims (primary language Bengali) with secondary English for expats. Users can sign up/login (social login), plan Ramadan goals, track daily Ramadan activity, and receive reminders/announcements with calendar sync and dynamic date/time by location/timezone.
 
 ## Tech Stack
 
-- Frontend: Next.js 16 (App Router), Tailwind CSS
+- Frontend: TanStack Start (TanStack Router, Vite, Nitro), Tailwind CSS
 - UI Components: shadcn/ui
 - Auth: Clerk
 - Database: PostgreSQL on Supabase, accessed through Prisma 7 and, for planner data, supabase-js with the service role key (server only)
-- Testing: Vitest (unit). Playwright is installed but has no specs yet.
+- Testing: Vitest (unit); Playwright smoke tests in `e2e/` against the built server (`npm run test:e2e`).
 - Hosting: Vercel
 
 ## Development Rules (Non-negotiable)
@@ -30,8 +30,8 @@ Goal: A high-performance Next.js 16 (App Router) website for Bangladeshi Muslims
 
 ## Architecture Defaults
 
-- Prefer Server Components; use Client Components only when required.
-- Public pages: SEO-first, static/ISR where possible.
+- Server-only code (Prisma, secrets, service role) lives in `src/server/` and is reached through server functions (`src/actions/*`) or server routes; components never import it directly.
+- Public pages: SEO-first (per-route `head()` via `pageHead` in `src/lib/seo.ts`), cache headers where possible.
 - Authenticated pages: privacy-first, noindex.
 - Data layer: server queries bypass RLS (Prisma and the service role), so every query must filter by the signed-in user's ID from `getAppAuthUser()`; never trust a client `user_id`.
 

@@ -1,7 +1,7 @@
 "use client";
 
-import { useTranslations } from "next-intl";
-import Link from "next/link";
+import { useTranslations } from "@/i18n/use-intl";
+import { Link } from "@/components/shared/link";
 import {
   Dialog,
   DialogContent,
