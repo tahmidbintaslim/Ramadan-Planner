@@ -69,9 +69,9 @@ test.describe("mobile shell", () => {
       const [b, n] = [await bar.boundingBox(), await nav.boundingBox()];
       expect(b && n).toBeTruthy();
       expect(b!.y + b!.height).toBeLessThanOrEqual(n!.y);
-      // ...and leaves room for the accessibility button on its right.
-      const fab = (await page.getByRole("button", { name: /অ্যাক্সেসিবিলিটি|Accessibility/ }).boundingBox())!;
-      expect(b!.x + b!.width).toBeLessThanOrEqual(fab.x);
+      // No floating accessibility button inside the shell any more (it lives in the More sheet), so the bar only
+      // has to stay inside the viewport.
+      expect(b!.x + b!.width).toBeLessThanOrEqual(width);
       // The last ayah can be scrolled clear of the floating bar.
       await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
       const lastAyah = page.locator("main [dir=rtl]").last();
