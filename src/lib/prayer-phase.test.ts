@@ -118,6 +118,32 @@ describe("getPrayerPhase", () => {
         expect(getPrayerPhase(at("21:00"), bare).next.at).toEqual(t.nextFajr);
     });
 
+    it("after isha counts down to tomorrow's sehri end when known", () => {
+        const tt = timingsFromPrayerTimes(
+            { fajr: "05:15", dhuhr: "12:10", asr: "15:30", maghrib: "17:55", isha: "19:10", sehri: "05:05" },
+            DATE,
+            TZ,
+            "05:14",
+            "05:04",
+        )!;
+        expect(tt.nextSehriEnd!.toISOString()).toBe("2027-02-20T23:04:00.000Z");
+        const r = getPrayerPhase(at("21:00"), tt);
+        expect(r.phase).toBe("night");
+        expect(r.next).toEqual({ key: "sehri", at: tt.nextSehriEnd });
+        expect(r.remainingMs).toBe((8 * 60 + 4) * 60_000);
+        expect(r.isNight).toBe(true);
+        // Before isha the target is still isha; the night progress segment is unchanged.
+        expect(getPrayerPhase(at("18:30"), tt).next.key).toBe("isha");
+        expect(r.progress).toBeCloseTo(getPrayerPhase(at("21:00"), t).progress);
+    });
+
+    it("ignores a next sehri end at or after tomorrow's fajr", () => {
+        const late: PhaseTimings = { ...t, nextSehriEnd: t.nextFajr };
+        expect(getPrayerPhase(at("21:00"), late).next).toEqual({ key: "fajr", at: t.nextFajr });
+        const pt = { fajr: "05:15", dhuhr: "12:10", asr: "15:30", maghrib: "17:55", isha: "19:10" };
+        expect(timingsFromPrayerTimes(pt, DATE, TZ, "05:14")!.nextSehriEnd).toBeUndefined();
+    });
+
     it("never returns negative remaining time", () => {
         expect(getPrayerPhase(at("12:00"), t).remainingMs).toBeGreaterThan(0);
     });

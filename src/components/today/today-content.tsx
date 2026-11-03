@@ -39,9 +39,11 @@ export function TodayContent({ initialNow }: { initialNow?: Date }) {
   const phaseTimings = useMemo(() => {
     if (!home.timings || !dateISO) return null;
     const pt = home.timings.prayerTimes;
-    // The API answers one day; tomorrow's fajr is about a minute from today's, so today's stands in for it.
-    return timingsFromPrayerTimes(pt, dateISO, timeZone, pt.fajr);
-  }, [home.timings, dateISO, timeZone]);
+    // Tomorrow's fajr and sehri end come from tomorrow's answer; without it (offline, upstream error) today's
+    // times stand in (they drift by about a minute a day).
+    const next = home.tomorrow?.prayerTimes;
+    return timingsFromPrayerTimes(pt, dateISO, timeZone, next?.fajr || pt.fajr, next?.sehri || pt.sehri || undefined);
+  }, [home.timings, home.tomorrow, dateISO, timeZone]);
 
   const ramadanDay = ramadanDayOf(home.ramadan);
   const checklist = useDailyChecklist(ramadanDay ?? 1);

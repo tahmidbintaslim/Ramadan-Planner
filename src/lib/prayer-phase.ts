@@ -26,6 +26,11 @@ export interface PhaseTimings {
     sehriEnd?: Date;
     /** Tomorrow's fajr (not fajr+24h: it drifts daily and days may be 23/25h on DST). */
     nextFajr: Date;
+    /**
+     * Tomorrow's sehri end (Imsak). When set and before `nextFajr`, the night countdown after isha targets it
+     * (next key "sehri") instead of tomorrow's fajr.
+     */
+    nextSehriEnd?: Date;
     /** Start of the local day (00:00 in the user's zone). */
     dayStart: Date;
     /** End of the local day (next 00:00 in the user's zone; not dayStart+24h on DST days). */
@@ -124,6 +129,10 @@ export function getPrayerPhase(now: Date, t: PhaseTimings): PrayerPhaseResult {
     if (n < t.isha.getTime()) {
         return make("night", "isha", t.isha, maghrib, end.getTime());
     }
+    // After isha: tomorrow's sehri end when known (same guard as today's: only a sehri end before fajr counts).
+    if (t.nextSehriEnd && t.nextSehriEnd.getTime() < t.nextFajr.getTime() && n < t.nextSehriEnd.getTime()) {
+        return make("night", "sehri", t.nextSehriEnd, maghrib, end.getTime());
+    }
     return make("night", "fajr", t.nextFajr, maghrib, end.getTime());
 }
 
@@ -202,8 +211,9 @@ function addDaysISO(dateISO: string, days: number): string {
 
 /**
  * Convert the app's string timings (see PrayerTimes) for a calendar day into
- * PhaseTimings. `nextFajrHHmm` is tomorrow's fajr. `dateISO` should come from
- * `todayISOInZone(now, timeZone)`. Returns null when any time fails to parse.
+ * PhaseTimings. `nextFajrHHmm` is tomorrow's fajr and `nextSehriHHmm` (optional)
+ * tomorrow's sehri end. `dateISO` should come from `todayISOInZone(now, timeZone)`.
+ * Returns null when any required time fails to parse.
  */
 export function timingsFromPrayerTimes(
     pt: Pick<PrayerTimes, "fajr" | "dhuhr" | "asr" | "maghrib" | "isha"> &
@@ -211,6 +221,7 @@ export function timingsFromPrayerTimes(
     dateISO: string,
     timeZone: string,
     nextFajrHHmm: string,
+    nextSehriHHmm?: string,
 ): PhaseTimings | null {
     const at = (s: string) => zonedTime(dateISO, s, timeZone);
     const fajr = at(pt.fajr);
@@ -223,7 +234,9 @@ export function timingsFromPrayerTimes(
     const dayEnd = zonedTime(tomorrow, "00:00", timeZone);
     const nextFajr = zonedTime(tomorrow, nextFajrHHmm, timeZone);
     if (!nextFajr || !fajr || !dhuhr || !asr || !maghrib || !isha || !dayStart || !dayEnd) return null;
+    const nextSehriEnd = nextSehriHHmm ? zonedTime(tomorrow, nextSehriHHmm, timeZone) : null;
     return {
+        ...(nextSehriEnd ? { nextSehriEnd } : {}),
         fajr,
         dhuhr,
         asr,

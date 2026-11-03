@@ -89,6 +89,49 @@ test("desktop side nav replaces the bottom nav and marks the active item", async
   await expect(page.locator("nav.fixed").first()).toBeHidden();
 });
 
+test.describe("accessibility panel", () => {
+  const A11Y = /^(অ্যাক্সেসিবিলিটি|Accessibility)$/;
+
+  test.describe("mobile", () => {
+    test.use({ viewport: { width: 390, height: 844 } });
+
+    test("no floating button in the app shell; font size and theme live in the More sheet", async ({ page }) => {
+      await visit(page, "/today");
+      await expect(page.getByRole("button", { name: A11Y })).toHaveCount(0);
+      await page
+        .getByRole("navigation", { name: /প্রধান নেভিগেশন|Main navigation/ })
+        .first()
+        .getByRole("button", { name: /আরও|More/ })
+        .click();
+      const sheet = page.getByRole("dialog");
+      await expect(sheet.getByRole("heading", { name: A11Y })).toBeVisible();
+      await sheet.getByRole("button", { name: /ফন্ট বড় করুন|Increase font size/ }).click();
+      await expect.poll(() => page.evaluate(() => document.documentElement.style.fontSize)).toBe("105%");
+      await sheet.getByRole("button", { name: /^(অটো|Auto)$/ }).click();
+      await expect.poll(() => page.evaluate(() => localStorage.getItem("theme"))).toBe("auto");
+      // The stored size applies after a reload too.
+      await page.reload({ waitUntil: "load" });
+      await expect.poll(() => page.evaluate(() => document.documentElement.style.fontSize)).toBe("105%");
+    });
+
+    test("pages outside the shell keep the floating button", async ({ page }) => {
+      await visit(page, "/");
+      await expect(page.getByRole("button", { name: A11Y })).toBeVisible();
+    });
+  });
+
+  test("desktop side-nav footer opens the accessibility dialog", async ({ page }) => {
+    await visit(page, "/today");
+    const trigger = page.locator("aside").getByRole("button", { name: A11Y });
+    await expect(trigger).toBeVisible();
+    await trigger.click();
+    const dialog = page.getByRole("dialog", { name: A11Y });
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("button", { name: /^(ডার্ক|Dark)$/ }).click();
+    await expect(page.locator("html")).toHaveClass(/\bdark\b/);
+  });
+});
+
 test.describe("Auto Night", () => {
   test.use({ timezoneId: "Asia/Dhaka" });
 

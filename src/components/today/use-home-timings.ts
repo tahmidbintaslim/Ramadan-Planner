@@ -10,9 +10,17 @@ export interface HomeTimings {
   status: HomeTimingsStatus;
   /** Today's timings from /api/timings, or the last known (cached) ones when offline (`cached`). */
   timings: TimingData | null;
+  /** Tomorrow's timings (tomorrow's fajr and sehri end), or null when unavailable. */
+  tomorrow: TimingData | null;
   /** True when `timings` came from the local cache, not a fresh answer: the hero labels it as sample. */
   cached: boolean;
   ramadan: RamadanStatus | null;
+}
+
+/** "2027-02-20" → "2027-02-21". */
+export function nextDayISO(dateISO: string): string {
+  const [y, m, d] = dateISO.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10);
 }
 
 export function deviceTimeZone(): string {
@@ -65,7 +73,13 @@ function cachedTimings(tz: string): TimingData | null {
  * Refetches when `todayISO` changes (local midnight). Fresh timings are remembered for Auto Night mode.
  */
 export function useHomeTimings(todayISO: string): HomeTimings & { retry: () => void } {
-  const [state, setState] = useState<HomeTimings>({ status: "loading", timings: null, cached: false, ramadan: null });
+  const [state, setState] = useState<HomeTimings>({
+    status: "loading",
+    timings: null,
+    tomorrow: null,
+    cached: false,
+    ramadan: null,
+  });
   const [attempt, setAttempt] = useState(0);
   const retry = useCallback(() => {
     setState((prev) => ({ ...prev, status: "loading" }));
@@ -77,14 +91,25 @@ export function useHomeTimings(todayISO: string): HomeTimings & { retry: () => v
     const { signal } = controller;
     const tz = deviceTimeZone();
 
+    const json = async <T,>(res: Response | null): Promise<T | null> =>
+      res?.ok ? ((await res.json().catch(() => null)) as T | null) : null;
+    const valid = (d: TimingData | null) => (d?.prayerTimes ? d : null);
+
     const load = async (params: URLSearchParams) => {
-      const [timingsRes, ramadanRes] = await Promise.all([
+      // Tomorrow's times (for the after-Isha sehri/fajr countdown) are one more cached request.
+      const tomorrowParams = new URLSearchParams(params);
+      const tomorrowISO = nextDayISO(todayISOInZone(new Date(), tz));
+      tomorrowParams.set("date", tomorrowISO);
+      const [timingsRes, tomorrowRes, ramadanRes] = await Promise.all([
         fetch(`/api/timings?${params}`, { signal }).catch(() => null),
+        fetch(`/api/timings?${tomorrowParams}`, { signal }).catch(() => null),
         fetch(`/api/ramadan?${params}`, { signal }).catch(() => null),
       ]);
-      const timings = timingsRes?.ok ? ((await timingsRes.json().catch(() => null)) as TimingData | null) : null;
-      const ramadan = ramadanRes?.ok ? ((await ramadanRes.json().catch(() => null)) as RamadanStatus | null) : null;
-      return { timings: timings?.prayerTimes ? timings : null, ramadan };
+      return {
+        timings: valid(await json<TimingData>(timingsRes)),
+        tomorrow: valid(await json<TimingData>(tomorrowRes)),
+        ramadan: await json<RamadanStatus>(ramadanRes),
+      };
     };
 
     const run = async () => {
@@ -93,15 +118,21 @@ export function useHomeTimings(todayISO: string): HomeTimings & { retry: () => v
       if (signal.aborted) return;
       if (first.timings) {
         rememberTimings(first.timings, "tz");
-        setState({ status: "ready", timings: first.timings, cached: false, ramadan: first.ramadan });
+        setState({
+          status: "ready",
+          timings: first.timings,
+          tomorrow: first.tomorrow,
+          cached: false,
+          ramadan: first.ramadan,
+        });
       } else {
         const offline = cachedTimings(tz);
         setState((prev) =>
           prev.timings && !prev.cached
             ? prev
             : offline
-              ? { status: "ready", timings: offline, cached: true, ramadan: first.ramadan ?? prev.ramadan }
-              : { status: "error", timings: null, cached: false, ramadan: first.ramadan ?? prev.ramadan },
+              ? { status: "ready", timings: offline, tomorrow: null, cached: true, ramadan: first.ramadan ?? prev.ramadan }
+              : { status: "error", timings: null, tomorrow: null, cached: false, ramadan: first.ramadan ?? prev.ramadan },
         );
       }
 
@@ -114,6 +145,7 @@ export function useHomeTimings(todayISO: string): HomeTimings & { retry: () => v
       setState((prev) => ({
         status: "ready",
         timings: better.timings,
+        tomorrow: better.tomorrow,
         cached: false,
         ramadan: better.ramadan ?? prev.ramadan,
       }));

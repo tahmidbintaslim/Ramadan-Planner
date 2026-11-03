@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Globe } from "lucide-react";
+import { Accessibility, Globe } from "lucide-react";
+import { AccessibilityControls } from "@/components/shared/accessibility-sidebar";
 import { Link } from "@/components/shared/link";
 import { usePathname } from "@/hooks/use-pathname";
 import { useTranslations } from "@/i18n/use-intl";
@@ -50,6 +51,7 @@ function TabContent({ item, active, label }: { item: Pick<NavItem, "icon">; acti
 function MoreSheetBody({ onNavigate }: { onNavigate: () => void }) {
   const t = useTranslations("nav");
   const tCommon = useTranslations("common");
+  const tA11y = useTranslations("accessibility");
   const pathname = usePathname();
   const { isGuest } = useAuth();
   const { switchLocale, isPending } = useLocaleSwitch();
@@ -99,6 +101,13 @@ function MoreSheetBody({ onNavigate }: { onNavigate: () => void }) {
         </button>
         <GuestAuthButtons stacked />
       </div>
+      <section aria-labelledby="more-a11y" className="flex flex-col gap-3 border-t border-rp-rule pt-4">
+        <h3 id="more-a11y" className="rp-row flex items-center gap-3 px-3 text-rp-ink">
+          <Accessibility className="size-[22px]" strokeWidth={1.6} aria-hidden />
+          {tA11y("title")}
+        </h3>
+        <AccessibilityControls className="px-3" />
+      </section>
     </div>
   );
 }

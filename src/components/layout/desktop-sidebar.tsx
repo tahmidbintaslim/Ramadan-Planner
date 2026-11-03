@@ -1,6 +1,8 @@
 "use client";
 
+import { Accessibility } from "lucide-react";
 import { Link } from "@/components/shared/link";
+import { AccessibilityDialog } from "@/components/shared/accessibility-sidebar";
 import { usePathname } from "@/hooks/use-pathname";
 import { useTranslations } from "@/i18n/use-intl";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -39,6 +41,7 @@ export function DesktopSidebar() {
   const pathname = usePathname();
   const t = useTranslations("nav");
   const tCommon = useTranslations("common");
+  const tA11y = useTranslations("accessibility");
   const { isGuest } = useAuth();
   const secondary = SECONDARY_NAV.filter((i) => !i.signedInOnly || !isGuest);
 
@@ -66,6 +69,20 @@ export function DesktopSidebar() {
           ))}
         </ul>
       </nav>
+
+      <div className="border-t border-rp-rule px-3 py-4">
+        <AccessibilityDialog
+          trigger={
+            <button
+              type="button"
+              className="flex min-h-12 items-center gap-3 rounded-[14px] px-3.5 rp-button text-rp-muted transition-colors hover:bg-rp-accent-tint/60 hover:text-rp-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Accessibility className="size-[22px] shrink-0" strokeWidth={1.6} aria-hidden />
+              <span className="truncate">{tA11y("title")}</span>
+            </button>
+          }
+        />
+      </div>
     </aside>
   );
 }

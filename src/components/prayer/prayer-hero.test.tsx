@@ -81,6 +81,21 @@ describe("PrayerHero phases (bn)", () => {
     expect(hero()).toHaveTextContent("৪:৫৪");
   });
 
+  it("night after isha in Ramadan: tomorrow's sehri end time, not fajr", () => {
+    const withSehri = { ...TIMINGS, nextSehriEnd: new Date(TIMINGS.nextFajr.getTime() - 5 * 60_000) };
+    renderHero({ now: at("21:00"), ramadan: true, timings: withSehri });
+    expect(hero()).toHaveTextContent("সেহরি শেষ");
+    expect(hero()).toHaveTextContent("৪:৪৯");
+    expect(hero()).toHaveTextContent("আর ৭ ঘণ্টা ৪৯ মিনিট");
+    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuetext", expect.stringContaining("সেহরি"));
+    cleanup();
+    // Outside Ramadan the hero keeps "next · Fajr" and its time.
+    renderHero({ now: at("21:00"), timings: withSehri });
+    expect(hero()).toHaveTextContent("পরবর্তী · ফজর");
+    expect(hero()).toHaveTextContent("৪:৫৪");
+    expect(hero()).toHaveTextContent("আর ৭ ঘণ্টা ৫৪ মিনিট");
+  });
+
   it("top row and source line (sample labelled)", () => {
     renderHero({ now: at("13:00"), sample: true });
     expect(hero()).toHaveTextContent("ঢাকা");

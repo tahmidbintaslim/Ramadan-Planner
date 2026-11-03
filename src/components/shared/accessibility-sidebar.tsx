@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback, useSyncExternalStore, useEffect } from "react";
+import { useState, useCallback, useSyncExternalStore, useEffect, type ReactNode } from "react";
+import { useMatches } from "@tanstack/react-router";
 import { useLocale, useTranslations } from "@/i18n/use-intl";
 import { useTheme } from "next-themes";
 import {
@@ -15,34 +16,67 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { formatLocalizedNumber } from "@/lib/locale-number";
 
-const FONT_SIZE_KEY = "ramadan-planner-font-size";
-const DEFAULT_FONT_SIZE = 100;
-const MIN_FONT_SIZE = 80;
-const MAX_FONT_SIZE = 150;
+// Accessibility settings (font size, theme incl. Auto). Inside the app shell they live in the More sheet (mobile)
+// and behind a side-nav footer button (desktop); on pages without the shell (landing, auth) the floating button
+// opens the same controls. The stored font size is applied on every page by <AccessibilitySidebar /> in the root.
+
+export const FONT_SIZE_KEY = "ramadan-planner-font-size";
+const FONT_SIZE_EVENT = "rp:font-size";
+export const DEFAULT_FONT_SIZE = 100;
+export const MIN_FONT_SIZE = 80;
+export const MAX_FONT_SIZE = 150;
 const STEP = 5;
 
 function applyFontSize(size: number) {
   if (typeof document === "undefined") return;
-  const value = `${size}%`;
-  document.documentElement.style.fontSize = value;
+  document.documentElement.style.fontSize = `${size}%`;
   document.body.style.fontSize = "1rem";
 }
 
-function getInitialFontSize(): number {
-  if (typeof window === "undefined") return DEFAULT_FONT_SIZE;
-  const saved = localStorage.getItem(FONT_SIZE_KEY);
-  if (saved) {
-    const size = parseInt(saved, 10);
-    if (size >= MIN_FONT_SIZE && size <= MAX_FONT_SIZE) {
-      applyFontSize(size);
-      return size;
-    }
+/** The stored font size (percent), or the default when missing, out of range or unreadable. */
+export function readFontSize(): number {
+  try {
+    const size = Number.parseInt(localStorage.getItem(FONT_SIZE_KEY) ?? "", 10);
+    return size >= MIN_FONT_SIZE && size <= MAX_FONT_SIZE ? size : DEFAULT_FONT_SIZE;
+  } catch {
+    return DEFAULT_FONT_SIZE;
   }
-  applyFontSize(DEFAULT_FONT_SIZE);
-  return DEFAULT_FONT_SIZE;
+}
+
+function subscribeFontSize(onChange: () => void) {
+  window.addEventListener(FONT_SIZE_EVENT, onChange);
+  window.addEventListener("storage", onChange);
+  return () => {
+    window.removeEventListener(FONT_SIZE_EVENT, onChange);
+    window.removeEventListener("storage", onChange);
+  };
+}
+
+/** Font size shared by every control instance (localStorage + an in-page event). */
+export function useFontSize(): [number, (size: number) => void] {
+  const size = useSyncExternalStore(subscribeFontSize, readFontSize, () => DEFAULT_FONT_SIZE);
+  const set = useCallback((next: number) => {
+    const clamped = Math.max(MIN_FONT_SIZE, Math.min(MAX_FONT_SIZE, next));
+    try {
+      localStorage.setItem(FONT_SIZE_KEY, String(clamped));
+    } catch {
+      // Storage unavailable: applies for this page view only.
+      applyFontSize(clamped);
+    }
+    window.dispatchEvent(new Event(FONT_SIZE_EVENT));
+  }, []);
+  return [size, set];
 }
 
 /** Maps fontSize percentage 80–150 to a Tailwind fractional width class */
@@ -58,32 +92,17 @@ function fontBarWidthClass(size: number): string {
   return "w-full";
 }
 
-export function AccessibilitySidebar() {
+/** The controls themselves: font size and theme (Light / Night / System / Auto). */
+export function AccessibilityControls({ className }: { className?: string }) {
   const t = useTranslations("accessibility");
   const locale = useLocale();
   const { theme, setTheme } = useTheme();
-  const [isOpen, setIsOpen] = useState(false);
-  const [fontSize, setFontSize] = useState(getInitialFontSize);
+  const [fontSize, setFontSize] = useFontSize();
   const mounted = useSyncExternalStore(
     () => () => {},
     () => true,
     () => false,
   );
-
-  const updateFontSize = useCallback((newSize: number) => {
-    const clamped = Math.max(MIN_FONT_SIZE, Math.min(MAX_FONT_SIZE, newSize));
-    setFontSize(clamped);
-    applyFontSize(clamped);
-    localStorage.setItem(FONT_SIZE_KEY, String(clamped));
-  }, []);
-
-  useEffect(() => {
-    applyFontSize(fontSize);
-  }, [fontSize]);
-
-  const increaseFontSize = () => updateFontSize(fontSize + STEP);
-  const decreaseFontSize = () => updateFontSize(fontSize - STEP);
-  const resetFontSize = () => updateFontSize(DEFAULT_FONT_SIZE);
 
   const themeOptions = [
     { value: "light" as const, icon: Sun, label: t("light") },
@@ -93,138 +112,148 @@ export function AccessibilitySidebar() {
   ];
 
   return (
+    <div className={cn("space-y-4", className)}>
+      <div className="space-y-2">
+        <p className="text-xs font-medium text-muted-foreground">{t("fontSize")}</p>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon-sm"
+            onClick={() => setFontSize(fontSize - STEP)}
+            disabled={fontSize <= MIN_FONT_SIZE}
+            aria-label={t("decrease")}
+          >
+            <Minus className="h-3.5 w-3.5" />
+          </Button>
+
+          <div className="flex-1 text-center">
+            <span className="text-sm font-medium tabular-nums" aria-live="polite">
+              {formatLocalizedNumber(fontSize, locale)}%
+            </span>
+          </div>
+
+          <Button
+            variant="outline"
+            size="icon-sm"
+            onClick={() => setFontSize(fontSize + STEP)}
+            disabled={fontSize >= MAX_FONT_SIZE}
+            aria-label={t("increase")}
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </Button>
+
+          <Button variant="ghost" size="icon-sm" onClick={() => setFontSize(DEFAULT_FONT_SIZE)} aria-label={t("reset")}>
+            <RotateCcw className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+
+        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+          <div className={cn("h-full bg-primary rounded-full transition-all", fontBarWidthClass(fontSize))} />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-xs font-medium text-muted-foreground">{t("theme")}</p>
+        <div className="grid grid-cols-4 gap-1.5">
+          {themeOptions.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setTheme(option.value)}
+              aria-pressed={mounted ? theme === option.value : undefined}
+              className={cn(
+                "flex min-h-12 flex-col items-center justify-center gap-1 rounded-lg px-2 py-2 text-xs transition-colors",
+                mounted && theme === option.value
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+              )}
+              aria-label={option.label}
+            >
+              <option.icon className="h-4 w-4" />
+              <span className="text-[10px] leading-tight">{option.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** A dialog with the controls, opened by `trigger` (the desktop side-nav footer button). */
+export function AccessibilityDialog({ trigger }: { trigger: ReactNode }) {
+  const t = useTranslations("accessibility");
+  return (
+    <Dialog>
+      <DialogTrigger asChild>{trigger}</DialogTrigger>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>{t("title")}</DialogTitle>
+          <DialogDescription className="sr-only">{t("title")}</DialogDescription>
+        </DialogHeader>
+        <AccessibilityControls />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** Applies the stored font size on every page and whenever a control changes it. */
+function FontSizeSync() {
+  const [fontSize] = useFontSize();
+  useEffect(() => {
+    applyFontSize(fontSize);
+  }, [fontSize]);
+  return null;
+}
+
+/** Root-level: font size sync everywhere, plus the floating trigger on pages outside the app shell. */
+export function AccessibilitySidebar() {
+  const inAppShell = useMatches({ select: (matches) => matches.some((m) => m.routeId.startsWith("/_app")) });
+  return (
     <>
-      {/* Floating trigger button */}
+      <FontSizeSync />
+      {inAppShell ? null : <FloatingAccessibility />}
+    </>
+  );
+}
+
+function FloatingAccessibility() {
+  const t = useTranslations("accessibility");
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <>
       <button
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
+        aria-expanded={isOpen}
         className={cn(
-          // Below 1024px it sits 16px above the floating bottom nav (16px gap + 72px bar, safe-area aware).
-          "fixed bottom-[calc(6.5rem+env(safe-area-inset-bottom))] right-4 z-50 flex items-center justify-center lg:bottom-6 lg:right-6 border shadow-lg transition-all duration-200",
-          "h-12 w-12 rounded-full shadow-lg transition-all duration-200",
+          "fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] right-4 z-50 flex items-center justify-center lg:bottom-6 lg:right-6 border shadow-lg transition-all duration-200",
+          "h-12 w-12 rounded-full",
           "bg-primary text-primary-foreground hover:scale-110",
           "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
           isOpen && "rotate-45",
         )}
         aria-label={t("title")}
       >
-        {isOpen ? (
-          <X className="h-5 w-5" />
-        ) : (
-          <Accessibility className="h-5 w-5" />
-        )}
+        {isOpen ? <X className="h-5 w-5" /> : <Accessibility className="h-5 w-5" />}
       </button>
 
-      {/* Panel */}
       <div
         className={cn(
-          "fixed bottom-[calc(10.5rem+env(safe-area-inset-bottom))] right-4 z-50 w-[min(92vw,18rem)] md:w-72 lg:bottom-20 lg:right-6",
+          "fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-4 z-50 w-[min(92vw,18rem)] md:w-72 lg:bottom-20 lg:right-6",
           "rounded-xl border bg-card shadow-2xl transition-all duration-200 origin-bottom-right",
-          isOpen
-            ? "scale-100 opacity-100 pointer-events-auto"
-            : "scale-75 opacity-0 pointer-events-none",
+          isOpen ? "scale-100 opacity-100 pointer-events-auto" : "scale-75 opacity-0 pointer-events-none",
         )}
+        aria-hidden={!isOpen}
+        inert={!isOpen}
       >
         <div className="p-4 space-y-4">
-          {/* Header */}
-          <h3 className="text-sm font-semibold text-foreground">
-            {t("title")}
-          </h3>
-
-          {/* Font Size Control */}
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-muted-foreground">
-              {t("fontSize")}
-            </label>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8"
-                onClick={decreaseFontSize}
-                disabled={fontSize <= MIN_FONT_SIZE}
-                aria-label={t("decrease")}
-              >
-                <Minus className="h-3.5 w-3.5" />
-              </Button>
-
-              <div className="flex-1 text-center">
-                <span
-                  className="text-sm font-medium tabular-nums"
-                  aria-live="polite"
-                >
-                  {formatLocalizedNumber(fontSize, locale)}%
-                </span>
-              </div>
-
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8"
-                onClick={increaseFontSize}
-                disabled={fontSize >= MAX_FONT_SIZE}
-                aria-label={t("increase")}
-              >
-                <Plus className="h-3.5 w-3.5" />
-              </Button>
-
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={resetFontSize}
-                aria-label={t("reset")}
-              >
-                <RotateCcw className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-
-            {/* Font size preview bar */}
-            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-              <div
-                className={cn(
-                  "h-full bg-primary rounded-full transition-all",
-                  fontBarWidthClass(fontSize),
-                )}
-              />
-            </div>
-          </div>
-
-          {/* Theme Control */}
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-muted-foreground">
-              {t("theme")}
-            </label>
-            <div className="grid grid-cols-4 gap-1.5">
-              {themeOptions.map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => setTheme(option.value)}
-                  className={cn(
-                    "flex flex-col items-center gap-1 rounded-lg px-2 py-2 text-xs transition-colors",
-                    mounted && theme === option.value
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-                  )}
-                  aria-label={option.label}
-                >
-                  <option.icon className="h-4 w-4" />
-                  <span className="text-[10px] leading-tight">
-                    {option.label}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
+          <h3 className="text-sm font-semibold text-foreground">{t("title")}</h3>
+          <AccessibilityControls />
         </div>
       </div>
 
-      {/* Backdrop for mobile */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 z-40 md:hidden"
-          onClick={() => setIsOpen(false)}
-        />
-      )}
+      {isOpen && <div className="fixed inset-0 z-40 md:hidden" onClick={() => setIsOpen(false)} />}
     </>
   );
 }

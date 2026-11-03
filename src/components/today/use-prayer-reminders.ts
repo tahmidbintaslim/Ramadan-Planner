@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/providers/auth-provider";
-import { getTodayKey, useGuestData } from "@/hooks/use-guest-data";
+import { useGuestReminderRules } from "@/lib/guest-reminders";
 import {
   createReminderRuleAction,
   listReminderRulesAction,
@@ -55,14 +55,11 @@ function notifyTrackerUpdate() {
 
 /**
  * The prayer list's bells, wired to the same reminder rules as the Reminders page: guest rules in local storage
- * (the page's own key), signed-in rules through the server functions.
+ * (the stable `rp_reminder_rules` key), signed-in rules through the server functions.
  */
 export function usePrayerReminders() {
   const { isGuest, loading } = useAuth();
-  const { data: guestRules, updateData: updateGuestRules } = useGuestData<ReminderRuleDTO[]>(
-    getTodayKey("reminder_rules"),
-    [],
-  );
+  const { data: guestRules, updateData: updateGuestRules } = useGuestReminderRules();
   const [serverRules, setServerRules] = useState<ReminderRuleDTO[]>([]);
 
   useEffect(() => {

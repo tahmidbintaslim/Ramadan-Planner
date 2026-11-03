@@ -94,11 +94,31 @@ export function heroLabel(
       return t("iftar");
     case "night":
       if (next.key === "isha") return tSalah("isha");
+      // "sehri" only reaches here in Ramadan (see heroResult); without tomorrow's sehri end the target is fajr.
+      if (next.key === "sehri") return t("sehriEnds");
       return ramadan ? t("sehriEnds") : t("nextPrayer", { name: tSalah("fajr") });
     case "day":
     default:
       return t("nextPrayer", { name: tSalah(next.key === "sehri" ? "fajr" : next.key) });
   }
+}
+
+/**
+ * The phase result the hero shows. After isha the engine counts down to tomorrow's sehri end when it is known;
+ * outside Ramadan the hero keeps "next · Fajr", so it counts down to tomorrow's fajr instead.
+ */
+export function heroResult(
+  result: PrayerPhaseResult,
+  timings: PhaseTimings,
+  now: Date,
+  ramadan: boolean,
+): PrayerPhaseResult {
+  if (ramadan || result.phase !== "night" || result.next.key !== "sehri") return result;
+  return {
+    ...result,
+    next: { key: "fajr", at: timings.nextFajr },
+    remainingMs: Math.max(0, timings.nextFajr.getTime() - now.getTime()),
+  };
 }
 
 /** What the ring counts towards, for the progressbar's aria-valuetext ("ইফতার পর্যন্ত …"). */
@@ -143,7 +163,7 @@ export function PrayerHero({
   const { now, phase: result } = usePrayerPhase(timings, timeZone, { now: nowOverride, initialNow });
 
   // usePrayerPhase only returns null without timings; timings is required here.
-  const r = result as PrayerPhaseResult;
+  const r = heroResult(result as PrayerPhaseResult, timings, now, ramadan);
   const label = heroLabel(r, timings, t, tSalah, ramadan);
   const time = formatPrayerClock(r.next.at, timeZone, locale);
   const remaining = formatRemaining(r.remainingMs, locale);

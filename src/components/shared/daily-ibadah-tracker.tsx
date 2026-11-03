@@ -14,6 +14,7 @@ import {
 } from "@/actions/planner";
 import { useAuth } from "@/components/providers/auth-provider";
 import { getTodayKey, useGuestData } from "@/hooks/use-guest-data";
+import { useGuestReminderRules } from "@/lib/guest-reminders";
 import { cn } from "@/lib/utils";
 import { formatLocalizedNumber } from "@/lib/locale-number";
 import { DAILY_TRACKER_MARKERS } from "@/lib/daily-tracker-markers";
@@ -59,10 +60,7 @@ export function DailyIbadahTracker({ day }: { day: number }) {
     getTodayKey("plan_tasks"),
     [],
   );
-  const { data: guestReminders } = useGuestData<Array<{ enabled: boolean }>>(
-    getTodayKey("reminder_rules"),
-    [],
-  );
+  const { data: guestReminders } = useGuestReminderRules();
   const { data: guestPrayers } = useGuestData<Record<string, boolean>>(
     getTodayKey("salah"),
     {},

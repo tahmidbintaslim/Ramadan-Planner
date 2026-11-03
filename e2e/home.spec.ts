@@ -110,11 +110,7 @@ test.describe("mobile Home", () => {
     await expect(bell).toHaveAttribute("aria-pressed", "false");
     await bell.click();
     await expect(bell).toHaveAttribute("aria-pressed", "true");
-    const stored = await page.evaluate(() =>
-      Object.keys(localStorage)
-        .filter((k) => k.startsWith("rp_reminder_rules_"))
-        .flatMap((k) => JSON.parse(localStorage.getItem(k) || "[]")),
-    );
+    const stored = await page.evaluate(() => JSON.parse(localStorage.getItem("rp_reminder_rules") || "[]"));
     expect(stored).toEqual([
       expect.objectContaining({ type: "asr", offsetMinutes: -15, channels: ["push"], enabled: true }),
     ]);
@@ -123,6 +119,29 @@ test.describe("mobile Home", () => {
       "aria-pressed",
       "true",
     );
+  });
+
+  test("guest reminders saved under an old dated key are migrated and shown on the Reminders page", async ({ page }) => {
+    await page.addInitScript(() => {
+      if (localStorage.getItem("rp_migrated_once")) return;
+      localStorage.setItem("rp_migrated_once", "1");
+      const rule = (id: string, type: string) => ({ id, type, label: "", offsetMinutes: -15, channels: ["push"], enabled: true });
+      localStorage.setItem("rp_reminder_rules_2027-02-18", JSON.stringify([rule("00000000-0000-4000-8000-000000000001", "fajr")]));
+      localStorage.setItem("rp_reminder_rules_2027-02-19", JSON.stringify([rule("00000000-0000-4000-8000-000000000002", "isha")]));
+    });
+    await mockHome(page, "13:00");
+    await visit(page, "/today");
+    await expect(page.getByRole("button", { name: /^(এশা রিমাইন্ডার|ইশা রিমাইন্ডার|Isha reminder)$/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    const keys = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith("rp_reminder_rules")));
+    expect(keys).toEqual(["rp_reminder_rules"]);
+    // The Reminders page reads (and keeps) the same stable list.
+    await visit(page, "/reminders");
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem("rp_reminder_rules") || "[]"))).toEqual([
+      expect.objectContaining({ type: "isha", enabled: true }),
+    ]);
   });
 });
 
@@ -134,6 +153,9 @@ test("desktop Home has two columns: hero on the left, prayers on the right; sada
   await visit(page, "/today");
   const hero = page.locator("[data-phase]").first();
   await expect(hero).toHaveAttribute("data-phase", "night");
+  // After isha in Ramadan: tomorrow's sehri end (04:57 in the mocked answer), not tomorrow's fajr (05:02).
+  await expect(hero).toContainText(/সেহরি শেষ|Sehri ends/);
+  await expect(hero).toContainText(/৪:৫৭|4:57/);
   const list = page.locator("li[data-prayer]").first();
   await expect(list).toBeVisible();
   const h = await hero.boundingBox();
