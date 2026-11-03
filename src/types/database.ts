@@ -207,4 +207,6 @@ export interface TimingData {
     gregorianDate: string;
     timezone: string;
     location: string;
+    /** Which upstream calculated the times (AlAdhan: Karachi method, Hanafi Asr). Absent in older caches. */
+    source?: "islamicapi" | "aladhan";
 }

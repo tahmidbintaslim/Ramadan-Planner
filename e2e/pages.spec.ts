@@ -56,9 +56,11 @@ test("client-side navigation to /hadith uses the server-function path and stays 
 });
 
 test("guest Today data persists across a reload (localStorage)", async ({ page }) => {
-  // The salah tracker's prayers are toggle buttons (filled = done); the checklist below uses checkboxes.
+  // The salah tracker's prayers are toggle buttons (filled = done); the checklist below uses checkboxes. The exact
+  // name skips the Home prayer list's bell ("ফজর রিমাইন্ডার"); the first checkbox is the Home plan preview, which
+  // shares the checklist's state.
   await visit(page, "/today");
-  const fajr = page.getByRole("button", { name: /^(ফজর|Fajr)/ }).first();
+  const fajr = page.getByRole("button", { name: /^(ফজর|Fajr)$/ }).first();
   await fajr.waitFor({ state: "visible", timeout: 15_000 });
   const done = async () => (await fajr.getAttribute("class"))?.includes("bg-primary text-primary-foreground") ?? false;
   const box = page.getByRole("checkbox").first();
@@ -70,7 +72,7 @@ test("guest Today data persists across a reload (localStorage)", async ({ page }
   await expect(box).toBeChecked({ checked: !boxBefore });
   await page.waitForTimeout(500);
   await page.reload({ waitUntil: "load" });
-  const fajr2 = page.getByRole("button", { name: /^(ফজর|Fajr)/ }).first();
+  const fajr2 = page.getByRole("button", { name: /^(ফজর|Fajr)$/ }).first();
   await fajr2.waitFor({ state: "visible", timeout: 15_000 });
   await expect.poll(async () => (await fajr2.getAttribute("class"))?.includes("bg-primary text-primary-foreground") ?? false).toBe(!before);
   await expect(page.getByRole("checkbox").first()).toBeChecked({ checked: !boxBefore });

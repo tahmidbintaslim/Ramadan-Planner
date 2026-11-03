@@ -110,6 +110,7 @@ export async function fetchPrayerTimes(
     // Try IslamicAPI (if key present) then fall back to AlAdhan
     let timings: AlAdhanTiming | null = null;
     let dateInfo: AlAdhanDate | null = null;
+    let source: TimingData["source"] = "islamicapi";
     try {
         const ia = await fetchIslamicApiPrayerTimes(latitude, longitude, date, timezone);
         // Map IslamicAPI v1 response to our expected shape if possible
@@ -122,6 +123,7 @@ export async function fetchPrayerTimes(
     }
 
     if (!timings || !dateInfo) {
+        source = "aladhan";
         const country = getCountryCodeForTimezone(timezone) ?? "DEFAULT";
         const offset = getHijriOffsetForLocation(country);
         const adjustmentParams = getHijriAdjustmentParams(offset);
@@ -168,6 +170,7 @@ export async function fetchPrayerTimes(
         gregorianDate: dateInfo.gregorian.date,
         timezone,
         location: locationLabel,
+        source,
     };
 
     setCache(key, timingData);
