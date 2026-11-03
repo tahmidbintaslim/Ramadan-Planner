@@ -6,7 +6,9 @@ import { Link } from "@/components/shared/link";
 import { usePathname } from "@/hooks/use-pathname";
 import { useRouter } from "@tanstack/react-router";
 import { CrescentIcon } from "@/components/icons/islamic-icons";
+import { AccessibilityControls, AccessibilityDialog } from "@/components/shared/accessibility-sidebar";
 import {
+  Accessibility,
   Globe,
   LogIn,
   UserPlus,
@@ -56,6 +58,7 @@ export function SiteHeader() {
   const t = useTranslations("common");
   const tAuth = useTranslations("auth");
   const tNav = useTranslations("nav");
+  const tA11y = useTranslations("accessibility");
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const pathname = usePathname();
@@ -96,6 +99,17 @@ export function SiteHeader() {
             <Globe className="h-4 w-4" />
           </Button>
 
+          {/* md+: the accessibility controls in a dialog (phones reach them from the menu sheet). */}
+          <div className="hidden md:block">
+            <AccessibilityDialog
+              trigger={
+                <Button variant="ghost" size="icon" aria-label={tA11y("title")}>
+                  <Accessibility className="h-5 w-5" />
+                </Button>
+              }
+            />
+          </div>
+
           <div className="md:hidden">
             <Sheet>
               <SheetTrigger asChild>
@@ -134,6 +148,12 @@ export function SiteHeader() {
                     );
                   })}
                 </nav>
+                <section aria-labelledby="site-sheet-a11y" className="space-y-3 border-t border-rp-rule px-3 py-4">
+                  <h2 id="site-sheet-a11y" className="rp-small font-semibold text-rp-ink">
+                    {tA11y("title")}
+                  </h2>
+                  <AccessibilityControls />
+                </section>
                 <div className="flex flex-col gap-2 p-2 border-t mt-auto">
                   <Show when="signed-out">
                     <Button variant="ghost" asChild className="w-full justify-start">

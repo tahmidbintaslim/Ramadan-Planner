@@ -184,7 +184,7 @@ export function AccessibilityControls({ className }: { className?: string }) {
   );
 }
 
-/** A dialog with the controls, opened by `trigger` (the desktop side-nav footer button). */
+/** A dialog with the controls, opened by `trigger` (the desktop side-nav footer, the landing header, onboarding). */
 export function AccessibilityDialog({ trigger }: { trigger: ReactNode }) {
   const t = useTranslations("accessibility");
   return (
@@ -210,13 +210,22 @@ function FontSizeSync() {
   return null;
 }
 
-/** Root-level: font size sync everywhere, plus the floating trigger on pages outside the app shell. */
+/**
+ * Routes outside the app shell that reach the controls from their own UI (the landing header, the onboarding
+ * screen), so a floating button would only cover their content.
+ */
+const OWN_ACCESSIBILITY_ENTRY = new Set(["/", "/welcome"]);
+
+/** Root-level: font size sync everywhere, plus the floating trigger on the remaining pages outside the app shell. */
 export function AccessibilitySidebar() {
-  const inAppShell = useMatches({ select: (matches) => matches.some((m) => m.routeId.startsWith("/_app")) });
+  const floating = useMatches({
+    select: (matches) =>
+      !matches.some((m) => m.routeId.startsWith("/_app") || OWN_ACCESSIBILITY_ENTRY.has(m.routeId)),
+  });
   return (
     <>
       <FontSizeSync />
-      {inAppShell ? null : <FloatingAccessibility />}
+      {floating ? <FloatingAccessibility /> : null}
     </>
   );
 }

@@ -16,7 +16,9 @@ export function msg(root: RootData, ns: string, key: string, fallback = ""): str
   return str(root?.messages?.[ns]?.[key], fallback);
 }
 
-export const OG_IMAGE_PATH = "/og.png";
+// The version query busts social-network caches of the old image; bump it whenever public/og.png changes
+// (scripts/generate-brand-assets.mjs).
+export const OG_IMAGE_PATH = "/og.png?v=2";
 
 type PageHeadOptions = {
   matches: readonly MatchLike[];

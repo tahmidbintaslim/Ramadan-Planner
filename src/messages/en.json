@@ -551,7 +551,7 @@
         "sampleIftar": "Iftar",
         "sampleSehriTime": "4:57",
         "sampleIftarTime": "5:58",
-        "sampleSource": "Sample times, for illustration only · the app shows your district's times · Source: AlAdhan, Karachi method, Hanafi Asr",
+        "sampleSource": "Source of the times shown in the app: AlAdhan, Karachi method, Hanafi Asr · the times above are a sample, for illustration only; the app shows your district's times",
         "featuresTitle": "What you get through the day",
         "tilePrayerTitle": "Prayer times",
         "tilePrayerDesc": "The next prayer and how long remains, at a glance",
@@ -888,6 +888,7 @@
         "geoAbroad": "Location found; the times for where you are will be shown.",
         "geoDenied": "Location permission wasn't given. No problem: pick your district below.",
         "geoUnavailable": "Couldn't get your location right now. Pick your district below.",
-        "switchLanguage": "বাংলায় দেখুন"
+        "switchLanguage": "বাংলায় দেখুন",
+        "ambiguous": "Several districts match. Pick one from the list."
     }
 }

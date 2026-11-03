@@ -37,6 +37,8 @@ test.describe("first run", () => {
     await visit(page, "/today");
     await expect(page).toHaveURL(/\/welcome$/);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(/আপনার জেলার সেহরি ও ইফতারের সময়/);
+    // While gated the Home fetched nothing.
+    expect(timingUrls).toEqual([]);
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
 
     await page.getByRole("button", { name: "সিলেট", exact: true }).click();
@@ -140,24 +142,46 @@ test("a returning guest goes straight to /today, and the landing CTA points ther
   await expect(page.getByTestId("landing-start")).toHaveAttribute("href", "/today");
 });
 
-test("a signed-in session is never sent to onboarding", async ({ browser, baseURL }) => {
-  const context = await browser.newContext({ timezoneId: "Asia/Dhaka" });
-  // A non-zero __client_uat is Clerk's "a session exists" marker; no stored location.
-  await context.addCookies([
-    { name: "__clerk_db_jwt", value: "dvb_fake", url: baseURL! },
-    { name: "__client_uat", value: "0", url: baseURL! },
-  ]);
-  await context.route(/clerk\.accounts\.dev|clerk\.com|clerk-telemetry|vercel/, (r) => r.abort());
-  const page = await context.newPage();
-  await mockApis(page);
-  // The server sees a signed-out Clerk cookie; flip it on the client only, before the app runs.
-  await page.addInitScript(() => {
-    document.cookie = "__client_uat=1730600000; path=/";
+test.describe("signed in, no stored location", () => {
+  test.use({ onboarded: false });
+
+  test("a signed-in session is never sent to onboarding and the Home loads", async ({ page }) => {
+    const timingUrls = await mockApis(page);
+    // A non-zero __client_uat is Clerk's "a session exists" marker. Set on the client only: the server keeps the
+    // signed-out cookie (a non-zero one would start a handshake with the fake Clerk instance).
+    await page.addInitScript(() => {
+      document.cookie = "__client_uat=1730600000; path=/";
+    });
+    await visit(page, "/today");
+    await expect(hero(page)).toBeVisible();
+    await page.waitForTimeout(3500); // past the gate's auth timeout
+    await expect(page).toHaveURL(/\/today$/);
+    expect(await page.evaluate(() => localStorage.getItem("rp_location"))).toBeNull();
+    expect(timingUrls.length).toBeGreaterThan(0);
   });
-  await visit(page, "/today");
-  await page.waitForTimeout(500);
-  await expect(page).toHaveURL(/\/today$/);
-  await context.close();
+});
+
+test("the timetable uses the district chosen at onboarding, without a location prompt", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      "rp_location",
+      JSON.stringify({ v: 1, kind: "district", districtId: "rajshahi", lat: 24.37, lng: 88.6, tz: "Asia/Dhaka", savedAt: "" }),
+    );
+    (window as unknown as { __geoCalls: number }).__geoCalls = 0;
+    Object.defineProperty(navigator, "geolocation", {
+      configurable: true,
+      value: { getCurrentPosition: () => void ((window as unknown as { __geoCalls: number }).__geoCalls += 1) },
+    });
+  });
+  const urls: string[] = [];
+  await page.route(/\/api\/ramadan-timetable/, (r) => {
+    urls.push(r.request().url());
+    return r.fulfill({ status: 503, json: { error: "x" } });
+  });
+  await visit(page, "/timetable");
+  await expect.poll(() => urls.length).toBeGreaterThan(0);
+  expect(urls[0]).toMatch(/tz=Asia%2FDhaka&lat=24\.37&lng=88\.60/);
+  expect(await page.evaluate(() => (window as unknown as { __geoCalls: number }).__geoCalls)).toBe(0);
 });
 
 test("landing shows the sample times card labelled as a sample, with a source line", async ({ page }) => {

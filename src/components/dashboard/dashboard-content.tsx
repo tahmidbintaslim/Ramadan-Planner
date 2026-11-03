@@ -21,6 +21,7 @@ import {
 } from "@/lib/locale-number";
 import { getRamadanDayOrdinal } from "@/lib/ramadan-ordinal";
 import { rememberTimings } from "@/lib/auto-night";
+import { storedRequestLocation } from "@/lib/user-location";
 
 export function DashboardContent() {
   const t = useTranslations("dashboard");
@@ -36,13 +37,15 @@ export function DashboardContent() {
   useEffect(() => {
     async function load() {
       try {
-        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        // The location chosen at onboarding wins (no geolocation prompt); otherwise the device position.
+        const stored = storedRequestLocation();
+        const tz = stored?.tz ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
 
         // Try to get user's location for accurate prayer times
-        let lat: number | undefined;
-        let lng: number | undefined;
+        let lat: number | undefined = stored?.lat;
+        let lng: number | undefined = stored?.lng;
 
-        try {
+        if (!stored) try {
           const pos = await new Promise<GeolocationPosition>(
             (resolve, reject) =>
               navigator.geolocation.getCurrentPosition(resolve, reject, {
@@ -56,8 +59,8 @@ export function DashboardContent() {
         }
 
         const timingsParams = new URLSearchParams({ tz });
-        if (lat !== undefined) timingsParams.set("lat", String(lat));
-        if (lng !== undefined) timingsParams.set("lng", String(lng));
+        if (lat !== undefined) timingsParams.set("lat", lat.toFixed(2));
+        if (lng !== undefined) timingsParams.set("lng", lng.toFixed(2));
 
         const [timingsRes, ramadanRes] = await Promise.all([
           fetch(`/api/timings?${timingsParams.toString()}`),

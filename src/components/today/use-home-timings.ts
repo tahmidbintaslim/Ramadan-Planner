@@ -106,9 +106,9 @@ function cachedTimings(tz: string): TimingData | null {
  * Home data: today's timings and the Ramadan status. With a location chosen at onboarding (district or coarse
  * device position) the requests use it and nothing prompts. Without one: first the device timezone (fast, no
  * prompt), then refined with the device location when the user allows it.
- * Refetches when `todayISO` changes (local midnight). Fresh timings are remembered for Auto Night mode.
+ * Refetches when `todayISO` changes (local midnight). `enabled: false` holds every request. Fresh timings are remembered for Auto Night mode.
  */
-export function useHomeTimings(todayISO: string): HomeTimings & { retry: () => void } {
+export function useHomeTimings(todayISO: string, { enabled = true }: { enabled?: boolean } = {}): HomeTimings & { retry: () => void } {
   const [state, setState] = useState<HomeTimings>({
     status: "loading",
     timings: null,
@@ -124,6 +124,8 @@ export function useHomeTimings(todayISO: string): HomeTimings & { retry: () => v
   }, []);
 
   useEffect(() => {
+    // Nothing is fetched (and nothing prompts) until the caller says so, e.g. while the first-run gate decides.
+    if (!enabled) return;
     const controller = new AbortController();
     const { signal } = controller;
     // Effects run only in the browser, after hydration: reading localStorage here cannot cause a mismatch.
@@ -191,7 +193,7 @@ export function useHomeTimings(todayISO: string): HomeTimings & { retry: () => v
 
     void run();
     return () => controller.abort();
-  }, [todayISO, attempt]);
+  }, [todayISO, attempt, enabled]);
 
   return { ...state, retry };
 }

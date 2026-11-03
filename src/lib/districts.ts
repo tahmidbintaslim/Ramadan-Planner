@@ -112,10 +112,17 @@ export function districtName(d: District, locale: string): string {
   return locale.startsWith("bn") ? d.bn : d.en;
 }
 
-/** Lower-case, NFC, no punctuation or spaces, "district"/"জেলা" suffix dropped. */
+/**
+ * ড় ঢ় য় have two encodings: one code point (U+09DC/09DD/09DF) or the base letter + nukta (U+09BC). They are
+ * Unicode composition exclusions, so NFC alone yields the two-code-point form; map both to the single one.
+ */
+function composeNukta(s: string): string {
+  return s.replace(/\u09A1\u09BC/g, "\u09DC").replace(/\u09A2\u09BC/g, "\u09DD").replace(/\u09AF\u09BC/g, "\u09DF");
+}
+
+/** Lower-case, NFC (with ড় ঢ় য় as single code points), no punctuation or spaces, "district"/"জেলা" suffix dropped. */
 export function normalizeDistrictQuery(input: string): string {
-  return input
-    .normalize("NFC")
+  return composeNukta(input.normalize("NFC"))
     .toLowerCase()
     .replace(/\s*(district|zila|zilla|জেলা)\s*$/u, "")
     .replace(/[\s'’.,\-_()]/g, "");

@@ -6,7 +6,8 @@
 //   public/og.png 1200x630 (og.svg, with the self-hosted Tiro Bangla and Hind Siliguri files from @fontsource)
 // Needs the `playwright` package and a Chrome:
 //   PWCHROME=/usr/bin/google-chrome node scripts/generate-brand-assets.mjs
-// After changing the icons, bump CACHE_VERSION in public/sw.js (the icons are precached).
+// After changing the icons, bump CACHE_VERSION in public/sw.js (the icons are precached); after changing og.png,
+// bump the ?v= of OG_IMAGE_PATH in src/lib/seo.ts.
 import { createRequire } from "node:module";
 import fs from "node:fs";
 import path from "node:path";
@@ -39,17 +40,19 @@ const browser = await chromium.launch({ executablePath: process.env.PWCHROME, ar
 
 async function render(svg, width, height, { transparent = false } = {}) {
   const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 1 });
-  const sized = svg.replace("<svg ", `<svg width="${width}" height="${height}" `);
-  await page.setContent(
-    `<!doctype html><html><head><meta charset="utf-8"><style>${FONT_CSS}\nhtml,body{margin:0;background:transparent}svg{display:block}</style></head><body>${sized}</body></html>`,
-  );
-  await page.evaluate(async () => {
-    await Promise.all(["RP Display", "RP Sans"].flatMap((f) => [`400 20px "${f}"`, `600 20px "${f}"`]).map((s) => document.fonts.load(s, "অআ Aa")));
-    await document.fonts.ready;
-  });
-  const png = await page.screenshot({ omitBackground: transparent, type: "png" });
-  await page.close();
-  return png;
+  try {
+    const sized = svg.replace("<svg ", `<svg width="${width}" height="${height}" `);
+    await page.setContent(
+      `<!doctype html><html><head><meta charset="utf-8"><style>${FONT_CSS}\nhtml,body{margin:0;background:transparent}svg{display:block}</style></head><body>${sized}</body></html>`,
+    );
+    await page.evaluate(async () => {
+      await Promise.all(["RP Display", "RP Sans"].flatMap((f) => [`400 20px "${f}"`, `600 20px "${f}"`]).map((s) => document.fonts.load(s, "অআ Aa")));
+      await document.fonts.ready;
+    });
+    return await page.screenshot({ omitBackground: transparent, type: "png" });
+  } finally {
+    await page.close();
+  }
 }
 
 function write(rel, buf) {
@@ -79,14 +82,17 @@ function ico(pngs) {
   return Buffer.concat([header, ...pngs.map((p) => p.data)]);
 }
 
-const icon = read("icon.svg");
-const maskable = read("icon-maskable.svg");
-write("icons/icon-192.png", await render(icon, 192, 192, { transparent: true }));
-write("icons/icon-512.png", await render(icon, 512, 512, { transparent: true }));
-write("icons/icon-512-maskable.png", await render(maskable, 512, 512));
-write("icons/apple-touch-icon.png", await render(maskable, 180, 180));
-const favicons = [];
-for (const size of [16, 32, 48]) favicons.push({ size, data: await render(icon, size, size, { transparent: true }) });
-write("favicon.ico", ico(favicons));
-write("og.png", await render(read("og.svg"), 1200, 630));
-await browser.close();
+try {
+  const icon = read("icon.svg");
+  const maskable = read("icon-maskable.svg");
+  write("icons/icon-192.png", await render(icon, 192, 192, { transparent: true }));
+  write("icons/icon-512.png", await render(icon, 512, 512, { transparent: true }));
+  write("icons/icon-512-maskable.png", await render(maskable, 512, 512));
+  write("icons/apple-touch-icon.png", await render(maskable, 180, 180));
+  const favicons = [];
+  for (const size of [16, 32, 48]) favicons.push({ size, data: await render(icon, size, size, { transparent: true }) });
+  write("favicon.ico", ico(favicons));
+  write("og.png", await render(read("og.svg"), 1200, 630));
+} finally {
+  await browser.close();
+}

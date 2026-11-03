@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
-import { useRouter } from "@tanstack/react-router";
+import { useMemo, useSyncExternalStore } from "react";
 import { useLocale, useTranslations } from "@/i18n/use-intl";
-import { useAuth } from "@/components/providers/auth-provider";
+import { useOnboardingGate } from "@/components/onboarding/use-onboarding-gate";
 import { districtById, districtName } from "@/lib/districts";
-import { needsOnboarding } from "@/lib/user-location";
+import { readStoredLocation } from "@/lib/user-location";
 import { usePrayerPhase } from "@/components/prayer/use-prayer-phase";
 import { timingsFromPrayerTimes, todayISOInZone } from "@/lib/prayer-phase";
 import { DailyPractices } from "./daily-practices";
@@ -14,6 +13,8 @@ import { useSadaqahDismissal } from "./sadaqah-dismissal";
 import { useDailyChecklist } from "./use-daily-checklist";
 import { deviceTimeZone, nextDayISO, useHomeTimings } from "./use-home-timings";
 import { usePrayerReminders } from "./use-prayer-reminders";
+
+const subscribeNoop = () => () => {};
 
 function safeTodayISO(now: Date, timeZone: string): string | null {
   try {
@@ -32,19 +33,18 @@ function safeTodayISO(now: Date, timeZone: string): string | null {
 export function TodayContent({ initialNow }: { initialNow?: Date }) {
   const t = useTranslations("today");
   const locale = useLocale();
-  const router = useRouter();
-  const { user } = useAuth();
 
-  // First-run gate (after hydration, so the server and client renders agree): a guest without a chosen location
-  // goes to onboarding. Signed-in users are never sent there. Client navigations are gated earlier, in the route.
-  useEffect(() => {
-    if (needsOnboarding(user !== null)) void router.navigate({ to: "/welcome", replace: true });
-  }, [router, user]);
+  // First-run gate (resolved after hydration, so the server and client renders agree): a guest without a chosen
+  // location goes to onboarding; signed-in users never do. Until it clears, the Home shows its skeleton and
+  // fetches nothing. Client navigations are gated earlier, in the route's beforeLoad.
+  const gate = useOnboardingGate();
+  // The zone of the location chosen at onboarding names "today" (read after mount; null on the server).
+  const storedTz = useSyncExternalStore(subscribeNoop, () => readStoredLocation()?.tz ?? null, () => null);
 
-  // Live clock (30 s). Its date in the device zone (the zone the timings are requested for) drives the
-  // midnight refetch.
-  const { now, todayISO } = usePrayerPhase(null, deviceTimeZone(), { initialNow });
-  const home = useHomeTimings(todayISO);
+  // Live clock (30 s). Its date in the zone the timings are requested for (the stored location's, else the
+  // device's) drives the midnight refetch.
+  const { now, todayISO } = usePrayerPhase(null, storedTz ?? deviceTimeZone(), { initialNow });
+  const home = useHomeTimings(todayISO, { enabled: gate === "clear" });
   const timeZone = home.timings?.timezone ?? "Asia/Dhaka";
   const dateISO = safeTodayISO(now, timeZone);
 

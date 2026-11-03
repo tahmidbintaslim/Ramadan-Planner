@@ -43,6 +43,18 @@ describe("matching", () => {
     expect(normalizeDistrictQuery("Dhaka District")).toBe("dhaka");
   });
 
+  it("treats the one- and two-code-point forms of ড় ঢ় য় alike", () => {
+    const single = "\u09AC\u0997\u09C1\u09DC\u09BE"; // বগুড়া with U+09DC
+    const split = "\u09AC\u0997\u09C1\u09A1\u09BC\u09BE"; // বগুড়া as ড + nukta
+    expect(normalizeDistrictQuery(single)).toBe(normalizeDistrictQuery(split));
+    expect(normalizeDistrictQuery(split)).toContain("\u09DC");
+    expect(findDistrict(split)?.id).toBe("bogura");
+    expect(findDistrict(single)?.id).toBe("bogura");
+    // য় (U+09DF vs য + nukta) and ঢ় (U+09DD vs ঢ + nukta)
+    expect(findDistrict("\u09AE\u09AF\u09BC\u09AE\u09A8\u09B8\u09BF\u0982\u09B9")?.id).toBe("mymensingh");
+    expect(normalizeDistrictQuery("\u09A2\u09BC")).toBe("\u09DD");
+  });
+
   it("matches Bengali and English names and old spellings, best first", () => {
     expect(matchDistricts("সিলে").map((d) => d.id)).toEqual(["sylhet"]);
     expect(matchDistricts("chittagong")[0].id).toBe("chattogram");

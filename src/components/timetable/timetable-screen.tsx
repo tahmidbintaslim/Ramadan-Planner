@@ -11,6 +11,7 @@ import { ShareIcon } from "@/components/icons/islamic-icons";
 import { Printer } from "lucide-react";
 import { oddNightStartingAfter } from "@/lib/ramadan-nights";
 import { todayISOInZone } from "@/lib/prayer-phase";
+import { storedRequestLocation } from "@/lib/user-location";
 import type { RamadanTimetable, TimetableDay } from "@/lib/ramadan-timetable";
 import { TimetableRow } from "./timetable-row";
 import {
@@ -52,12 +53,15 @@ export function TimetableScreen() {
 
   useEffect(() => {
     let cancelled = false;
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    loadTimetable(tz)
+    // The location chosen at onboarding wins: its coordinates and zone, and no geolocation at all.
+    const stored = storedRequestLocation();
+    const tz = stored?.tz ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+    loadTimetable(tz, stored ?? undefined)
       .then(async (data) => {
         if (cancelled) return;
         setTimetable(data);
         setStatus("ready");
+        if (stored) return;
         // Refine to the device position only when the visitor has already allowed it; never prompt on a public page.
         try {
           const perm = await navigator.permissions?.query({ name: "geolocation" });

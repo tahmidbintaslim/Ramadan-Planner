@@ -20,6 +20,7 @@ import type {
 } from "@/lib/ramadan-timetable";
 import { getRamadanDayOrdinal } from "@/lib/ramadan-ordinal";
 import { localizeAsciiDigits } from "@/lib/locale-number";
+import { storedRequestLocation } from "@/lib/user-location";
 
 interface RamadanTimetableProps {
   /** Compact mode shows fewer columns, used in dashboard */
@@ -42,8 +43,8 @@ export function RamadanTimetable({ compact = false }: RamadanTimetableProps) {
       setError(false);
       try {
         const params = new URLSearchParams();
-        if (lat !== undefined) params.set("lat", String(lat));
-        if (lng !== undefined) params.set("lng", String(lng));
+        if (lat !== undefined) params.set("lat", lat.toFixed(2));
+        if (lng !== undefined) params.set("lng", lng.toFixed(2));
         if (tz) params.set("tz", tz);
 
         const res = await fetch(`/api/ramadan-timetable?${params.toString()}`);
@@ -64,6 +65,12 @@ export function RamadanTimetable({ compact = false }: RamadanTimetableProps) {
   );
 
   const detectLocationAndFetch = useCallback(() => {
+    // The location chosen at onboarding wins (no geolocation prompt); otherwise the device position.
+    const stored = storedRequestLocation();
+    if (stored) {
+      fetchTimetable(stored.lat, stored.lng, stored.tz);
+      return;
+    }
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
     if ("geolocation" in navigator) {

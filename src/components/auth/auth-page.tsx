@@ -5,7 +5,8 @@ import { FloatingQuickNav } from "@/components/shared/floating-quick-nav";
 export function AuthPage({ children }: { children: ReactNode }) {
   return (
     <>
-      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      {/* pb-24 keeps the end of a tall form scrollable above the floating accessibility button. */}
+      <div className="min-h-screen flex items-center justify-center bg-background px-4 pt-10 pb-24">
         <div className="w-full max-w-md">{children}</div>
       </div>
       <FloatingQuickNav />

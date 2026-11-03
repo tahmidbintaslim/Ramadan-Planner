@@ -114,10 +114,37 @@ test.describe("accessibility panel", () => {
       await expect.poll(() => page.evaluate(() => document.documentElement.style.fontSize)).toBe("105%");
     });
 
-    test("pages outside the shell keep the floating button", async ({ page }) => {
+    test("the landing has no floating button; its menu sheet holds the controls", async ({ page }) => {
       await visit(page, "/");
+      await expect(page.getByRole("button", { name: A11Y })).toHaveCount(0);
+      await page.getByRole("banner").getByRole("button", { name: /মেনু|Menu/i }).click();
+      const sheet = page.getByRole("dialog");
+      await expect(sheet.getByRole("heading", { name: A11Y })).toBeVisible();
+      await sheet.getByRole("button", { name: /ফন্ট বড় করুন|Increase font size/ }).click();
+      await expect.poll(() => page.evaluate(() => document.documentElement.style.fontSize)).toBe("105%");
+    });
+
+    test("onboarding has its own accessibility entry instead of the floating button", async ({ page }) => {
+      await visit(page, "/welcome");
+      const entries = page.getByRole("button", { name: A11Y });
+      await expect(entries).toHaveCount(1);
+      await expect(entries).not.toHaveCSS("position", "fixed");
+      await entries.click();
+      await expect(page.getByRole("dialog", { name: A11Y })).toBeVisible();
+    });
+
+    test("other pages outside the shell keep the floating button", async ({ page }) => {
+      await visit(page, "/sign-in");
       await expect(page.getByRole("button", { name: A11Y })).toBeVisible();
     });
+  });
+
+  test("desktop landing header opens the accessibility dialog", async ({ page }) => {
+    await visit(page, "/");
+    const trigger = page.getByRole("banner").getByRole("button", { name: A11Y });
+    await expect(trigger).toBeVisible();
+    await trigger.click();
+    await expect(page.getByRole("dialog", { name: A11Y })).toBeVisible();
   });
 
   test("desktop side-nav footer opens the accessibility dialog", async ({ page }) => {

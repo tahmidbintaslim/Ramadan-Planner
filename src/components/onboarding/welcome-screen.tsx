@@ -7,6 +7,8 @@ import { Chip } from "@/components/ui/chip";
 import { GirihPattern } from "@/components/design/girih-pattern";
 import { MihrabArch } from "@/components/design/mihrab-arch";
 import { CrescentIcon, PinIcon } from "@/components/icons/islamic-icons";
+import { AccessibilityDialog } from "@/components/shared/accessibility-sidebar";
+import { Accessibility } from "lucide-react";
 import {
   POPULAR_DISTRICT_IDS,
   districtById,
@@ -28,6 +30,14 @@ import { deviceTimeZone } from "@/components/today/use-home-timings";
 import { cn } from "@/lib/utils";
 
 type GeoStatus = "idle" | "locating" | "found" | "abroad" | "denied" | "unavailable";
+/** none: a district is missing; noMatch: nothing by that name; ambiguous: several match, pick one. */
+type InputError = "none" | "noMatch" | "ambiguous" | null;
+
+/** Why a typed name cannot be used as it is. */
+function inputErrorFor(query: string): Exclude<InputError, null> {
+  if (!query.trim()) return "none";
+  return matchDistricts(query, 2).length > 1 ? "ambiguous" : "noMatch";
+}
 
 /**
  * First-run onboarding (no sign-up): a welcome sky, then the district. The choice is stored on this device only
@@ -37,6 +47,7 @@ type GeoStatus = "idle" | "locating" | "found" | "abroad" | "denied" | "unavaila
 export function WelcomeScreen() {
   const t = useTranslations("onboarding");
   const tCommon = useTranslations("common");
+  const tA11y = useTranslations("accessibility");
   const locale = useLocale();
   const router = useRouter();
   const [isSwitching, startSwitch] = useTransition();
@@ -46,7 +57,7 @@ export function WelcomeScreen() {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
   const [geo, setGeo] = useState<GeoStatus>("idle");
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<InputError>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listId = useId();
   const statusId = useId();
@@ -73,7 +84,7 @@ export function WelcomeScreen() {
     setQuery(nameOf(d));
     setOpen(false);
     setActive(-1);
-    setError(false);
+    setError(null);
     setGeo("idle");
   }
 
@@ -81,7 +92,8 @@ export function WelcomeScreen() {
     setQuery(value);
     setOpen(true);
     setActive(-1);
-    setError(false);
+    setError(null);
+    setGeo("idle");
     // Typing replaces an earlier pick unless the text still names it.
     if (choice && !(choice.districtId && findDistrict(value)?.id === choice.districtId)) setChoice(null);
   }
@@ -95,9 +107,17 @@ export function WelcomeScreen() {
       setActive((i) => (i <= 0 ? suggestions.length - 1 : i - 1));
     } else if (e.key === "Enter") {
       e.preventDefault();
-      const d = suggestions[active] ?? findDistrict(query);
-      if (d) pick(d);
-      else if (query.trim()) setError(true);
+      const highlighted = suggestions[active];
+      if (highlighted) {
+        pick(highlighted);
+        return;
+      }
+      // Enter on a district already chosen (or a full name) starts.
+      if (choice || findDistrict(query)) {
+        start();
+        return;
+      }
+      if (query.trim()) setError(inputErrorFor(query));
     } else if (e.key === "Escape") {
       setOpen(false);
       setActive(-1);
@@ -105,7 +125,7 @@ export function WelcomeScreen() {
   }
 
   function locate() {
-    setError(false);
+    setError(null);
     setOpen(false);
     if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
       setGeo("unavailable");
@@ -135,7 +155,9 @@ export function WelcomeScreen() {
   function start() {
     const loc = choice ?? (findDistrict(query) ? locationFromDistrict(findDistrict(query)!) : null);
     if (!loc) {
-      setError(true);
+      setError(inputErrorFor(query));
+      // An ambiguous name opens the list to pick from.
+      setOpen(true);
       inputRef.current?.focus();
       return;
     }
@@ -152,7 +174,7 @@ export function WelcomeScreen() {
 
   return (
     <div className="min-h-dvh bg-rp-page">
-      <main id="main-content" className="mx-auto flex w-full max-w-[480px] flex-col pb-24">
+      <main id="main-content" className="mx-auto flex w-full max-w-[480px] flex-col pb-10">
         <section
           aria-labelledby="welcome-greeting"
           className="relative isolate flex h-[360px] flex-col items-center overflow-hidden rounded-b-[40px] px-6 pt-14 text-center text-white sm:mt-6 sm:rounded-rp-xl"
@@ -193,8 +215,8 @@ export function WelcomeScreen() {
                 aria-controls={listId}
                 aria-autocomplete="list"
                 aria-activedescendant={active >= 0 ? `${listId}-${active}` : undefined}
-                aria-invalid={error || undefined}
-                aria-describedby={[error ? errorId : "", geo !== "idle" ? statusId : ""].filter(Boolean).join(" ") || undefined}
+                aria-invalid={error ? true : undefined}
+                aria-describedby={[errorId, geo !== "idle" ? statusId : ""].filter(Boolean).join(" ") || undefined}
                 autoComplete="off"
                 enterKeyHint="done"
                 placeholder={t("districtPlaceholder")}
@@ -246,11 +268,10 @@ export function WelcomeScreen() {
                 </li>
               ))}
             </ul>
-            {error ? (
-              <p id={errorId} className="rp-small mt-2 text-destructive">
-                {query.trim() ? t("noMatch") : t("chooseFirst")}
-              </p>
-            ) : null}
+            {/* Always in the DOM so screen readers announce the message when it appears. */}
+            <p id={errorId} role="alert" className={cn("rp-small text-destructive", error ? "mt-2" : "sr-only")}>
+              {error === "none" ? t("chooseFirst") : error === "noMatch" ? t("noMatch") : error === "ambiguous" ? t("ambiguous") : ""}
+            </p>
             <p id={statusId} role="status" aria-live="polite" className={cn("rp-small mt-2 text-rp-muted", geo === "idle" && "sr-only")}>
               {geo === "idle" ? "" : geoText[geo]}
             </p>
@@ -271,13 +292,25 @@ export function WelcomeScreen() {
             <Button size="lg" className="w-full" onClick={start}>
               {t("start")}
             </Button>
-            <Button variant="quiet" size="lg" className="w-full whitespace-normal" onClick={() => finish(defaultLocation())}>
+            <Button
+              variant="quiet"
+              size="lg"
+              className="h-auto min-h-[52px] w-full whitespace-normal py-2"
+              onClick={() => finish(defaultLocation())}
+            >
               {t("later")}
             </Button>
             <p className="rp-caption text-center text-rp-muted">{t("privacyNote")}</p>
           </div>
 
-          <div className="flex justify-center">
+          <div className="flex items-center justify-center gap-2">
+            <AccessibilityDialog
+              trigger={
+                <Button variant="quiet" size="icon" aria-label={tA11y("title")}>
+                  <Accessibility className="size-5" />
+                </Button>
+              }
+            />
             <Button
               variant="link"
               lang={locale.startsWith("bn") ? "en" : "bn"}

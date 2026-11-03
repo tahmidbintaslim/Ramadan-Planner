@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "@/i18n/use-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { CalendarDays, Moon, Star } from "lucide-react";
 import type { RamadanStatus } from "@/lib/ramadan-date";
+import { storedRequestLocation } from "@/lib/user-location";
 import {
   formatLocalizedNumber,
   localizeAsciiDigits,
@@ -20,10 +21,15 @@ export function RamadanStatusBanner() {
   useEffect(() => {
     async function load() {
       try {
-        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        // The location chosen at onboarding wins (no geolocation prompt); otherwise the device position.
+        const stored = storedRequestLocation();
+        const tz = stored?.tz ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
         const params = new URLSearchParams({ tz });
 
-        if ("geolocation" in navigator) {
+        if (stored) {
+          params.set("lat", stored.lat.toFixed(2));
+          params.set("lng", stored.lng.toFixed(2));
+        } else if ("geolocation" in navigator) {
           try {
             const pos = await new Promise<GeolocationPosition>(
               (resolve, reject) =>
@@ -31,8 +37,8 @@ export function RamadanStatusBanner() {
                   timeout: 5000,
                 }),
             );
-            params.set("lat", String(pos.coords.latitude));
-            params.set("lng", String(pos.coords.longitude));
+            params.set("lat", pos.coords.latitude.toFixed(2));
+            params.set("lng", pos.coords.longitude.toFixed(2));
           } catch {
             // Continue with timezone-only fallback
           }
