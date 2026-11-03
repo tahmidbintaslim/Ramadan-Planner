@@ -15,7 +15,7 @@
 
 ## Auth Problems
 
-- Auth is Clerk. Check `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` and that they belong to the same Clerk instance.
+- Auth is Clerk. Check `VITE_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` and that they belong to the same Clerk instance.
 - Social login: enable the provider (for example Google) in the Clerk dashboard.
 - A `pk_test_` key means a Clerk development instance; use a production instance (`pk_live_`) on a public domain.
 - Session expired: Clerk redirects to `/sign-in`.

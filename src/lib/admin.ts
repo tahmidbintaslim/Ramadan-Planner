@@ -1,3 +1,5 @@
+// Server-only: reads ADMIN_EMAILS and the AdminUser table.
+import "@tanstack/react-start/server-only";
 import { prisma } from "@/lib/prisma";
 
 function parseAdminEmails(): string[] {

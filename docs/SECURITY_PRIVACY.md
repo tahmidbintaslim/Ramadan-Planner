@@ -9,7 +9,7 @@
 
 ## Secrets
 
-- `SUPABASE_SERVICE_ROLE_KEY`, `CLERK_SECRET_KEY`, `VAPID_PRIVATE_KEY`, `CRON_SECRET`, `GOOGLE_OAUTH_CLIENT_SECRET` and `CALENDAR_TOKENS_ENCRYPTION_KEY` are server only. Never prefix them with `NEXT_PUBLIC_`.
+- `SUPABASE_SERVICE_ROLE_KEY`, `CLERK_SECRET_KEY`, `VAPID_PRIVATE_KEY`, `CRON_SECRET`, `GOOGLE_OAUTH_CLIENT_SECRET` and `CALENDAR_TOKENS_ENCRYPTION_KEY` are server only. Never prefix them with `VITE_` (Vite ships `VITE_*` values to the browser) or the deprecated `NEXT_PUBLIC_`.
 - Google OAuth tokens are encrypted at rest with AES-256-GCM (`src/lib/secure-json.ts`).
 - ICS feed URLs contain a per-user secret; anyone with the link can read that user's reminder schedule. Revoking clears the secret, but CDN-cached responses can be served for up to an hour plus a 6-hour stale window.
 - `/api/push/dispatch` rejects calls without the cron secret.

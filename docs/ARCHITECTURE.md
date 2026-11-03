@@ -2,22 +2,22 @@
 
 ## Frontend
 
-- Next.js 16 App Router, React 19
-- Server Components by default; Client Components for interactive trackers and forms
+- TanStack Start (TanStack Router file routes in `src/routes/`, Vite, Nitro with the Vercel preset), React 19
+- Pages render on the server (SSR) and hydrate; route loaders fetch data through server functions (`createServerFn`), whose bodies live in server-only modules under `src/server/`
 - shadcn/ui + Tailwind CSS 4
-- next-intl with Bengali as the default locale and English second (locale stored in the `NEXT_LOCALE` cookie)
+- use-intl with Bengali as the default locale and English second (locale stored in the `NEXT_LOCALE` cookie, read by the root loader)
 
 ## Auth
 
-- Clerk. `src/proxy.ts` runs `clerkMiddleware()`; `/sign-in` and `/sign-up` render Clerk components.
+- Clerk. `src/start.ts` runs the CSRF middleware and `clerkMiddleware()` on every request; `/sign-in` and `/sign-up` render Clerk components. Server functions that need a user go through `authMiddleware` (`src/server/auth-middleware.ts`), which answers 401 when signed out.
 - `getAppAuthUser()` in `src/lib/auth/server.ts` maps the Clerk user ID to a stable UUID (SHA-256 based) that is used as `user_profiles.id` and as `user_id` everywhere else.
-- Supabase Auth is not used. `src/actions/auth.ts` and the forms in `src/components/auth/` are leftovers from it and are not reachable from the app.
+- Supabase Auth is not used.
 
 ## Data
 
 - One PostgreSQL database, hosted on Supabase.
 - Prisma 7 with the `pg` adapter (`src/lib/prisma.ts`) for daily content, Quran, hadith, announcements, admin, push subscriptions and delivery logs, and calendar links.
-- `supabase-js` with the service role key (`src/lib/supabase/server.ts`), on the server only, for planner data in `src/actions/planner.ts`: daily logs, prayer goals, plan tasks, reminder rules and profile settings.
+- `supabase-js` with the service role key (`src/lib/supabase/server.ts`), on the server only, for planner data in `src/server/planner-impl.ts`: daily logs, prayer goals, plan tasks, reminder rules and profile settings.
 - The service role bypasses row-level security, so user isolation comes from application code: every server query filters by the signed-in user's ID. See [SECURITY_PRIVACY.md](SECURITY_PRIVACY.md).
 - Guests use the same screens with data in `localStorage` (`src/hooks/use-guest-data.ts`).
 

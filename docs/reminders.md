@@ -23,7 +23,7 @@ The schedule math is unit-tested in `src/lib/push-schedule.test.ts`.
 
 Environment variables on the deployment:
 
-- `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`: generate once with `npm run vapid:generate -- --subject=mailto:you@example.com` and keep them; new keys invalidate existing subscriptions. Next.js inlines `NEXT_PUBLIC_*` values at build time, so redeploy after setting or changing the public key
+- `VITE_VAPID_PUBLIC_KEY` (the server also reads the deprecated `NEXT_PUBLIC_VAPID_PUBLIC_KEY`), `VAPID_PRIVATE_KEY`: generate once with `npm run vapid:generate -- --subject=mailto:you@example.com` and keep them; new keys invalidate existing subscriptions. Vite inlines `VITE_*` values at build time, so redeploy after setting or changing the public key
 - `VAPID_SUBJECT` (e.g. `mailto:admin@example.com`)
 - `CRON_SECRET`: required by `GET /api/push/dispatch`
 - `PUSH_DISPATCH_SECRET` (optional): accepted by `POST` as the `x-cron-secret` header or a Bearer token; falls back to `CRON_SECRET`

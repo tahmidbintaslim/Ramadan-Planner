@@ -1,0 +1,399 @@
+/*
+ * Design system v2 tokens (source of truth: Figma variables, names = --rp-*).
+ *
+ * Modes: :root is Light, .dark is Night (class set by next-themes; "auto" phase switching arrives in Task 6).
+ * Fonts (self-hosted via @fontsource, Bengali + Latin subsets, font-display: swap):
+ *   - default sans / body ........ Hind Siliguri 400/500/600  -> `font-sans` (applied to body)
+ *   - greeting + H1 .............. Tiro Bangla Regular        -> `font-display` utility
+ * Type roles (CSS classes, use together with font-display where noted):
+ *   .rp-greeting 24/34 (Tiro)  .rp-h1 28/40 (Tiro)  .rp-time-xl 56/64 600  .rp-time-l 36/44 600
+ *   .rp-h2 20/30 600  .rp-row 16/24 500  .rp-body 16/26  .rp-small 14/22  .rp-button 16/22 600
+ *   .rp-caption 12/18 500  .rp-overline 13/18 500
+ * Colour utilities (Tailwind key -> CSS var; use as bg-/text-/border-/from-/ring- + key):
+ *   rp-page (bg-page)  rp-surface (bg-surface)  rp-live (bg-live)  rp-accent-tint (bg-accent-tint)
+ *   rp-inverse (bg-inverse)  rp-gold-tint (bg-gold-tint)  rp-ink (text-primary)  rp-muted (text-secondary)
+ *   rp-on-live (text-on-live)  rp-on-inverse (text-on-inverse)  rp-accent (text-accent)  rp-gold-text (text-gold)
+ *   rp-gold (accent-gold)  rp-rule (border-rule)  rp-strong (border-strong)  rp-input (border-input, >=3:1 field border)
+ *   rp-done (state-done). e.g. bg-rp-surface, text-rp-accent, border-rp-rule, from-rp-accent-tint, text-rp-ink.
+ * Contrast (body text >=4.5:1): text-accent on page/surface/accent-tint/gold-tint = Light 5.97/6.41/5.55/5.70,
+ *   Night 7.73/6.41/5.03/5.03; text-gold = Light 5.73/6.15/5.33/5.47, Night 9.85/8.17/6.40/6.40;
+ *   border-input = Light 3.20 page/3.43 surface, Night 4.04/3.35.
+ * Hero gradients: --rp-hero-sehri / -day / -iftar / -night (top to bottom) for the Prayer Hero.
+ */
+@import "@fontsource/hind-siliguri/bengali-400.css";
+@import "@fontsource/hind-siliguri/bengali-500.css";
+@import "@fontsource/hind-siliguri/bengali-600.css";
+@import "@fontsource/hind-siliguri/latin-400.css";
+@import "@fontsource/hind-siliguri/latin-500.css";
+@import "@fontsource/hind-siliguri/latin-600.css";
+@import "@fontsource/tiro-bangla/bengali-400.css";
+@import "@fontsource/tiro-bangla/latin-400.css";
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-display: var(--font-rp-display);
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-rp-sm: var(--rp-radius-sm);
+  --radius-rp-md: var(--rp-radius-md);
+  --radius-rp-lg: var(--rp-radius-lg);
+  --radius-rp-xl: var(--rp-radius-xl);
+  --radius-rp-full: var(--rp-radius-full);
+  --shadow-rp-soft: var(--rp-shadow-soft);
+  --color-rp-page: var(--rp-bg-page);
+  --color-rp-surface: var(--rp-bg-surface);
+  --color-rp-live: var(--rp-bg-live);
+  --color-rp-accent-tint: var(--rp-bg-accent-tint);
+  --color-rp-inverse: var(--rp-bg-inverse);
+  --color-rp-gold-tint: var(--rp-bg-gold-tint);
+  --color-rp-ink: var(--rp-text-primary);
+  --color-rp-muted: var(--rp-text-secondary);
+  --color-rp-on-live: var(--rp-text-on-live);
+  --color-rp-on-inverse: var(--rp-text-on-inverse);
+  --color-rp-accent: var(--rp-text-accent);
+  --color-rp-gold-text: var(--rp-text-gold);
+  --color-rp-gold: var(--rp-accent-gold);
+  --color-rp-rule: var(--rp-border-rule);
+  --color-rp-strong: var(--rp-border-strong);
+  --color-rp-done: var(--rp-state-done);
+  --color-rp-input: var(--rp-border-input);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+}
+
+:root {
+  --font-geist-sans: "Hind Siliguri", "Noto Sans Bengali", "Noto Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-rp-display: "Tiro Bangla", "Hind Siliguri", "Noto Serif Bengali", serif;
+  --font-geist-mono: "Fira Code", "JetBrains Mono", "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+  /* Primitives */
+  --rp-mist-0: #FFFFFF;
+  --rp-mist-50: #F3F8F6;
+  --rp-mist-100: #E6F0ED;
+  --rp-ink-900: #12302C;
+  --rp-ink-700: #2C4A45;
+  --rp-ink-500: #5B716D;
+  --rp-ink-300: #A3B5B1;
+  --rp-ink-150: #DCE8E4;
+  --rp-teal-800: #0B4F48;
+  --rp-teal-700: #0D6B5D;
+  --rp-teal-600: #0E7C6B;
+  --rp-teal-300: #3CC3A6;
+  --rp-teal-200: #7FD8C4;
+  --rp-teal-50: #E3F2EE;
+  --rp-night-950: #0B1F24;
+  --rp-night-900: #12302F;
+  --rp-night-800: #1B4240;
+  --rp-night-700: #24504D;
+  --rp-night-200: #9DB7B1;
+  --rp-night-50: #EAF4F1;
+  --rp-gold-700: #8A6A25;
+  --rp-gold-500: #C9A45C;
+  --rp-gold-300: #E0C27A;
+  --rp-gold-50: #F8F1E2;
+
+  /* Radius + shadow */
+  --rp-radius-sm: 10px;
+  --rp-radius-md: 16px;
+  --rp-radius-lg: 24px;
+  --rp-radius-xl: 32px;
+  --rp-radius-full: 999px;
+  --rp-shadow-soft: 0 8px 24px rgba(18, 48, 44, 0.08), 0 1px 2px rgba(18, 48, 44, 0.04);
+  --radius: 0.625rem;
+
+  /* Prayer Hero gradients, top to bottom (same in both modes) */
+  --rp-hero-sehri: linear-gradient(180deg, #0B1F24 0%, #1B4240 55%, #2F6E6A 100%);
+  --rp-hero-day: linear-gradient(180deg, #0B4F48 0%, #0E7C6B 55%, #4FBFA5 100%);
+  --rp-hero-iftar: linear-gradient(180deg, #0B4F48 0%, #2F7F72 55%, #D9B46C 100%);
+  --rp-gradient-quran: linear-gradient(90deg, #0B4F48 0%, #0E7C6B 100%);
+  --rp-hero-night: linear-gradient(180deg, #081A1E 0%, #0B1F24 55%, #163B3A 100%);
+
+  /* Semantic: Light */
+  --rp-bg-page: var(--rp-mist-50);
+  --rp-bg-surface: var(--rp-mist-0);
+  --rp-bg-live: var(--rp-teal-600);
+  --rp-bg-accent-tint: var(--rp-teal-50);
+  --rp-bg-inverse: var(--rp-teal-800);
+  --rp-bg-gold-tint: var(--rp-gold-50);
+  --rp-text-primary: var(--rp-ink-900);
+  --rp-text-secondary: var(--rp-ink-500);
+  --rp-text-on-live: var(--rp-mist-0);
+  --rp-text-on-inverse: var(--rp-mist-0);
+  --rp-text-accent: var(--rp-teal-700);
+  --rp-text-gold: #7a5d1f; /* darker than gold-700 for 4.5:1 on tints */
+  --rp-accent-gold: var(--rp-gold-500);
+  --rp-border-rule: var(--rp-ink-150);
+  --rp-border-strong: var(--rp-ink-300);
+  --rp-border-input: #7a8f8a; /* field borders, >=3:1 */
+  --rp-state-done: var(--rp-teal-600);
+
+  /* shadcn mapping */
+  --background: var(--rp-bg-page);
+  --foreground: var(--rp-text-primary);
+  --card: var(--rp-bg-surface);
+  --card-foreground: var(--rp-text-primary);
+  --popover: var(--rp-bg-surface);
+  --popover-foreground: var(--rp-text-primary);
+  --primary: var(--rp-bg-live);
+  --primary-foreground: var(--rp-text-on-live);
+  --secondary: var(--rp-mist-100);
+  --secondary-foreground: var(--rp-text-primary);
+  --muted: var(--rp-mist-100);
+  --muted-foreground: var(--rp-text-secondary);
+  --accent: var(--rp-bg-accent-tint);
+  --accent-foreground: var(--rp-teal-700);
+  --destructive: #dc2626;
+  --border: var(--rp-border-rule);
+  --input: var(--rp-border-input);
+  --ring: var(--rp-teal-600);
+  --chart-1: var(--rp-teal-600);
+  --chart-2: var(--rp-gold-500);
+  --chart-3: var(--rp-teal-300);
+  --chart-4: var(--rp-gold-700);
+  --chart-5: var(--rp-ink-500);
+  --sidebar: var(--rp-bg-surface);
+  --sidebar-foreground: var(--rp-text-primary);
+  --sidebar-primary: var(--rp-bg-live);
+  --sidebar-primary-foreground: var(--rp-text-on-live);
+  --sidebar-accent: var(--rp-bg-accent-tint);
+  --sidebar-accent-foreground: var(--rp-teal-700);
+  --sidebar-border: var(--rp-border-rule);
+  --sidebar-ring: var(--rp-teal-600);
+}
+
+.dark {
+  /* Semantic: Night */
+  --rp-bg-page: var(--rp-night-950);
+  --rp-bg-surface: var(--rp-night-900);
+  --rp-bg-live: var(--rp-teal-800);
+  --rp-bg-accent-tint: var(--rp-night-800);
+  --rp-bg-inverse: var(--rp-teal-300);
+  --rp-bg-gold-tint: var(--rp-night-800);
+  --rp-text-primary: var(--rp-night-50);
+  --rp-text-secondary: var(--rp-night-200);
+  --rp-text-on-live: var(--rp-mist-0);
+  --rp-text-on-inverse: var(--rp-night-950);
+  --rp-text-accent: var(--rp-teal-300);
+  --rp-text-gold: var(--rp-gold-300);
+  --rp-accent-gold: var(--rp-gold-300);
+  --rp-border-rule: var(--rp-night-800);
+  --rp-border-strong: var(--rp-night-700);
+  --rp-border-input: #55847f;
+  --rp-state-done: var(--rp-teal-300);
+  --rp-shadow-soft: 0 8px 24px rgba(0, 0, 0, 0.32), 0 1px 2px rgba(0, 0, 0, 0.2);
+  --accent-foreground: var(--rp-text-accent);
+  --primary: var(--rp-teal-300);
+  --primary-foreground: var(--rp-night-950);
+  --secondary: var(--rp-night-800);
+  --muted: var(--rp-night-800);
+  --destructive: #ef4444;
+  --ring: var(--rp-teal-300);
+  --chart-1: var(--rp-teal-300);
+  --chart-2: var(--rp-gold-300);
+  --chart-3: var(--rp-teal-200);
+  --chart-4: var(--rp-gold-500);
+  --chart-5: var(--rp-night-200);
+  --sidebar-primary: var(--rp-teal-300);
+  --sidebar-primary-foreground: var(--rp-night-950);
+  --sidebar-accent-foreground: var(--rp-text-accent);
+  --sidebar-ring: var(--rp-teal-300);
+}
+
+@layer utilities {
+  .rp-greeting { font-family: var(--font-rp-display); font-size: 24px; line-height: 34px; font-weight: 400; }
+  .rp-h1 { font-family: var(--font-rp-display); font-size: 28px; line-height: 40px; font-weight: 400; }
+  .rp-time-xl { font-size: 56px; line-height: 64px; font-weight: 600; }
+  .rp-time-l { font-size: 36px; line-height: 44px; font-weight: 600; }
+  .rp-h2 { font-size: 20px; line-height: 30px; font-weight: 600; }
+  .rp-row { font-size: 16px; line-height: 24px; font-weight: 500; }
+  .rp-body { font-size: 16px; line-height: 26px; font-weight: 400; }
+  .rp-small { font-size: 14px; line-height: 22px; font-weight: 400; }
+  .rp-button { font-size: 16px; line-height: 22px; font-weight: 600; }
+  .rp-caption { font-size: 12px; line-height: 18px; font-weight: 500; }
+  .rp-overline { font-size: 13px; line-height: 18px; font-weight: 500; }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.55;
+  }
+  h1, h2, h3 {
+    text-wrap: balance;
+  }
+  p, li {
+    text-wrap: pretty;
+  }
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  [role="button"]:focus-visible {
+    outline: 2px solid color-mix(in oklab, var(--color-ring) 72%, white);
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  .surface-soft {
+    background: color-mix(in oklab, var(--color-card) 84%, var(--color-background));
+    border-color: color-mix(in oklab, var(--color-border) 78%, transparent);
+    box-shadow: var(--rp-shadow-soft);
+  }
+
+  .motion-spring {
+    transition-property: transform, opacity, box-shadow, border-color, background-color, color;
+    transition-duration: 420ms;
+    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
+  }
+
+  .motion-spring:hover {
+    transform: translateY(-2px) scale(1.004);
+  }
+
+  .motion-spring:active {
+    transform: translateY(0) scale(0.997);
+  }
+
+  .motion-reveal {
+    opacity: 0;
+    transform: translateY(14px);
+    animation: reveal-up 700ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  .tap-target {
+    min-height: 44px;
+  }
+
+  .reading-copy {
+    line-height: 1.7;
+    color: color-mix(in oklab, var(--color-foreground) 86%, var(--color-muted-foreground));
+  }
+
+  @keyframes reveal-up {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes float-slow {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-8px);
+    }
+  }
+
+  @keyframes sway-slow {
+    0%, 100% {
+      transform: rotate(0deg);
+    }
+    50% {
+      transform: rotate(3deg);
+    }
+  }
+
+  .float-slow {
+    animation: float-slow 4.2s ease-in-out infinite;
+  }
+
+  .sway-slow {
+    transform-origin: top center;
+    animation: sway-slow 3.6s ease-in-out infinite;
+  }
+
+  @media (max-width: 640px) {
+    .mobile-comfy {
+      padding: 1rem;
+    }
+  }
+
+  @media (hover: none) {
+    .motion-spring:hover {
+      transform: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .motion-spring,
+    .motion-reveal {
+      transition-duration: 0ms !important;
+      animation: none !important;
+      transform: none !important;
+      opacity: 1 !important;
+    }
+  }
+}
+
+/* Toast offset (sonner): below 1024px toasts sit 16px above the floating bottom nav (16px gap + 72px bar). */
+:root {
+  --rp-toast-bottom: calc(6.5rem + env(safe-area-inset-bottom));
+}
+@media (min-width: 1024px) {
+  :root {
+    --rp-toast-bottom: 24px;
+  }
+}
+
+/* Print: the timetable page prints the full 30-day table on white, without the app chrome. */
+@media print {
+  html:has([data-timetable-print]),
+  body:has([data-timetable-print]) {
+    background: #fff !important;
+    color: #000 !important;
+  }
+  body:has([data-timetable-print]) :is(header, aside, nav, .fixed, [data-sonner-toaster]) {
+    display: none !important;
+  }
+  body:has([data-timetable-print]) main {
+    padding: 0 !important;
+  }
+}

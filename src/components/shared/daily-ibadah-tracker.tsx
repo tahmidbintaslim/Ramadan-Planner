@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { useLocale, useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "@/i18n/use-intl";
 import { BookOpen, Bell, CheckCircle2, Target } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +14,7 @@ import {
 } from "@/actions/planner";
 import { useAuth } from "@/components/providers/auth-provider";
 import { getTodayKey, useGuestData } from "@/hooks/use-guest-data";
+import { useGuestReminderRules } from "@/lib/guest-reminders";
 import { cn } from "@/lib/utils";
 import { formatLocalizedNumber } from "@/lib/locale-number";
 import { DAILY_TRACKER_MARKERS } from "@/lib/daily-tracker-markers";
@@ -59,10 +60,7 @@ export function DailyIbadahTracker({ day }: { day: number }) {
     getTodayKey("plan_tasks"),
     [],
   );
-  const { data: guestReminders } = useGuestData<Array<{ enabled: boolean }>>(
-    getTodayKey("reminder_rules"),
-    [],
-  );
+  const { data: guestReminders } = useGuestReminderRules();
   const { data: guestPrayers } = useGuestData<Record<string, boolean>>(
     getTodayKey("salah"),
     {},

@@ -5,7 +5,7 @@ import {
   useContext,
   type ReactNode,
 } from "react";
-import { useUser } from "@clerk/nextjs";
+import { useUser } from "@clerk/tanstack-react-start";
 
 interface AuthUser {
   id: string;

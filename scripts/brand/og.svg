@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <!-- Open Graph image (design system v2), 1200x630 -> public/og.png via scripts/generate-brand-assets.mjs, which
+       supplies the self-hosted fonts: "RP Display" = Tiro Bangla, "RP Sans" = Hind Siliguri (@fontsource files). -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0B4F48"/>
+      <stop offset="1" stop-color="#0E7C6B"/>
+    </linearGradient>
+    <pattern id="girih" width="40" height="40" patternUnits="userSpaceOnUse">
+      <g fill="none" stroke="#fff" stroke-width="1">
+        <rect x="10" y="10" width="20" height="20"/>
+        <rect x="10" y="10" width="20" height="20" transform="rotate(45 20 20)"/>
+      </g>
+    </pattern>
+    <mask id="crescent">
+      <rect width="1200" height="630" fill="#000"/>
+      <circle cx="944" cy="318" r="86" fill="#fff"/>
+      <circle cx="984" cy="292" r="76" fill="#000"/>
+    </mask>
+  </defs>
+  <rect width="1200" height="630" fill="url(#sky)"/>
+  <rect width="1200" height="630" fill="url(#girih)" opacity="0.07"/>
+  <path d="M800 630V330C800 220 868 150 960 106c92 44 160 114 160 224v300" fill="none" stroke="#fff" stroke-opacity="0.2" stroke-width="3" stroke-linecap="round"/>
+  <path d="M836 630V336C836 248 892 190 960 156c68 34 124 92 124 180v294" fill="none" stroke="#fff" stroke-opacity="0.1" stroke-width="3" stroke-linecap="round"/>
+  <rect width="1200" height="630" fill="#E0C27A" mask="url(#crescent)"/>
+  <path d="M1018 226l6 14 14 6-14 6-6 14-6-14-14-6 14-6z" fill="#E0C27A"/>
+
+  <g fill="#fff">
+    <rect x="80" y="84" width="56" height="56" rx="14" fill="#fff" fill-opacity="0.14"/>
+    <text x="156" y="124" font-family="RP Sans" font-weight="600" font-size="30" fill-opacity="0.92">রমজান প্ল্যানার</text>
+    <text font-family="RP Display" font-size="68">
+      <tspan x="80" y="262">সেহরি থেকে ইফতার,</tspan>
+      <tspan x="80" y="356">রমজানের শান্ত সঙ্গী</tspan>
+    </text>
+    <text x="80" y="440" font-family="RP Sans" font-size="30" fill-opacity="0.9">জেলার সেহরি-ইফতার ও নামাজের সময় · দৈনিক পরিকল্পনা · কুরআন</text>
+    <text x="80" y="540" font-family="RP Sans" font-weight="600" font-size="26" fill="#E0C27A">সম্পূর্ণ ফ্রি · বিজ্ঞাপন নেই · সাইন-আপ লাগে না</text>
+  </g>
+  <g transform="translate(92 96) scale(1.333)" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M15 3.6A8.6 8.6 0 1 0 20.4 15 7 7 0 1 1 15 3.6z"/>
+  </g>
+</svg>
