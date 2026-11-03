@@ -39,6 +39,12 @@ interface QuranReaderProps {
 // Default reciter id (Mishary Rashid Al Afasy)
 const DEFAULT_RECITER = "1";
 
+// Below 1024px the audio controls float 16px above the floating bottom nav (16px gap + 72px bar, safe-area aware),
+// leaving the right 72px free for the accessibility button; from 1024px (side nav, no bottom nav) they sit in flow.
+// The wrapper's pb-32 below 1024px keeps the last ayahs clear of the floating bar.
+export const AUDIO_BAR_CLASS =
+  "fixed left-4 right-[4.5rem] bottom-[calc(6.5rem+env(safe-area-inset-bottom))] z-30 mx-auto max-w-[900px] lg:static lg:inset-auto lg:w-auto";
+
 export function QuranReader({ surahNumber }: QuranReaderProps) {
   const t = useTranslations("quranReader");
   const locale = useLocale();
@@ -308,7 +314,7 @@ export function QuranReader({ surahNumber }: QuranReaderProps) {
   }
 
   return (
-    <div className="space-y-6 max-w-3xl mx-auto pb-32 sm:pb-0">
+    <div className="space-y-6 max-w-3xl mx-auto pb-32 lg:pb-0">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-center gap-2">
         <Button variant="ghost" size="icon" asChild>
@@ -385,10 +391,7 @@ export function QuranReader({ surahNumber }: QuranReaderProps) {
       </div>
 
       {/* Audio controls (mobile-friendly) */}
-      <Card
-        className="sm:static fixed bottom-4 inset-x-4 sm:inset-auto sm:w-auto max-w-[900px] z-40"
-        style={{ bottom: "calc(1rem + env(safe-area-inset-bottom))" }}
-      >
+      <Card data-quran-audio-bar="" className={AUDIO_BAR_CLASS}>
         <CardContent className="py-3">
           <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
             <div className="flex items-center gap-2">

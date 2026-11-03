@@ -371,3 +371,13 @@
     }
   }
 }
+
+/* Toast offset (sonner): below 1024px toasts sit 16px above the floating bottom nav (16px gap + 72px bar). */
+:root {
+  --rp-toast-bottom: calc(6.5rem + env(safe-area-inset-bottom));
+}
+@media (min-width: 1024px) {
+  :root {
+    --rp-toast-bottom: 24px;
+  }
+}

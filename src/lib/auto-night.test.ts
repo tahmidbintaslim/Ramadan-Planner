@@ -1,8 +1,15 @@
+// The device clock is pinned to Dhaka so device wall-clock time and the cached timings' zone agree.
+process.env.TZ = "Asia/Dhaka";
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   AUTO_NIGHT_SCRIPT,
+  FALLBACK_NIGHT_END_MIN,
+  FALLBACK_NIGHT_START_MIN,
   KNOWN_TIMINGS_EVENT,
   KNOWN_TIMINGS_KEY,
+  KNOWN_TIMINGS_MAX_AGE_DAYS,
+  autoNightAt,
   isAutoNight,
   isFallbackNight,
   parseKnownTimings,
@@ -10,7 +17,7 @@ import {
   rememberTimings,
   type KnownTimings,
 } from "./auto-night";
-import { zonedTime } from "./prayer-phase";
+import { getPrayerPhase, timingsFromPrayerTimes, zonedTime } from "./prayer-phase";
 
 const TZ = "Asia/Dhaka";
 const PT = { fajr: "05:15", sunrise: "06:30", dhuhr: "12:10", asr: "15:30", maghrib: "17:55", isha: "19:10", sehri: "05:05" };
@@ -18,52 +25,54 @@ const known: KnownTimings = { date: "2027-02-20", timezone: TZ, prayerTimes: PT,
 const at = (hhmm: string, date = "2027-02-20") => zonedTime(date, hhmm, TZ)!;
 
 describe("isFallbackNight (device local time)", () => {
-  const local = (h: number, m: number) => new Date(2027, 1, 20, h, m);
   it("is Night from 18:00 until 05:30", () => {
-    expect(isFallbackNight(local(18, 0))).toBe(true);
-    expect(isFallbackNight(local(23, 59))).toBe(true);
-    expect(isFallbackNight(local(0, 0))).toBe(true);
-    expect(isFallbackNight(local(5, 29))).toBe(true);
+    for (const t of ["18:00", "23:59", "00:00", "05:29"]) expect(isFallbackNight(at(t))).toBe(true);
   });
   it("is Light from 05:30 until 18:00", () => {
-    expect(isFallbackNight(local(5, 30))).toBe(false);
-    expect(isFallbackNight(local(12, 0))).toBe(false);
-    expect(isFallbackNight(local(17, 59))).toBe(false);
+    for (const t of ["05:30", "12:00", "17:59"]) expect(isFallbackNight(at(t))).toBe(false);
+  });
+  it("embedded literals match the exported constants", () => {
+    expect(FALLBACK_NIGHT_START_MIN).toBe(1080);
+    expect(FALLBACK_NIGHT_END_MIN).toBe(330);
+    expect(KNOWN_TIMINGS_MAX_AGE_DAYS).toBe(7);
   });
 });
 
 describe("isAutoNight with known timings", () => {
-  it("follows the phase engine: Night from Maghrib to Fajr", () => {
-    expect(isAutoNight(at("17:54"), known)).toBe(false); // iftar phase
-    expect(isAutoNight(at("17:55"), known)).toBe(true); // maghrib
-    expect(isAutoNight(at("23:30"), known)).toBe(true);
-    expect(isAutoNight(at("03:00"), known)).toBe(true); // sehri
-    expect(isAutoNight(at("05:14"), known)).toBe(true);
-    expect(isAutoNight(at("05:15"), known)).toBe(false); // fajr: day begins
-    expect(isAutoNight(at("12:00"), known)).toBe(false);
+  it("is Night from Maghrib to Fajr", () => {
+    expect(isAutoNight(at("17:54"), known, TZ)).toBe(false);
+    expect(isAutoNight(at("17:55"), known, TZ)).toBe(true);
+    expect(isAutoNight(at("23:30"), known, TZ)).toBe(true);
+    expect(isAutoNight(at("03:00"), known, TZ)).toBe(true);
+    expect(isAutoNight(at("05:14"), known, TZ)).toBe(true);
+    expect(isAutoNight(at("05:15"), known, TZ)).toBe(false);
+    expect(isAutoNight(at("12:00"), known, TZ)).toBe(false);
   });
 
-  it("applies recent (up to a week old) timings to today", () => {
-    expect(isAutoNight(at("19:00", "2027-02-25"), known)).toBe(true);
-    expect(isAutoNight(at("10:00", "2027-02-25"), known)).toBe(false);
+  it("agrees with getPrayerPhase(...).isNight across the whole day", () => {
+    const t = timingsFromPrayerTimes(PT, known.date, TZ, PT.fajr)!;
+    for (let m = 0; m < 24 * 60; m += 1) {
+      const hhmm = `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+      const now = at(hhmm);
+      expect(isAutoNight(now, known, TZ), hhmm).toBe(getPrayerPhase(now, t).isNight);
+    }
   });
 
-  it("uses the fallback for stale, future-dated or broken timings", () => {
-    // 17:56 Dhaka is after maghrib, but the fallback (device time) decides. Compare against it directly.
-    const stale = at("17:56", "2027-03-10");
-    expect(isAutoNight(stale, known)).toBe(isFallbackNight(stale));
-    const future = at("17:56", "2027-02-10");
-    expect(isAutoNight(future, known)).toBe(isFallbackNight(future));
-    const shifted = { ...known, prayerTimes: { ...PT, fajr: "22:48", maghrib: "11:18", isha: "12:35" } };
-    expect(isAutoNight(at("12:00"), shifted)).toBe(isFallbackNight(at("12:00")));
-    const broken = { ...known, timezone: "Not/AZone" };
-    expect(isAutoNight(at("12:00"), broken)).toBe(isFallbackNight(at("12:00")));
+  it("applies timings up to a week old to today", () => {
+    expect(isAutoNight(at("17:56", "2027-02-27"), known, TZ)).toBe(true);
+    expect(isAutoNight(at("17:56", "2027-02-28"), known, TZ)).toBe(false); // 8 days: fallback (before 18:00)
   });
 
-  it("uses the fallback without timings", () => {
-    const d = new Date(2027, 1, 20, 21, 0);
-    expect(isAutoNight(d, null)).toBe(true);
-    expect(isAutoNight(new Date(2027, 1, 20, 9, 0), null)).toBe(false);
+  it("falls back for future-dated, out-of-order, other-timezone or missing timings", () => {
+    const n = at("17:56");
+    expect(isAutoNight(at("17:56", "2027-02-19"), known, TZ)).toBe(false);
+    expect(isAutoNight(n, { ...known, prayerTimes: { ...PT, fajr: "22:48", maghrib: "11:18" } }, TZ)).toBe(false);
+    expect(isAutoNight(n, { ...known, timezone: "UTC" }, TZ)).toBe(false);
+    expect(autoNightAt(n.getTime(), undefined, known)).toBe(false); // device zone unknown
+    expect(isAutoNight(n, null, TZ)).toBe(false);
+    expect(autoNightAt(n.getTime(), TZ, { ...known, prayerTimes: { ...PT, maghrib: "soon" } })).toBe(false);
+    expect(autoNightAt(n.getTime(), TZ, "garbage")).toBe(false);
+    expect(isAutoNight(at("21:00"), null, TZ)).toBe(true);
   });
 });
 
@@ -128,15 +137,18 @@ describe("storage helpers", () => {
   });
 });
 
-describe("AUTO_NIGHT_SCRIPT (pre-hydration)", () => {
-  function run(theme: string | null, cached: KnownTimings | null, now: Date) {
+describe("AUTO_NIGHT_SCRIPT (pre-hydration) runs the same decision", () => {
+  function run(theme: string | null, cached: unknown, now: Date) {
     const classes = new Set(["light"]);
     const meta = { content: "#F3F8F6", setAttribute: (_: string, v: string) => (meta.content = v) };
     const html = {
       classList: { remove: (c: string) => classes.delete(c), add: (c: string) => classes.add(c) },
       style: { colorScheme: "light" },
     };
-    const storage: Record<string, string | null> = { theme, [KNOWN_TIMINGS_KEY]: cached ? JSON.stringify(cached) : null };
+    const storage: Record<string, string | null> = {
+      theme,
+      [KNOWN_TIMINGS_KEY]: cached === null ? null : typeof cached === "string" ? cached : JSON.stringify(cached),
+    };
     vi.useFakeTimers();
     vi.setSystemTime(now);
     try {
@@ -149,20 +161,33 @@ describe("AUTO_NIGHT_SCRIPT (pre-hydration)", () => {
     }
     return { dark: classes.has("dark") && !classes.has("light"), meta: meta.content, scheme: html.style.colorScheme };
   }
-  const local = (h: number, m: number) => new Date(2027, 1, 20, h, m);
 
   it("does nothing unless the preference is auto", () => {
-    expect(run("light", null, local(22, 0)).dark).toBe(false);
-    expect(run(null, null, local(22, 0)).dark).toBe(false);
+    expect(run("light", null, at("22:00")).dark).toBe(false);
+    expect(run(null, null, at("22:00")).dark).toBe(false);
   });
-  it("uses the 18:00–05:30 fallback without cached timings", () => {
-    expect(run("auto", null, local(22, 0))).toEqual({ dark: true, meta: "#0B1F24", scheme: "dark" });
-    expect(run("auto", null, local(12, 0)).dark).toBe(false);
+
+  it("switches to Night with the matching theme-color", () => {
+    expect(run("auto", null, at("22:00"))).toEqual({ dark: true, meta: "#0B1F24", scheme: "dark" });
+    expect(run("auto", "{corrupt", at("12:00")).dark).toBe(false);
   });
-  it("uses cached Maghrib/Fajr as device wall-clock times", () => {
-    const cached = { ...known, prayerTimes: { ...PT, maghrib: "19:30", fajr: "04:00" } };
-    expect(run("auto", cached, local(19, 0)).dark).toBe(false);
-    expect(run("auto", cached, local(19, 30)).dark).toBe(true);
-    expect(run("auto", cached, local(4, 30)).dark).toBe(false);
+
+  it("agrees with isAutoNight for fresh, stale, out-of-order, other-zone and missing caches", () => {
+    const cases: unknown[] = [
+      known,
+      null,
+      { ...known, date: "2027-02-10" },
+      { ...known, prayerTimes: { ...PT, fajr: "22:48", maghrib: "11:18" } },
+      { ...known, timezone: "UTC" },
+      { ...known, prayerTimes: { ...PT, maghrib: "19:30", fajr: "04:00" } },
+    ];
+    const times = ["00:00", "03:59", "04:00", "05:14", "05:15", "05:29", "05:30", "12:00", "17:54", "17:55", "17:59", "18:00", "19:29", "19:30", "23:59"];
+    for (const c of cases) {
+      for (const t of times) {
+        const now = at(t);
+        const expected = isAutoNight(now, parseKnownTimings(c), TZ);
+        expect(run("auto", c, now).dark, `${JSON.stringify(c)} @ ${t}`).toBe(expected);
+      }
+    }
   });
 });

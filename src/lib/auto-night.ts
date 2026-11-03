@@ -1,13 +1,13 @@
 /**
  * Auto Night mode: when the theme preference is "auto", Night (the `.dark` class) applies from Maghrib to Fajr.
  *
- * The decision uses the prayer phase engine (`getPrayerPhase(...).isNight`) with the user's last known timings
- * (cached in localStorage by whichever screen fetched them). Without timings it falls back to a fixed local
- * window, 18:00 to 05:30. Pure apart from the small storage helpers at the bottom, which never throw.
+ * The decision (`autoNightAt`) applies the phase engine's isNight rule (before Fajr or from Maghrib) to the user's
+ * last known timings, cached in localStorage by whichever screen fetched them. Without usable timings it falls
+ * back to a fixed local window, 18:00 to 05:30. Pure apart from the small storage helpers, which never throw.
  */
 
 import type { PrayerTimes } from "@/types/database";
-import { getPrayerPhase, timingsFromPrayerTimes, todayISOInZone } from "@/lib/prayer-phase";
+import { todayISOInZone } from "@/lib/prayer-phase";
 
 /** Fallback window (minutes after local midnight): Night from 18:00 until 05:30. */
 export const FALLBACK_NIGHT_START_MIN = 18 * 60;
@@ -30,38 +30,67 @@ export interface KnownTimings {
   source: "geo" | "tz";
 }
 
+/**
+ * THE Auto Night decision, shared by the React controller (`isAutoNight`) and the pre-hydration script
+ * (`AUTO_NIGHT_SCRIPT` embeds this function's source), so both always agree.
+ *
+ * Night = before Fajr or from Maghrib, on the device's wall clock: the same rule as `getPrayerPhase(...).isNight`
+ * (sehri + night phases; see the equivalence test). The cached times are used only when they are for the device's
+ * own timezone (so wall-clock comparison is exact), at most 7 days old, and in day order (Fajr before Maghrib);
+ * otherwise the 18:00–05:30 fallback applies.
+ *
+ * Must stay self-contained (no imports, no module-level references, plain syntax): it is serialized with
+ * `toString()`. The literals mirror FALLBACK_NIGHT_* and KNOWN_TIMINGS_MAX_AGE_DAYS (asserted in tests).
+ */
+export function autoNightAt(nowMs: number, deviceTimeZone: string | undefined, cached: unknown): boolean {
+  const now = new Date(nowMs);
+  const minute = now.getHours() * 60 + now.getMinutes();
+  let start = 1080;
+  let end = 330;
+  try {
+    const k = cached as { date?: unknown; timezone?: unknown; prayerTimes?: { fajr?: unknown; maghrib?: unknown } } | null;
+    const hm = function (x: unknown): number | null {
+      const r = typeof x === "string" ? /^(\d{1,2}):(\d{2})/.exec(x) : null;
+      return r ? Number(r[1]) * 60 + Number(r[2]) : null;
+    };
+    if (k && typeof k === "object" && deviceTimeZone && k.timezone === deviceTimeZone && k.prayerTimes) {
+      const d = typeof k.date === "string" ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(k.date) : null;
+      const fajr = hm(k.prayerTimes.fajr);
+      const maghrib = hm(k.prayerTimes.maghrib);
+      if (d && fajr !== null && maghrib !== null && fajr < maghrib) {
+        const age = Math.round(
+          (Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) - Date.UTC(Number(d[1]), Number(d[2]) - 1, Number(d[3]))) /
+            86400000,
+        );
+        if (age >= 0 && age <= 7) {
+          start = maghrib;
+          end = fajr;
+        }
+      }
+    }
+  } catch {
+    // Malformed cache: keep the fallback window.
+  }
+  return minute >= start || minute < end;
+}
+
+/** The device's IANA timezone, or undefined when Intl cannot tell. */
+export function deviceTimeZone(): string | undefined {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Fixed-window fallback, in the device's local time. */
 export function isFallbackNight(now: Date): boolean {
-  const m = now.getHours() * 60 + now.getMinutes();
-  return m >= FALLBACK_NIGHT_START_MIN || m < FALLBACK_NIGHT_END_MIN;
+  return autoNightAt(now.getTime(), undefined, null);
 }
 
-function daysBetweenISO(a: string, b: string): number {
-  const pa = a.split("-").map(Number);
-  const pb = b.split("-").map(Number);
-  return Math.round((Date.UTC(pb[0], pb[1] - 1, pb[2]) - Date.UTC(pa[0], pa[1] - 1, pa[2])) / 86_400_000);
-}
-
-/**
- * Whether Auto mode should show Night at `now`. Recent timings (up to a week old) are applied to today's date:
- * the times drift by about a minute a day, which is still far closer than the fixed fallback.
- */
-export function isAutoNight(now: Date, known: KnownTimings | null): boolean {
-  if (known) {
-    try {
-      const today = todayISOInZone(now, known.timezone);
-      const age = daysBetweenISO(known.date, today);
-      if (age >= 0 && age <= KNOWN_TIMINGS_MAX_AGE_DAYS) {
-        const pt = known.prayerTimes;
-        const t = timingsFromPrayerTimes(pt, today, known.timezone, pt.fajr);
-        // Times that are not in day order (e.g. answered for another zone) cannot be trusted.
-        if (t && t.fajr < t.maghrib && t.maghrib < t.isha) return getPrayerPhase(now, t).isNight;
-      }
-    } catch {
-      // Invalid timezone or malformed cache: use the fallback.
-    }
-  }
-  return isFallbackNight(now);
+/** Whether Auto mode should show Night at `now` (see `autoNightAt`). */
+export function isAutoNight(now: Date, known: KnownTimings | null, timeZone: string | undefined = deviceTimeZone()): boolean {
+  return autoNightAt(now.getTime(), timeZone, known);
 }
 
 const HHMM = /^\d{1,2}:\d{2}/;
@@ -125,8 +154,8 @@ export function rememberTimings(
 }
 
 /**
- * Inline pre-hydration script for Auto mode. Runs after next-themes' own script (which renders Auto as Light),
- * and switches to Night when the cached Maghrib/Fajr (or the 18:00–05:30 fallback) says so, so night users see
- * no Light flash. It reads the cached HH:mm on the device clock; the React controller refines it after mount.
+ * Inline pre-hydration script for Auto mode. Runs after next-themes' own script (which renders Auto as Light) and
+ * switches to Night when `autoNightAt` (embedded verbatim) says so, so night users see no Light flash and the
+ * React controller, which calls the same function, never disagrees after mount.
  */
-export const AUTO_NIGHT_SCRIPT = `try{if(localStorage.getItem("theme")==="auto"){var d=new Date(),m=d.getHours()*60+d.getMinutes(),s=${FALLBACK_NIGHT_START_MIN},e=${FALLBACK_NIGHT_END_MIN};try{var k=JSON.parse(localStorage.getItem("${KNOWN_TIMINGS_KEY}")||"null"),p=function(x){var r=/^(\\d{1,2}):(\\d{2})/.exec(x||"");return r?(+r[1])*60+(+r[2]):null};if(k&&k.prayerTimes){var a=p(k.prayerTimes.maghrib),b=p(k.prayerTimes.fajr);if(a!==null&&b!==null){s=a;e=b}}}catch(_){}if(m>=s||m<e){var h=document.documentElement;h.classList.remove("light");h.classList.add("dark");h.style.colorScheme="dark";var t=document.querySelector('meta[name="theme-color"]');if(t)t.setAttribute("content","#0B1F24")}}}catch(_){}`;
+export const AUTO_NIGHT_SCRIPT = `try{if(localStorage.getItem("theme")==="auto"){var z,k=null;try{z=Intl.DateTimeFormat().resolvedOptions().timeZone}catch(_){}try{k=JSON.parse(localStorage.getItem("${KNOWN_TIMINGS_KEY}")||"null")}catch(_){}if((${autoNightAt.toString()})(Date.now(),z,k)){var h=document.documentElement;h.classList.remove("light");h.classList.add("dark");h.style.colorScheme="dark";var t=document.querySelector('meta[name="theme-color"]');if(t)t.setAttribute("content","#0B1F24")}}}catch(_){}`;

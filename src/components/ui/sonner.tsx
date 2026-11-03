@@ -11,11 +11,16 @@ import { useTheme } from "next-themes"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme()
+  // Auto mode resolves to Light or Night through forcedTheme (see ThemeProvider).
+  const { forcedTheme, resolvedTheme } = useTheme()
+  const theme = forcedTheme ?? resolvedTheme ?? "light"
 
   return (
     <Sonner
-      theme={(theme === "auto" ? "light" : theme) as ToasterProps["theme"]}
+      theme={(theme === "dark" ? "dark" : "light") as ToasterProps["theme"]}
+      // Below 1024px toasts clear the floating bottom nav (--rp-toast-bottom in globals.css).
+      offset={{ bottom: "var(--rp-toast-bottom)" }}
+      mobileOffset={{ bottom: "var(--rp-toast-bottom)" }}
       className="toaster group"
       icons={{
         success: <CircleCheckIcon className="size-4" />,

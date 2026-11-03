@@ -43,6 +43,42 @@ test.describe("mobile shell", () => {
     });
     expect(contentBottom).toBeLessThanOrEqual(navTop);
   });
+  test("the Quran audio bar floats above the bottom nav without overlapping it (390 and 800px)", async ({ page }) => {
+    // The surah arrives from /api/quran on the client; answer it locally so no third-party API is needed.
+    const ayah = (n: number) => ({
+      ayahNo: n, textArabic: "بِسْمِ ٱللَّهِ", textArabicClean: "بسم الله", textEnglish: "In the name of Allah",
+      textBengali: "আল্লাহর নামে", audio: { "1": { reciter: "R", url: "data:,", originalUrl: "data:," } },
+    });
+    await page.route(/\/api\/quran\?surah=1$/, (r) =>
+      r.fulfill({
+        json: {
+          surahNo: 1, nameArabic: "الفاتحة", nameArabicLong: "سورة الفاتحة", nameEnglish: "Al-Faatiha",
+          nameTranslation: "The Opening", nameBengali: "আল-ফাতিহা", revelationPlace: "Mecca", totalAyah: 7,
+          audio: {}, ayahs: Array.from({ length: 7 }, (_, i) => ayah(i + 1)),
+        },
+      }),
+    );
+    await page.route(/\/api\/quran\?reciters=true$/, (r) => r.fulfill({ json: [{ id: 1, name: "R" }] }));
+    // 390px phone and 800px tablet: both have the floating bottom nav (it goes at 1024px).
+    for (const width of [390, 800]) {
+      await page.setViewportSize({ width, height: 844 });
+      await visit(page, "/quran/1");
+      const bar = page.locator("[data-quran-audio-bar]");
+      await expect(bar).toBeVisible({ timeout: 15_000 });
+      const nav = page.getByRole("navigation", { name: /প্রধান নেভিগেশন|Main navigation/ }).first();
+      const [b, n] = [await bar.boundingBox(), await nav.boundingBox()];
+      expect(b && n).toBeTruthy();
+      expect(b!.y + b!.height).toBeLessThanOrEqual(n!.y);
+      // ...and leaves room for the accessibility button on its right.
+      const fab = (await page.getByRole("button", { name: /অ্যাক্সেসিবিলিটি|Accessibility/ }).boundingBox())!;
+      expect(b!.x + b!.width).toBeLessThanOrEqual(fab.x);
+      // The last ayah can be scrolled clear of the floating bar.
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+      const lastAyah = page.locator("main [dir=rtl]").last();
+      const a = await lastAyah.boundingBox();
+      expect(a!.y + a!.height).toBeLessThanOrEqual((await bar.boundingBox())!.y);
+    }
+  });
 });
 
 test("desktop side nav replaces the bottom nav and marks the active item", async ({ page }) => {

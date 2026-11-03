@@ -23,9 +23,9 @@ export function useLocaleSwitch() {
   return { switchLocale, isPending };
 }
 
-/** 44px round white button with the soft shadow (top bar actions). */
+/** 48px round white button with the soft shadow (top bar actions). */
 export const roundButtonClass =
-  "inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-rp-surface text-rp-ink shadow-rp-soft transition-colors hover:text-rp-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-rp-page disabled:opacity-50";
+  "inline-flex size-12 shrink-0 items-center justify-center rounded-full bg-rp-surface text-rp-ink shadow-rp-soft transition-colors hover:text-rp-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-rp-page disabled:opacity-50";
 
 export function LanguageButton({ className }: { className?: string }) {
   const t = useTranslations("common");

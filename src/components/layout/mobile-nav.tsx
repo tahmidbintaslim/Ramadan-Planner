@@ -6,7 +6,8 @@ import { Link } from "@/components/shared/link";
 import { usePathname } from "@/hooks/use-pathname";
 import { useTranslations } from "@/i18n/use-intl";
 import { useAuth } from "@/components/providers/auth-provider";
-import { MoreIcon } from "@/components/icons/islamic-icons";
+import { Show } from "@clerk/tanstack-react-start";
+import { CrescentIcon, MoreIcon } from "@/components/icons/islamic-icons";
 import {
   Sheet,
   SheetContent,
@@ -25,6 +26,9 @@ import { GuestAuthButtons, useLocaleSwitch } from "./shell-actions";
 
 const itemClass =
   "group mx-auto flex h-[60px] w-full max-w-16 flex-col items-center justify-center gap-1 rounded-rp-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+
+const sheetRowClass =
+  "flex min-h-12 items-center gap-3 rounded-rp-md px-3 text-left text-rp-ink transition-colors hover:bg-rp-accent-tint/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50";
 
 function TabContent({ item, active, label }: { item: Pick<NavItem, "icon">; active: boolean; label: string }) {
   const Icon = item.icon;
@@ -78,11 +82,17 @@ function MoreSheetBody({ onNavigate }: { onNavigate: () => void }) {
         </ul>
       </nav>
       <div className="flex flex-col gap-2 border-t border-rp-rule pt-4">
+        <Show when="signed-out">
+          <Link href="/" onClick={onNavigate} className={sheetRowClass}>
+            <CrescentIcon size={22} aria-hidden />
+            <span className="rp-row">{tCommon("exploreTheApp")}</span>
+          </Link>
+        </Show>
         <button
           type="button"
           onClick={switchLocale}
           disabled={isPending}
-          className="flex min-h-12 items-center gap-3 rounded-rp-md px-3 text-left text-rp-ink transition-colors hover:bg-rp-accent-tint/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+          className={sheetRowClass}
         >
           <Globe className="size-[22px]" strokeWidth={1.6} aria-hidden />
           <span className="rp-row">{tCommon("switchLanguage")}</span>

@@ -7,11 +7,11 @@ import { useAuth } from "@/components/providers/auth-provider";
 import { CrescentIcon } from "@/components/icons/islamic-icons";
 import { cn } from "@/lib/utils";
 import { PRIMARY_NAV, SECONDARY_NAV, isNavActive, type NavItem } from "./nav-items";
-import { GuestAuthButtons } from "./shell-actions";
 
 // Desktop side nav (≥1024px): 232px on the surface colour, brand row (36px teal circle + crescent, app name), then
 // the primary destinations and the rest. Items: icon 22 + label 16/22 600, px 14 py 10, radius 14; active item
-// uses the accent tint. AppShell offsets the content by SIDEBAR_WIDTH.
+// uses the accent tint; links are at least 48px tall. Guest sign-in lives in the top bar only. AppShell offsets
+// the content by SIDEBAR_WIDTH_CLASS.
 
 export const SIDEBAR_WIDTH_CLASS = "lg:pl-[232px]";
 
@@ -24,7 +24,7 @@ function NavLink({ item, pathname, label }: { item: NavItem; pathname: string; l
         href={item.href}
         aria-current={active ? "page" : undefined}
         className={cn(
-          "flex items-center gap-3 rounded-[14px] px-3.5 py-2.5 rp-button transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          "flex min-h-12 items-center gap-3 rounded-[14px] px-3.5 py-2.5 rp-button transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           active ? "bg-rp-accent-tint text-rp-accent" : "text-rp-muted hover:bg-rp-accent-tint/60 hover:text-rp-ink",
         )}
       >
@@ -39,7 +39,7 @@ export function DesktopSidebar() {
   const pathname = usePathname();
   const t = useTranslations("nav");
   const tCommon = useTranslations("common");
-  const { isGuest, loading } = useAuth();
+  const { isGuest } = useAuth();
   const secondary = SECONDARY_NAV.filter((i) => !i.signedInOnly || !isGuest);
 
   return (
@@ -66,12 +66,6 @@ export function DesktopSidebar() {
           ))}
         </ul>
       </nav>
-
-      {!loading && isGuest && (
-        <div className="border-t border-rp-rule px-3 py-4">
-          <GuestAuthButtons stacked />
-        </div>
-      )}
     </aside>
   );
 }
