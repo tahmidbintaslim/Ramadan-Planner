@@ -277,7 +277,7 @@ export function HadithChapterPage({
             </div>
           </div>
           <p className="mt-2">
-            <Link href={`/hadith/${encodeURIComponent(editionName)}`} className="text-sm text-emerald-600">
+            <Link href={`/hadith/${encodeURIComponent(editionName)}`} className="text-sm text-rp-accent">
               {t("backToList")}
             </Link>
           </p>

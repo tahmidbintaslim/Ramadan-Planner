@@ -8,6 +8,7 @@ import {
   Sun,
   Moon,
   Monitor,
+  Clock,
   Plus,
   Minus,
   RotateCcw,
@@ -88,6 +89,7 @@ export function AccessibilitySidebar() {
     { value: "light" as const, icon: Sun, label: t("light") },
     { value: "dark" as const, icon: Moon, label: t("dark") },
     { value: "system" as const, icon: Monitor, label: t("system") },
+    { value: "auto" as const, icon: Clock, label: t("auto") },
   ];
 
   return (
@@ -191,7 +193,7 @@ export function AccessibilitySidebar() {
             <label className="text-xs font-medium text-muted-foreground">
               {t("theme")}
             </label>
-            <div className="grid grid-cols-3 gap-1.5">
+            <div className="grid grid-cols-4 gap-1.5">
               {themeOptions.map((option) => (
                 <button
                   key={option.value}

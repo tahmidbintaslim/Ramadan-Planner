@@ -234,7 +234,7 @@ export function LandingPage() {
                     </p>
                   </div>
 
-                  <div className="relative mx-auto h-[300px] w-full max-w-[380px] overflow-hidden rounded-2xl border border-emerald-200/70 bg-linear-to-br from-emerald-100/60 via-card to-emerald-200/55 p-3 shadow-inner">
+                  <div className="relative mx-auto h-[300px] w-full max-w-[380px] overflow-hidden rounded-2xl border border-rp-rule bg-linear-to-br from-rp-accent-tint via-card to-rp-accent-tint p-3 shadow-inner">
                     <div className="absolute inset-3 rounded-xl border border-white/45" />
                     <svg
                       viewBox="0 0 360 280"

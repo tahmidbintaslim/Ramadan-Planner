@@ -27,7 +27,8 @@ export const Route = createRootRoute({
         { property: "og:title", content: title },
         { property: "og:description", content: common?.metaOgDescription ?? "" },
         { property: "og:type", content: "website" },
-        { name: "theme-color", content: "#006c40" },
+        // Light value; ThemeColorSync switches it to the Night value (#0B1F24) when the .dark class is active.
+        { name: "theme-color", content: "#F3F8F6" },
       ],
       links: [
         { rel: "stylesheet", href: appCss },
