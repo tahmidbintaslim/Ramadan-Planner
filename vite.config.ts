@@ -24,6 +24,16 @@ export default defineConfig(({ mode }) => {
     // Resolves the "@/*" alias from tsconfig.json.
     resolve: { tsconfigPaths: true },
     define,
-    plugins: [nitro(), tailwindcss(), tanstackStart(), viteReact()],
+    plugins: [
+      nitro({
+        // Node server builds (no NITRO_PRESET): pre-compress the static assets (JS, CSS, fonts) as .br/.gz, served
+        // when the browser accepts them. Vercel compresses on its CDN, so its build skips this. HTML responses
+        // are rendered per request and stay uncompressed on the Node server.
+        compressPublicAssets: env.NITRO_PRESET || env.VERCEL ? false : { gzip: true, brotli: true },
+      }),
+      tailwindcss(),
+      tanstackStart(),
+      viteReact(),
+    ],
   };
 });
