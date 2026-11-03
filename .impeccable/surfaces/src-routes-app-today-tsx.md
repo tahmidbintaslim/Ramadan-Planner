@@ -5,23 +5,23 @@ primary_target: "src/routes/_app.today.tsx"
 related_targets: []
 ---
 
-# Surface: app shell and Today (home) screen
+# Surface: app shell and Home (Today) screen
 
-Scope: the PWA app shell and its time-aware home screen (Today), the design system it establishes, and the follow-on screens (timetable, day plan, Quran, reminders, support/contribute, last-ten-nights). Mode: Operate. Platform: mobile-first web/PWA, later native.
+Scope: PWA app shell, the time-aware Home screen, and the design system it establishes (timetable, day plan, last ten nights, Quran, sadaqah, onboarding follow it). Mode: Operate. Platform: mobile-first web/PWA, later native.
 
-Audience/job: Bengali-speaking fasting users checking sehri/iftar and the day's plan in short, time-critical moments, one-handed, often in the dark. Constraints: prayer times never obscured; quiet donation asks only at natural moments (after iftar, last ten nights, Eid); offline, light, Bengali-first.
+Audience/job: Bengali-speaking fasting users checking sehri/iftar, the next prayer and the day's plan in short moments, one-handed, often in the dark. Constraints: prayer times never obscured; quiet sadaqah asks only after iftar, the last ten nights and Eid; offline, light, Bengali-first.
 
 ## Direction contract
 
-THESIS: The home screen is the year's Ramadan timetable card come alive: the familiar printed সময়সূচি grid, with today's row lifted and counting down. It refuses the category's card-dashboard of icon tiles and the cream-and-serif spiritual-wellness look.
+THESIS: A peaceful, unmistakably Islamic companion: the home screen is a sky that follows the day, with one focus at a time. User-pinned (2026-11-03) from founder references (calm teal Islamic prayer/dua/Quran app concepts); replaces the rejected timetable-card direction.
 
-OWN-WORLD: Two-colour print discipline: timetable white ground, carbon ink, one festival red for "today/now" and state, plus a deep night ink for after-maghrib and the last ten nights. Hairline-ruled tabular grid, Bengali numerals set tabular, heavy grotesque Bengali display for the live time. No gradients, no ornament, no mosque silhouettes; the rule lines are the decoration.
+OWN-WORLD: Mint-mist ground, white soft cards (radius 24, one soft shadow), deep teal primary, muted gold accent for iftar, odd nights and sadaqah. Night mode (Maghrib→Fajr) on deep teal-ink. Three quiet Islamic motifs only: mihrab arch outline, faint 8-point girih lattice at 6–10%, crescent/lantern line icons. Tiro Bangla greetings/headings, Hind Siliguri UI. Pills for buttons and chips.
 
-STORY: The visitor instantly sees today's sehri and iftar and how long remains, trusts the source line beneath, then moves to the day's plan or another day by tapping its row; contributing is a quiet row in the same card.
+STORY: The visitor sees the next moment (sehri, prayer or iftar) and how long remains, trusts the source line, then checks the five prayers, the day's plan or a Quran/dua shortcut; sadaqah appears as a gentle gold card at the right moments.
 
-FIRST VIEWPORT: Top bar (Hijri day, district selector). Below, the timetable grid fills the screen: three rows above and below today; today's row expands in red into a live countdown band (next event, time, remaining) with the five prayer times as a sub-row. Primary action (today's plan) sits under the band. Bottom navigation: আজ, সময়সূচি, পরিকল্পনা, কুরআন, আরও.
+FIRST VIEWPORT: Greeting top bar (Tiro Bangla salam, date, bell). Prayer Hero card (sky gradient per phase, location pill, Hijri date, progress ring with label/time/remaining, source line). Sehri/Iftar pair card. Today's prayers list with the next one tinted. Floating rounded bottom nav: আজ, সময়সূচি, পরিকল্পনা, কুরআন, আরও.
 
-FORM: Ramadan timetable card, position 1 on my ordered list (IMPECCABLE'S PICK). seed:491b9b64af1a2b60
-Signature move: the live row: today's timetable row expands into the countdown band and shifts phase through the day (sehri, prayers, iftar, night), the rest of the grid stays still.
+FORM: User-pinned calm Islamic direction (founder references), not a dealt card; earlier roll seed:491b9b64af1a2b60 superseded, safer re-roll round 1.
+Signature move: the Prayer Hero's sky and ring change phase through the day (Sehri, Day, Iftar, Night).
 
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance

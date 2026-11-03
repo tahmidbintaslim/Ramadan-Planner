@@ -82,6 +82,7 @@ Success for Ramadan 2027 means:
 - Bengali first, English second.
 - Ad-free and privacy-respecting.
 - There is no finished logo asset yet.
+- Visual commitment (founder, 2026-11-03): calm, eye-soothing, unmistakably Islamic look in the spirit of the founder's reference concepts (teal/mint, soft rounded cards, mihrab arch, faint geometric pattern, Islamic line icons). Peaceful focus over novelty.
 
 ## Evidence on Hand
 
