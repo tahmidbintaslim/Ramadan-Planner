@@ -1002,6 +1002,11 @@ export function LandingPage() {
               </p>
             </div>
             <RamadanTimetable />
+            <div className="text-center">
+              <Button asChild variant="soft">
+                <Link href="/timetable">{t("viewFullTimetable")}</Link>
+              </Button>
+            </div>
           </div>
         </section>
 

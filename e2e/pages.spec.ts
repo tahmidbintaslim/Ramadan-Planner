@@ -3,7 +3,7 @@ import { test, expect, visit, HYDRATION, LEAK } from "./fixtures";
 // Every page renders for a guest with the placeholder database: HTTP 200, a visible heading, no app console
 // errors and no hydration warnings. (Promoted from the old scripts/smoke.mjs.)
 const ROUTES = [
-  "/", "/dashboard", "/today", "/plan", "/quran", "/reminders", "/duas", "/books", "/quiz",
+  "/", "/dashboard", "/today", "/plan", "/timetable", "/quran", "/reminders", "/duas", "/books", "/quiz",
   "/tasbih", "/zakat", "/settings", "/admin/announcements",
 ];
 

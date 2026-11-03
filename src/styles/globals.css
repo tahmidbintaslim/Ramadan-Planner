@@ -381,3 +381,18 @@
     --rp-toast-bottom: 24px;
   }
 }
+
+/* Print: the timetable page prints the full 30-day table on white, without the app chrome. */
+@media print {
+  html:has([data-timetable-print]),
+  body:has([data-timetable-print]) {
+    background: #fff !important;
+    color: #000 !important;
+  }
+  body:has([data-timetable-print]) :is(header, aside, nav, .fixed, [data-sonner-toaster]) {
+    display: none !important;
+  }
+  body:has([data-timetable-print]) main {
+    padding: 0 !important;
+  }
+}

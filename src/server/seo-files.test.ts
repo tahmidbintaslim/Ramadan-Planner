@@ -14,7 +14,8 @@ function oldRobots(baseUrl: string) {
   return ["User-agent: *", "Allow: /", "Disallow: /api/", `Sitemap: ${baseUrl}/sitemap.xml`].join("\n") + "\n";
 }
 function oldSitemap(baseUrl: string) {
-  const staticPages = ["/", "/quran", "/hadith"];
+  // /timetable is new in design system v2 (Task 8).
+  const staticPages = ["/", "/quran", "/hadith", "/timetable"];
   const urls: string[] = [];
   for (const p of staticPages) urls.push(`<url><loc>${baseUrl}${p}</loc></url>`);
   for (let i = 1; i <= 114; i++) urls.push(`<url><loc>${baseUrl}/quran/${i}</loc></url>`);
@@ -57,9 +58,9 @@ describe("sitemap content", () => {
   const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1].replace("https://x.test", ""));
 
   it("lists the public pages and surahs 1..114 exactly once", () => {
-    expect(locs).toHaveLength(3 + 114);
+    expect(locs).toHaveLength(4 + 114);
     expect(new Set(locs).size).toBe(locs.length);
-    expect(locs).toEqual(expect.arrayContaining(["/", "/quran", "/hadith", "/quran/1", "/quran/114"]));
+    expect(locs).toEqual(expect.arrayContaining(["/", "/quran", "/hadith", "/timetable", "/quran/1", "/quran/114"]));
     expect(locs).not.toContain("/quran/0");
     expect(locs).not.toContain("/quran/115");
   });

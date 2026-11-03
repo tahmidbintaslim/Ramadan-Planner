@@ -13,7 +13,9 @@ const SITE = "https://x.test";
 const rootLoaderData = {
   locale: "bn",
   siteUrl: SITE,
-  messages: { common: { appName: "Ramadan Planner", metaTitle: "Ramadan Planner" }, nav: { quran: "Quran", hadith: "Hadith" } },
+  messages: { common: { appName: "Ramadan Planner", metaTitle: "Ramadan Planner" }, nav: { quran: "Quran", hadith: "Hadith" },
+    timetablePage: { metaTitle: "Ramadan timetable", metaDescription: "30-day Sehri and Iftar timetable" },
+  },
 };
 const surahData = (n: number) => ({
   surahNumber: n,
@@ -54,6 +56,16 @@ describe("sitemap paths are indexable", () => {
 
   it("detects noindex on a signed-in page (sanity check for the merge above)", () => {
     expect(mergedHead("/today").robots).toMatch(/noindex/);
+  });
+});
+
+describe("timetable page head", () => {
+  it("has its own title, description and canonical", () => {
+    const { meta, canonical } = mergedHead("/timetable");
+    const last = (key: string, val: string) => meta.filter((m) => m[key] === val).at(-1);
+    expect(meta.filter((m) => m.title).at(-1)?.title).toBe("Ramadan timetable — Ramadan Planner");
+    expect(last("name", "description")?.content).toBe("30-day Sehri and Iftar timetable");
+    expect(canonical).toBe(`${SITE}/timetable`);
   });
 });
 

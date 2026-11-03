@@ -48,9 +48,8 @@ export interface NavItem {
   signedInOnly?: boolean;
 }
 
-// The timetable screen (/timetable) arrives in design-system Task 8; until then the tab opens the existing
-// Ramadan timetable section on the landing page. Switch this constant when the route lands.
-export const TIMETABLE_HREF = "/#timetable";
+// The Ramadan timetable screen (public, inside the app shell).
+export const TIMETABLE_HREF = "/timetable";
 
 /** The four primary destinations (bottom-nav tabs 1–4; the fifth tab opens the More sheet). */
 export const PRIMARY_NAV: NavItem[] = [
@@ -75,7 +74,7 @@ export const SECONDARY_NAV: NavItem[] = [
   { href: "/admin/announcements", icon: ShieldCheck, labelKey: "admin", signedInOnly: true },
 ];
 
-/** Active when the path is the item's path or below it (hash-only links such as the timetable never match). */
+/** Active when the path is the item's path or below it (hash-only links never match). */
 export function isNavActive(pathname: string, href: string): boolean {
   if (href.includes("#")) return false;
   return pathname === href || pathname.startsWith(`${href}/`);

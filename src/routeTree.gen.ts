@@ -24,6 +24,7 @@ import { Route as AppQuizRouteImport } from './routes/_app.quiz'
 import { Route as AppRemindersRouteImport } from './routes/_app.reminders'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
 import { Route as AppTasbihRouteImport } from './routes/_app.tasbih'
+import { Route as AppTimetableRouteImport } from './routes/_app.timetable'
 import { Route as AppTodayRouteImport } from './routes/_app.today'
 import { Route as AppZakatRouteImport } from './routes/_app.zakat'
 import { Route as AuthSignupRouteImport } from './routes/_auth.signup'
@@ -119,6 +120,11 @@ const AppSettingsRoute = AppSettingsRouteImport.update({
 const AppTasbihRoute = AppTasbihRouteImport.update({
   id: '/tasbih',
   path: '/tasbih',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTimetableRoute = AppTimetableRouteImport.update({
+  id: '/timetable',
+  path: '/timetable',
   getParentRoute: () => AppRoute,
 } as any)
 const AppTodayRoute = AppTodayRouteImport.update({
@@ -253,6 +259,7 @@ export interface FileRoutesByFullPath {
   '/reminders': typeof AppRemindersRoute
   '/settings': typeof AppSettingsRoute
   '/tasbih': typeof AppTasbihRoute
+  '/timetable': typeof AppTimetableRoute
   '/today': typeof AppTodayRoute
   '/zakat': typeof AppZakatRoute
   '/signup': typeof AuthSignupRoute
@@ -291,6 +298,7 @@ export interface FileRoutesByTo {
   '/reminders': typeof AppRemindersRoute
   '/settings': typeof AppSettingsRoute
   '/tasbih': typeof AppTasbihRoute
+  '/timetable': typeof AppTimetableRoute
   '/today': typeof AppTodayRoute
   '/zakat': typeof AppZakatRoute
   '/signup': typeof AuthSignupRoute
@@ -332,6 +340,7 @@ export interface FileRoutesById {
   '/_app/reminders': typeof AppRemindersRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/tasbih': typeof AppTasbihRoute
+  '/_app/timetable': typeof AppTimetableRoute
   '/_app/today': typeof AppTodayRoute
   '/_app/zakat': typeof AppZakatRoute
   '/_auth/signup': typeof AuthSignupRoute
@@ -372,6 +381,7 @@ export interface FileRouteTypes {
     | '/reminders'
     | '/settings'
     | '/tasbih'
+    | '/timetable'
     | '/today'
     | '/zakat'
     | '/signup'
@@ -410,6 +420,7 @@ export interface FileRouteTypes {
     | '/reminders'
     | '/settings'
     | '/tasbih'
+    | '/timetable'
     | '/today'
     | '/zakat'
     | '/signup'
@@ -450,6 +461,7 @@ export interface FileRouteTypes {
     | '/_app/reminders'
     | '/_app/settings'
     | '/_app/tasbih'
+    | '/_app/timetable'
     | '/_app/today'
     | '/_app/zakat'
     | '/_auth/signup'
@@ -602,6 +614,13 @@ declare module '@tanstack/react-router' {
       path: '/tasbih'
       fullPath: '/tasbih'
       preLoaderRoute: typeof AppTasbihRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/timetable': {
+      id: '/_app/timetable'
+      path: '/timetable'
+      fullPath: '/timetable'
+      preLoaderRoute: typeof AppTimetableRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/today': {
@@ -777,6 +796,7 @@ interface AppRouteChildren {
   AppRemindersRoute: typeof AppRemindersRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppTasbihRoute: typeof AppTasbihRoute
+  AppTimetableRoute: typeof AppTimetableRoute
   AppTodayRoute: typeof AppTodayRoute
   AppZakatRoute: typeof AppZakatRoute
   AppAdminAnnouncementsRoute: typeof AppAdminAnnouncementsRoute
@@ -796,6 +816,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppRemindersRoute: AppRemindersRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppTasbihRoute: AppTasbihRoute,
+  AppTimetableRoute: AppTimetableRoute,
   AppTodayRoute: AppTodayRoute,
   AppZakatRoute: AppZakatRoute,
   AppAdminAnnouncementsRoute: AppAdminAnnouncementsRoute,

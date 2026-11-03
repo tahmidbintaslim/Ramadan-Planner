@@ -440,6 +440,7 @@
         "timetableToday": "Today",
         "timetableLoading": "Loading Ramadan timetable...",
         "timetableError": "Could not load timetable. Try again later.",
+        "viewFullTimetable": "View the full timetable",
         "quranTitle": "Read the Holy Quran",
         "quranDesc": "Read all 114 Surahs with Arabic text and keep your recitation progress on track.",
         "quranAyahs": "{count} Ayahs",
@@ -608,5 +609,30 @@
         "progress": "Time progress",
         "sehri": "Sehri",
         "progressText": "{percent}% of the time until {target} has passed"
+    },
+    "timetablePage": {
+        "title": "Ramadan timetable",
+        "metaTitle": "Ramadan Sehri and Iftar timetable",
+        "metaDescription": "The 30-day Sehri and Iftar timetable, split into the three ten-day sections of mercy, forgiveness and release. Odd nights are marked; print or share it.",
+        "caption": "{location} · {range} (approximate)",
+        "decades": "Ten-day sections of Ramadan",
+        "rahmat": "Days of mercy",
+        "maghfirah": "Days of forgiveness",
+        "najat": "Days of release",
+        "sehri": "Sehri",
+        "iftar": "Iftar",
+        "today": "Today",
+        "oddNight": "Odd night · seek Laylat al-Qadr",
+        "rozaLabel": "Fast number {day}",
+        "source": "Source: AlAdhan · Karachi (Hanafi) method · may shift by a day with the moon sighting",
+        "share": "Share",
+        "print": "Print",
+        "shareText": "Ramadan Sehri and Iftar timetable",
+        "linkCopied": "Link copied",
+        "loading": "Loading the timetable",
+        "error": "Could not load the timetable. Try again later.",
+        "retry": "Try again",
+        "nextRamadan": "Ramadan is not under way, so the next Ramadan is shown.",
+        "printHeading": "Ramadan {year} AH · Sehri and Iftar"
     }
 }
