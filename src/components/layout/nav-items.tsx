@@ -12,6 +12,7 @@ import {
   BellIcon,
   CalendarIcon,
   DuaIcon,
+  HeartIcon,
   HomeIcon,
   PlanIcon,
   QuranIcon,
@@ -36,6 +37,7 @@ export type NavLabelKey =
   | "books"
   | "quiz"
   | "reminders"
+  | "support"
   | "dashboard"
   | "settings"
   | "admin";
@@ -59,7 +61,6 @@ export const PRIMARY_NAV: NavItem[] = [
   { href: "/quran", icon: QuranIcon, labelKey: "quran" },
 ];
 
-// The support/contribute page (/support) arrives in Task 10; add it here when the route exists.
 /** Everything else, listed in the More sheet (mobile) and below the primary items (desktop). */
 export const SECONDARY_NAV: NavItem[] = [
   { href: "/duas", icon: DuaIcon, labelKey: "duas" },
@@ -69,6 +70,7 @@ export const SECONDARY_NAV: NavItem[] = [
   { href: "/books", icon: Library, labelKey: "books" },
   { href: "/quiz", icon: Brain, labelKey: "quiz" },
   { href: "/reminders", icon: BellIcon, labelKey: "reminders" },
+  { href: "/support", icon: HeartIcon, labelKey: "support" },
   { href: "/dashboard", icon: LayoutDashboard, labelKey: "dashboard" },
   { href: "/settings", icon: Settings, labelKey: "settings" },
   { href: "/admin/announcements", icon: ShieldCheck, labelKey: "admin", signedInOnly: true },

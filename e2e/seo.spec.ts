@@ -14,8 +14,8 @@ test("sitemap.xml lists the public pages and 114 surahs", async ({ request }) =>
   expect(res.status()).toBe(200);
   expect(res.headers()["content-type"]).toMatch(/^application\/xml/);
   const locs = [...(await res.text()).matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]).pathname);
-  expect(locs).toHaveLength(4 + 114);
-  expect(locs.slice(0, 4)).toEqual(["/", "/quran", "/hadith", "/timetable"]);
+  expect(locs).toHaveLength(5 + 114);
+  expect(locs.slice(0, 5)).toEqual(["/", "/quran", "/hadith", "/timetable", "/support"]);
 });
 
 test("favicon is served from public/", async ({ request }) => {

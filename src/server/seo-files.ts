@@ -38,7 +38,7 @@ export function robotsTxt(baseUrl: string): string {
 
 // Public pages only. The Next sitemap also listed the signed-in noindex pages /plan, /today, /reminders,
 // /settings; they were dropped deliberately (Task 10 fix round 1).
-export const SITEMAP_STATIC_PAGES = ["/", "/quran", "/hadith", "/timetable"];
+export const SITEMAP_STATIC_PAGES = ["/", "/quran", "/hadith", "/timetable", "/support"];
 export const SURAH_COUNT = 114;
 
 /** Every path the sitemap lists, in order (static pages, then /quran/1..114). */

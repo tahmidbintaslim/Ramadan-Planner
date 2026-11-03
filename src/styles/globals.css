@@ -145,6 +145,7 @@
   --rp-hero-sehri: linear-gradient(180deg, #0B1F24 0%, #1B4240 55%, #2F6E6A 100%);
   --rp-hero-day: linear-gradient(180deg, #0B4F48 0%, #0E7C6B 55%, #4FBFA5 100%);
   --rp-hero-iftar: linear-gradient(180deg, #0B4F48 0%, #2F7F72 55%, #D9B46C 100%);
+  --rp-gradient-quran: linear-gradient(90deg, #0B4F48 0%, #0E7C6B 100%);
   --rp-hero-night: linear-gradient(180deg, #081A1E 0%, #0B1F24 55%, #163B3A 100%);
 
   /* Semantic: Light */

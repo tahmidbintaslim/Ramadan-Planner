@@ -23,6 +23,7 @@ import { Route as AppPlanRouteImport } from './routes/_app.plan'
 import { Route as AppQuizRouteImport } from './routes/_app.quiz'
 import { Route as AppRemindersRouteImport } from './routes/_app.reminders'
 import { Route as AppSettingsRouteImport } from './routes/_app.settings'
+import { Route as AppSupportRouteImport } from './routes/_app.support'
 import { Route as AppTasbihRouteImport } from './routes/_app.tasbih'
 import { Route as AppTimetableRouteImport } from './routes/_app.timetable'
 import { Route as AppTodayRouteImport } from './routes/_app.today'
@@ -115,6 +116,11 @@ const AppRemindersRoute = AppRemindersRouteImport.update({
 const AppSettingsRoute = AppSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSupportRoute = AppSupportRouteImport.update({
+  id: '/support',
+  path: '/support',
   getParentRoute: () => AppRoute,
 } as any)
 const AppTasbihRoute = AppTasbihRouteImport.update({
@@ -258,6 +264,7 @@ export interface FileRoutesByFullPath {
   '/quiz': typeof AppQuizRoute
   '/reminders': typeof AppRemindersRoute
   '/settings': typeof AppSettingsRoute
+  '/support': typeof AppSupportRoute
   '/tasbih': typeof AppTasbihRoute
   '/timetable': typeof AppTimetableRoute
   '/today': typeof AppTodayRoute
@@ -297,6 +304,7 @@ export interface FileRoutesByTo {
   '/quiz': typeof AppQuizRoute
   '/reminders': typeof AppRemindersRoute
   '/settings': typeof AppSettingsRoute
+  '/support': typeof AppSupportRoute
   '/tasbih': typeof AppTasbihRoute
   '/timetable': typeof AppTimetableRoute
   '/today': typeof AppTodayRoute
@@ -339,6 +347,7 @@ export interface FileRoutesById {
   '/_app/quiz': typeof AppQuizRoute
   '/_app/reminders': typeof AppRemindersRoute
   '/_app/settings': typeof AppSettingsRoute
+  '/_app/support': typeof AppSupportRoute
   '/_app/tasbih': typeof AppTasbihRoute
   '/_app/timetable': typeof AppTimetableRoute
   '/_app/today': typeof AppTodayRoute
@@ -380,6 +389,7 @@ export interface FileRouteTypes {
     | '/quiz'
     | '/reminders'
     | '/settings'
+    | '/support'
     | '/tasbih'
     | '/timetable'
     | '/today'
@@ -419,6 +429,7 @@ export interface FileRouteTypes {
     | '/quiz'
     | '/reminders'
     | '/settings'
+    | '/support'
     | '/tasbih'
     | '/timetable'
     | '/today'
@@ -460,6 +471,7 @@ export interface FileRouteTypes {
     | '/_app/quiz'
     | '/_app/reminders'
     | '/_app/settings'
+    | '/_app/support'
     | '/_app/tasbih'
     | '/_app/timetable'
     | '/_app/today'
@@ -607,6 +619,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/support': {
+      id: '/_app/support'
+      path: '/support'
+      fullPath: '/support'
+      preLoaderRoute: typeof AppSupportRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/tasbih': {
@@ -795,6 +814,7 @@ interface AppRouteChildren {
   AppQuizRoute: typeof AppQuizRoute
   AppRemindersRoute: typeof AppRemindersRoute
   AppSettingsRoute: typeof AppSettingsRoute
+  AppSupportRoute: typeof AppSupportRoute
   AppTasbihRoute: typeof AppTasbihRoute
   AppTimetableRoute: typeof AppTimetableRoute
   AppTodayRoute: typeof AppTodayRoute
@@ -815,6 +835,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppQuizRoute: AppQuizRoute,
   AppRemindersRoute: AppRemindersRoute,
   AppSettingsRoute: AppSettingsRoute,
+  AppSupportRoute: AppSupportRoute,
   AppTasbihRoute: AppTasbihRoute,
   AppTimetableRoute: AppTimetableRoute,
   AppTodayRoute: AppTodayRoute,

@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import type { SurahDetail, QuranAyah, ReciterInfo } from "@/lib/quran";
 import { cn } from "@/lib/utils";
+import { readLastRead, writeLastRead } from "@/lib/quran-last-read";
 import { formatLocalizedNumber } from "@/lib/locale-number";
 
 interface QuranReaderProps {
@@ -136,6 +137,25 @@ export function QuranReader({ surahNumber }: QuranReaderProps) {
       el.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }, []);
+
+  // Remember where the reader is, on this device only: the surah on open (keeping the saved ayah when it is the
+  // same surah), then the ayah being recited. The Quran list's "last read" card reads this.
+  const surahLoaded = surah !== null;
+  useEffect(() => {
+    if (!surahLoaded) return;
+    const saved = readLastRead();
+    writeLastRead({ surah: surahNumber, ayah: saved?.surah === surahNumber ? saved.ayah : 1 });
+  }, [surahLoaded, surahNumber]);
+  useEffect(() => {
+    if (audioAyah !== null) writeLastRead({ surah: surahNumber, ayah: audioAyah });
+  }, [audioAyah, surahNumber]);
+
+  // "#ayah-N" (from the last-read card) scrolls to that ayah once the surah has rendered.
+  useEffect(() => {
+    if (!surahLoaded) return;
+    const m = /^#ayah-(\d+)$/.exec(window.location.hash);
+    if (m) scrollToAyah(Number(m[1]));
+  }, [surahLoaded, scrollToAyah]);
 
   // Text-to-Speech implementation temporarily removed from runtime.
   // To re-enable, uncomment the state above and the functions below.
@@ -528,6 +548,7 @@ export function QuranReader({ surahNumber }: QuranReaderProps) {
           return (
             <Card
               key={ayah.ayahNo}
+              id={`ayah-${ayah.ayahNo}`}
               ref={(el) => {
                 if (el) ayahRefs.current.set(ayah.ayahNo, el);
               }}

@@ -15,6 +15,7 @@ const rootLoaderData = {
   siteUrl: SITE,
   messages: { common: { appName: "Ramadan Planner", metaTitle: "Ramadan Planner" }, nav: { quran: "Quran", hadith: "Hadith" },
     timetablePage: { metaTitle: "Ramadan timetable", metaDescription: "30-day Sehri and Iftar timetable" },
+    supportPage: { metaTitle: "Sadaqah & contribute", metaDescription: "Free forever; give sadaqah or your time" },
   },
 };
 const surahData = (n: number) => ({
