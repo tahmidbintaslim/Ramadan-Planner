@@ -56,6 +56,10 @@ export interface HomeOverviewProps {
   tomorrowTimings?: Pick<PhaseTimings, "fajr" | "maghrib" | "sehriEnd"> | null;
   /** Timings came from the offline cache rather than a fresh answer. */
   cached: boolean;
+  /** The district chosen at onboarding; wins over the API's location label. */
+  districtLabel?: string;
+  /** Where the hero's location pill leads (change the district). */
+  locationHref?: string;
   ramadan: RamadanStatus | null;
   now: Date;
   initialNow?: Date;
@@ -81,6 +85,8 @@ export function HomeOverview({
   phaseTimings,
   tomorrowTimings,
   cached,
+  districtLabel,
+  locationHref,
   ramadan,
   now,
   initialNow,
@@ -120,7 +126,8 @@ export function HomeOverview({
               className="order-1"
               timings={phaseTimings}
               timeZone={timeZone}
-              district={districtOf(timings.location)}
+              district={districtLabel ?? districtOf(timings.location)}
+              locationHref={locationHref}
               hijriLabel={hijriLabelOf(timings, locale, (v) => t("hijri", v))}
               source={source}
               sample={!knownSource}

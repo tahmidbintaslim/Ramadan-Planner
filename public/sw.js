@@ -1,7 +1,7 @@
 // Bump CACHE_VERSION to invalidate every cache created by an older worker. Also bump it whenever offline.html,
 // manifest.webmanifest or the precached icons change: they are served from the cache, so an old copy sticks
 // until the version changes (hashed /assets/* files get new names and need no bump).
-const CACHE_VERSION = "v3";
+const CACHE_VERSION = "v4";
 const CACHE_NAME = `ramadan-planner-${CACHE_VERSION}`;
 const OFFLINE_URL = "/offline.html";
 // Only static, user-independent files are ever stored: the offline page, icons and hashed build assets.

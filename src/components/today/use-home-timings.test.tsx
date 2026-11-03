@@ -57,3 +57,28 @@ describe("useHomeTimings", () => {
     expect(second.some((u) => u.includes("2027-02-20"))).toBe(false);
   });
 });
+
+describe("useHomeTimings with a location chosen at onboarding", () => {
+  it("requests the stored district's coordinates and zone and never asks for the device position", async () => {
+    localStorage.setItem(
+      "rp_location",
+      JSON.stringify({ v: 1, kind: "district", districtId: "sylhet", lat: 24.9, lng: 91.87, tz: "Asia/Dhaka", savedAt: "" }),
+    );
+    const getCurrentPosition = vi.fn();
+    vi.stubGlobal("navigator", { ...navigator, geolocation: { getCurrentPosition } });
+    const fetchMock = vi.fn(async (url: string) =>
+      new Response(JSON.stringify(url.startsWith("/api/timings") ? TIMINGS : { phase: "ramadan", currentDay: 12 }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const { result } = renderHook(() => useHomeTimings("2027-02-20"));
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+    expect(result.current.location).toMatchObject({ kind: "district", districtId: "sylhet" });
+    const urls = fetchMock.mock.calls.map(([u]) => u);
+    expect(urls).toHaveLength(3);
+    expect(urls.every((u) => u.includes("tz=Asia%2FDhaka&lat=24.90&lng=91.87"))).toBe(true);
+    expect(getCurrentPosition).not.toHaveBeenCalled();
+  });
+});

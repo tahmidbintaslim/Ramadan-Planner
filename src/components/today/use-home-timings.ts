@@ -3,6 +3,7 @@ import type { TimingData } from "@/types/database";
 import type { RamadanStatus } from "@/lib/ramadan-date";
 import { readKnownTimings, rememberTimings } from "@/lib/auto-night";
 import { todayISOInZone } from "@/lib/prayer-phase";
+import { readStoredLocation, type StoredLocation } from "@/lib/user-location";
 
 export type HomeTimingsStatus = "loading" | "ready" | "error";
 
@@ -15,6 +16,8 @@ export interface HomeTimings {
   /** True when `timings` came from the local cache, not a fresh answer: the hero labels it as sample. */
   cached: boolean;
   ramadan: RamadanStatus | null;
+  /** The location chosen at onboarding (read after mount), or null: device zone, then the device position. */
+  location: StoredLocation | null;
 }
 
 /** Coordinates rounded to 2 decimals (about 1 km): plenty for prayer times, kinder to privacy and the CDN cache. */
@@ -100,8 +103,9 @@ function cachedTimings(tz: string): TimingData | null {
 }
 
 /**
- * Home data: today's timings and the Ramadan status, first for the device timezone (fast, no prompt), then
- * refined with the device location when the user allows it (the same flow the Today and Dashboard screens used).
+ * Home data: today's timings and the Ramadan status. With a location chosen at onboarding (district or coarse
+ * device position) the requests use it and nothing prompts. Without one: first the device timezone (fast, no
+ * prompt), then refined with the device location when the user allows it.
  * Refetches when `todayISO` changes (local midnight). Fresh timings are remembered for Auto Night mode.
  */
 export function useHomeTimings(todayISO: string): HomeTimings & { retry: () => void } {
@@ -111,6 +115,7 @@ export function useHomeTimings(todayISO: string): HomeTimings & { retry: () => v
     tomorrow: null,
     cached: false,
     ramadan: null,
+    location: null,
   });
   const [attempt, setAttempt] = useState(0);
   const retry = useCallback(() => {
@@ -121,7 +126,9 @@ export function useHomeTimings(todayISO: string): HomeTimings & { retry: () => v
   useEffect(() => {
     const controller = new AbortController();
     const { signal } = controller;
-    const tz = deviceTimeZone();
+    // Effects run only in the browser, after hydration: reading localStorage here cannot cause a mismatch.
+    const stored = readStoredLocation();
+    const tz = stored?.tz ?? deviceTimeZone();
 
     const json = async <T,>(res: Response | null): Promise<T | null> =>
       res?.ok ? ((await res.json().catch(() => null)) as T | null) : null;
@@ -142,16 +149,17 @@ export function useHomeTimings(todayISO: string): HomeTimings & { retry: () => v
     };
 
     const run = async () => {
-      const first = await load();
+      const first = await load(stored ? { lat: stored.lat, lng: stored.lng } : undefined);
       if (signal.aborted) return;
       if (first.timings) {
-        rememberTimings(first.timings, "tz");
+        rememberTimings(first.timings, stored ? "geo" : "tz");
         setState({
           status: "ready",
           timings: first.timings,
           tomorrow: first.tomorrow,
           cached: false,
           ramadan: first.ramadan,
+          location: stored,
         });
       } else {
         const offline = cachedTimings(tz);
@@ -159,11 +167,13 @@ export function useHomeTimings(todayISO: string): HomeTimings & { retry: () => v
           prev.timings && !prev.cached
             ? prev
             : offline
-              ? { status: "ready", timings: offline, tomorrow: null, cached: true, ramadan: first.ramadan ?? prev.ramadan }
-              : { status: "error", timings: null, tomorrow: null, cached: false, ramadan: first.ramadan ?? prev.ramadan },
+              ? { status: "ready", timings: offline, tomorrow: null, cached: true, ramadan: first.ramadan ?? prev.ramadan, location: stored }
+              : { status: "error", timings: null, tomorrow: null, cached: false, ramadan: first.ramadan ?? prev.ramadan, location: stored },
         );
       }
 
+      // A chosen location is final: no geolocation prompt on the Home.
+      if (stored) return;
       const pos = await getPosition();
       if (!pos || signal.aborted) return;
       const better = await load({ lat: pos.coords.latitude, lng: pos.coords.longitude });
@@ -175,6 +185,7 @@ export function useHomeTimings(todayISO: string): HomeTimings & { retry: () => v
         tomorrow: better.tomorrow ?? prev.tomorrow,
         cached: false,
         ramadan: better.ramadan ?? prev.ramadan,
+        location: null,
       }));
     };
 

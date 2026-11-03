@@ -40,7 +40,7 @@ await page.goto(`${BASE}/duas`, { waitUntil: "load" });
 (await page.locator('meta[name="theme-color"]').getAttribute("content")) === "#F3F8F6" ? ok("theme-color (light)") : fail("theme-color");
 
 console.log("service worker");
-// Registered from /duas (the landing widget unregisters workers on localhost in dev, by design).
+// Registered from /duas (a static page outside the landing).
 const state = await page.evaluate(async () => {
   const reg = await navigator.serviceWorker.register("/sw.js");
   await navigator.serviceWorker.ready;
@@ -55,8 +55,7 @@ await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
 (await page.evaluate(() => !!navigator.serviceWorker.controller)) ? ok("page controlled") : fail("page not controlled");
 
 console.log("browse, then check caches");
-// Not "/": on localhost the landing page's prayer-times widget unregisters service workers (dev-only
-// behavior), which made the offline step below fail at random.
+// App pages only (the old landing prayer-times widget, now removed, unregistered workers on localhost).
 for (const p of ["/today", "/quran"]) await page.goto(BASE + p, { waitUntil: "load" });
 await page.waitForLoadState("networkidle", { timeout: 10000 }).catch(() => {});
 await page.goto(`${BASE}/duas`, { waitUntil: "load" });

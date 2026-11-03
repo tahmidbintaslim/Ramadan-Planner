@@ -28,13 +28,23 @@ export const BLOCKED_HOSTS = /clerk\.accounts\.dev|clerk\.com|clerk-telemetry|ve
 
 type Fixtures = {
   appLocale: "bn" | "en" | undefined;
+  /** A returning guest (a stored location, so /today does not send them to onboarding). Default true. */
+  onboarded: boolean;
   consoleEntries: ConsoleEntry[];
   /** Console errors/warnings and page errors that are not known external noise. */
   appErrors: () => ConsoleEntry[];
 };
 
-/** Signed-out Clerk dev-browser cookies (+ optional NEXT_LOCALE) and blocked Clerk/Vercel hosts. */
-export async function prepareContext(context: BrowserContext, baseURL: string, appLocale?: "bn" | "en") {
+/** The "later" choice of first-run onboarding (Dhaka, the default), as src/lib/user-location.ts stores it. */
+export const ONBOARDED_LOCATION = {
+  v: 1, kind: "default", districtId: "dhaka", lat: 23.81, lng: 90.41, tz: "Asia/Dhaka", savedAt: "2027-01-01T00:00:00.000Z",
+};
+
+/**
+ * Signed-out Clerk dev-browser cookies (+ optional NEXT_LOCALE), blocked Clerk/Vercel hosts and, unless
+ * `onboarded` is false, a stored location so the first-run onboarding does not intercept /today.
+ */
+export async function prepareContext(context: BrowserContext, baseURL: string, appLocale?: "bn" | "en", onboarded = true) {
   // Pretend a dev-browser, signed-out Clerk client so the fake-key server skips the Clerk handshake redirect.
   const cookies = [
     { name: "__clerk_db_jwt", value: "dvb_fake", url: baseURL },
@@ -44,12 +54,22 @@ export async function prepareContext(context: BrowserContext, baseURL: string, a
   await context.addCookies(cookies);
   // No network to Clerk/Vercel (fake keys): fail those requests fast.
   await context.route(BLOCKED_HOSTS, (r) => r.abort());
+  if (onboarded) {
+    await context.addInitScript((loc) => {
+      try {
+        if (!localStorage.getItem("rp_location")) localStorage.setItem("rp_location", JSON.stringify(loc));
+      } catch {
+        // Opaque origins (about:blank) have no storage.
+      }
+    }, ONBOARDED_LOCATION);
+  }
 }
 
 export const test = base.extend<Fixtures>({
   appLocale: [undefined, { option: true }],
-  context: async ({ context, baseURL, appLocale }, provide) => {
-    await prepareContext(context, baseURL!, appLocale);
+  onboarded: [true, { option: true }],
+  context: async ({ context, baseURL, appLocale, onboarded }, provide) => {
+    await prepareContext(context, baseURL!, appLocale, onboarded);
     await provide(context);
   },
   consoleEntries: async ({ page }, provide) => {

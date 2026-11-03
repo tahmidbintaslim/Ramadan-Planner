@@ -16,6 +16,7 @@ import { Route as ForgotRouteImport } from './routes/forgot'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as WelcomeRouteImport } from './routes/welcome'
 import { Route as AppBooksRouteImport } from './routes/_app.books'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppDuasRouteImport } from './routes/_app.duas'
@@ -81,6 +82,11 @@ const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WelcomeRoute = WelcomeRouteImport.update({
+  id: '/welcome',
+  path: '/welcome',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppBooksRoute = AppBooksRouteImport.update({
@@ -257,6 +263,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/welcome': typeof WelcomeRoute
   '/books': typeof AppBooksRoute
   '/dashboard': typeof AppDashboardRoute
   '/duas': typeof AppDuasRoute
@@ -297,6 +304,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/welcome': typeof WelcomeRoute
   '/books': typeof AppBooksRoute
   '/dashboard': typeof AppDashboardRoute
   '/duas': typeof AppDuasRoute
@@ -340,6 +348,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/welcome': typeof WelcomeRoute
   '/_app/books': typeof AppBooksRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/duas': typeof AppDuasRoute
@@ -382,6 +391,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/robots.txt'
     | '/sitemap.xml'
+    | '/welcome'
     | '/books'
     | '/dashboard'
     | '/duas'
@@ -422,6 +432,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/robots.txt'
     | '/sitemap.xml'
+    | '/welcome'
     | '/books'
     | '/dashboard'
     | '/duas'
@@ -464,6 +475,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/robots.txt'
     | '/sitemap.xml'
+    | '/welcome'
     | '/_app/books'
     | '/_app/dashboard'
     | '/_app/duas'
@@ -507,6 +519,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  WelcomeRoute: typeof WelcomeRoute
   ApiDailyContentRoute: typeof ApiDailyContentRoute
   ApiQuranRoute: typeof ApiQuranRoute
   ApiRamadanRoute: typeof ApiRamadanRoute
@@ -570,6 +583,13 @@ declare module '@tanstack/react-router' {
       path: '/sitemap.xml'
       fullPath: '/sitemap.xml'
       preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/welcome': {
+      id: '/welcome'
+      path: '/welcome'
+      fullPath: '/welcome'
+      preLoaderRoute: typeof WelcomeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/books': {
@@ -872,6 +892,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  WelcomeRoute: WelcomeRoute,
   ApiDailyContentRoute: ApiDailyContentRoute,
   ApiQuranRoute: ApiQuranRoute,
   ApiRamadanRoute: ApiRamadanRoute,

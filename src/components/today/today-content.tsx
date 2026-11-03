@@ -1,7 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
-import { useTranslations } from "@/i18n/use-intl";
+import { useEffect, useMemo } from "react";
+import { useRouter } from "@tanstack/react-router";
+import { useLocale, useTranslations } from "@/i18n/use-intl";
+import { useAuth } from "@/components/providers/auth-provider";
+import { districtById, districtName } from "@/lib/districts";
+import { needsOnboarding } from "@/lib/user-location";
 import { usePrayerPhase } from "@/components/prayer/use-prayer-phase";
 import { timingsFromPrayerTimes, todayISOInZone } from "@/lib/prayer-phase";
 import { DailyPractices } from "./daily-practices";
@@ -27,6 +31,15 @@ function safeTodayISO(now: Date, timeZone: string): string | null {
  */
 export function TodayContent({ initialNow }: { initialNow?: Date }) {
   const t = useTranslations("today");
+  const locale = useLocale();
+  const router = useRouter();
+  const { user } = useAuth();
+
+  // First-run gate (after hydration, so the server and client renders agree): a guest without a chosen location
+  // goes to onboarding. Signed-in users are never sent there. Client navigations are gated earlier, in the route.
+  useEffect(() => {
+    if (needsOnboarding(user !== null)) void router.navigate({ to: "/welcome", replace: true });
+  }, [router, user]);
 
   // Live clock (30 s). Its date in the device zone (the zone the timings are requested for) drives the
   // midnight refetch.
@@ -55,6 +68,9 @@ export function TodayContent({ initialNow }: { initialNow?: Date }) {
   const checklist = useDailyChecklist(ramadanDay ?? 1);
   const { reminders, toggle } = usePrayerReminders();
   const sadaqah = useSadaqahDismissal();
+  // The district chosen at onboarding names the hero's location pill (in the UI language).
+  const chosen = districtById(home.location?.districtId);
+  const districtLabel = chosen ? districtName(chosen, locale) : undefined;
 
   return (
     <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-8">
@@ -65,6 +81,8 @@ export function TodayContent({ initialNow }: { initialNow?: Date }) {
         phaseTimings={phaseTimings}
         tomorrowTimings={tomorrowTimings}
         cached={home.cached}
+        districtLabel={districtLabel}
+        locationHref="/welcome"
         ramadan={home.ramadan}
         now={now}
         initialNow={initialNow}

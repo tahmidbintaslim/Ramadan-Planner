@@ -5,8 +5,8 @@ import { useTranslations } from "@/i18n/use-intl";
 import { Link } from "@/components/shared/link";
 import { usePathname } from "@/hooks/use-pathname";
 import { useRouter } from "@tanstack/react-router";
+import { CrescentIcon } from "@/components/icons/islamic-icons";
 import {
-  Moon,
   Globe,
   LogIn,
   UserPlus,
@@ -51,7 +51,7 @@ const navItems = [
   { href: "/settings", icon: Settings, labelKey: "settings" as const },
 ];
 
-/** Brand header for pages outside the app shell (the landing page; restyled in design-system Task 11). */
+/** Brand header for pages outside the app shell (the landing page), in the v2 style. */
 export function SiteHeader() {
   const t = useTranslations("common");
   const tAuth = useTranslations("auth");
@@ -69,15 +69,17 @@ export function SiteHeader() {
   };
 
   return (
-    <header className="sticky top-0 z-40 border-b bg-card/95 backdrop-blur supports-backdrop-filter:bg-card/60">
-      <div className="flex h-15 items-center justify-between px-4 md:px-6">
+    <header className="sticky top-0 z-40 border-b border-rp-rule bg-rp-page/95 backdrop-blur supports-backdrop-filter:bg-rp-page/80">
+      <div className="mx-auto flex h-16 max-w-[1120px] items-center justify-between px-4 sm:px-6">
         <div className="flex items-center gap-2">
           <Link
             href="/"
-            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+            className="flex min-h-12 items-center gap-2.5 hover:opacity-80 transition-opacity"
           >
-            <Moon className="h-5 w-5 text-primary" />
-            <span className="font-semibold text-primary whitespace-nowrap">
+            <span aria-hidden="true" className="flex size-9 items-center justify-center rounded-rp-sm bg-rp-live text-rp-on-live">
+              <CrescentIcon size={20} />
+            </span>
+            <span className="font-display text-[20px] leading-[30px] text-rp-ink whitespace-nowrap">
               {t("appName")}
             </span>
           </Link>
@@ -97,7 +99,7 @@ export function SiteHeader() {
           <div className="md:hidden">
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" aria-label={t("mobileMenu")}>
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
@@ -109,8 +111,8 @@ export function SiteHeader() {
                   href="/"
                   className="flex items-center gap-2 py-4 border-b hover:opacity-80 transition-opacity"
                 >
-                  <Moon className="h-5 w-5 text-primary" />
-                  <span className="font-semibold text-primary whitespace-nowrap">
+                  <CrescentIcon size={20} className="text-rp-accent" />
+                  <span className="font-display text-[20px] leading-[30px] text-rp-ink whitespace-nowrap">
                     {t("appName")}
                   </span>
                 </Link>
@@ -165,13 +167,13 @@ export function SiteHeader() {
 
           <div className="hidden md:flex items-center gap-2">
             <Show when="signed-out">
-              <Button variant="ghost" size="sm" asChild>
+              <Button variant="ghost" size="sm" asChild className="h-12">
                 <Link href="/sign-in">
                   <LogIn className="h-4 w-4 mr-1.5" />
                   {tAuth("login")}
                 </Link>
               </Button>
-              <Button size="sm" asChild>
+              <Button size="sm" asChild className="h-12">
                 <Link href="/sign-up">
                   <UserPlus className="h-4 w-4 mr-1.5" />
                   {tAuth("signup")}

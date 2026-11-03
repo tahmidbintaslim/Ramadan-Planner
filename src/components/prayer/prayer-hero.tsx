@@ -5,6 +5,7 @@ import { MihrabArch } from "@/components/design/mihrab-arch";
 import { CrescentIcon, PinIcon } from "@/components/icons/islamic-icons";
 import { toBengaliDigits, type PhaseTimings, type PrayerPhase, type PrayerPhaseResult } from "@/lib/prayer-phase";
 import { cn } from "@/lib/utils";
+import { Link } from "@/components/shared/link";
 import { formatPrayerClock, formatRemaining, isBnLocale, usePrayerPhase } from "./use-prayer-phase";
 
 export interface PrayerHeroProps {
@@ -14,6 +15,8 @@ export interface PrayerHeroProps {
   timeZone: string;
   /** District / city name for the location pill. */
   district: string;
+  /** When set, the location pill is a link there (to change the district). */
+  locationHref?: string;
   /** Pre-formatted Hijri date, e.g. "১২ রমযান ১৪৪৮". */
   hijriLabel?: string;
   /** Where the times come from, e.g. "ইসলামিক ফাউন্ডেশন". Always shown. */
@@ -149,6 +152,7 @@ export function PrayerHero({
   timings,
   timeZone,
   district,
+  locationHref,
   hijriLabel,
   source,
   sample = false,
@@ -210,13 +214,28 @@ export function PrayerHero({
       ) : null}
 
       <div className="flex items-center justify-between gap-3">
-        <span className="rp-caption inline-flex min-w-0 items-center gap-1.5 rounded-rp-full bg-white/14 px-3 py-1.5">
-          <PinIcon size={16} />
-          <span className="sr-only">{t("location", { district })}</span>
-          <span aria-hidden="true" className="truncate">
-            {district}
+        {locationHref ? (
+          // The visible pill stays small; the ::before box gives it a 48px hit area.
+          <Link
+            href={locationHref}
+            data-testid="hero-location"
+            aria-label={t("locationChange", { district })}
+            className="rp-caption relative inline-flex min-w-0 items-center gap-1.5 rounded-rp-full bg-white/14 px-3 py-1.5 outline-none transition-colors before:absolute before:-inset-x-1 before:-inset-y-[9px] before:content-[''] hover:bg-white/22 focus-visible:ring-[3px] focus-visible:ring-white/70"
+          >
+            <PinIcon size={16} />
+            <span aria-hidden="true" className="truncate">
+              {district}
+            </span>
+          </Link>
+        ) : (
+          <span data-testid="hero-location" className="rp-caption inline-flex min-w-0 items-center gap-1.5 rounded-rp-full bg-white/14 px-3 py-1.5">
+            <PinIcon size={16} />
+            <span className="sr-only">{t("location", { district })}</span>
+            <span aria-hidden="true" className="truncate">
+              {district}
+            </span>
           </span>
-        </span>
+        )}
         {hijriLabel ? <span className="rp-caption shrink-0 text-white/85">{hijriLabel}</span> : null}
       </div>
 

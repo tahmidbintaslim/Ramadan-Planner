@@ -36,16 +36,6 @@ test("/quran surah list loads", async ({ page, baseURL }) => {
   expect(apiOk(apis, "/api/quran")).toBeTruthy();
 });
 
-test("landing widgets load timings, Quran and the Ramadan timetable", async ({ page, baseURL, appErrors }) => {
-  const apis = trackApi(page, baseURL!);
-  await visit(page, "/");
-  await page.mouse.wheel(0, 20_000);
-  await page.waitForLoadState("networkidle", { timeout: 10_000 }).catch(() => {});
-  for (const prefix of ["/api/timings", "/api/quran", "/api/ramadan-timetable"]) expect(apiOk(apis, prefix), prefix).toBeTruthy();
-  expect(await page.locator("main").first().innerText()).toMatch(/[০-৯0-9]{1,2}:[০-৯0-9]{2}/);
-  expect(appErrors()).toEqual([]);
-});
-
 for (const path of ["/today", "/dashboard"]) {
   test(`${path} loads the Ramadan status`, async ({ page, baseURL }) => {
     const apis = trackApi(page, baseURL!);

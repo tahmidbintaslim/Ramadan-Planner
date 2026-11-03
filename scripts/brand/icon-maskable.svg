@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Maskable / Apple touch variant of icon.svg: full-bleed teal (the platform applies its own mask), with the
+       arch and crescent scaled into the central 80% safe zone. Source for icon-512-maskable.png and
+       apple-touch-icon.png. -->
+  <defs>
+    <mask id="crescent">
+      <rect width="512" height="512" fill="#000"/>
+      <circle cx="244" cy="282" r="104" fill="#fff"/>
+      <circle cx="292" cy="250" r="92" fill="#000"/>
+    </mask>
+  </defs>
+  <rect width="512" height="512" fill="#0E7C6B"/>
+  <g transform="translate(256 256) scale(0.78) translate(-256 -256)">
+    <path d="M132 448V262C132 178 190 122 256 92c66 30 124 86 124 170v186" fill="none" stroke="#fff" stroke-opacity="0.22" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect width="512" height="512" fill="#fff" mask="url(#crescent)"/>
+    <path d="M334 178l7 17 17 7-17 7-7 17-7-17-17-7 17-7z" fill="#fff"/>
+  </g>
+</svg>
