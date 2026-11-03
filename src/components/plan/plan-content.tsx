@@ -1,662 +1,317 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
-import { useTranslations } from "@/i18n/use-intl";
-import { CheckSquare, Sparkles, Target } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useMemo, useState, useSyncExternalStore } from "react";
+import { useLocale, useTranslations } from "@/i18n/use-intl";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import { useAuth } from "@/components/providers/auth-provider";
-import { getTodayKey, useGuestData } from "@/hooks/use-guest-data";
+import { Chip } from "@/components/ui/chip";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useKnownTimings, useRamadanDay } from "@/hooks/use-shell-day";
+import { useNowTick } from "@/components/prayer/use-prayer-phase";
+import { digits, ddmmyyyyToISO, formatClock, type Locale } from "@/components/timetable/timetable-logic";
+import { shouldShowSadaqah, timingsFromPrayerTimes, todayISOInZone } from "@/lib/prayer-phase";
+import { AddAmalSheet, type NewAmal } from "./add-amal-sheet";
+import { ChecklistCards, ChecklistOverline, type ChecklistRowItem } from "./checklist";
+import { NightHero, OddNightsCard, PlanSupportCard } from "./night-view";
+import { useItemNotes } from "./plan-item-meta";
 import {
-  createPlanTaskAction,
-  createPrayerGoalAction,
-  deletePlanTaskAction,
-  deletePrayerGoalAction,
-  listPlanTasksAction,
-  listPrayerGoalsAction,
-  updatePlanTaskAction,
-  updatePrayerGoalAction,
-  type PlanTaskDTO,
-  type PrayerGoalDTO,
-} from "@/actions/planner";
+  DAY_DEFAULTS,
+  NIGHT_DEFAULTS,
+  PLAN_WINDOWS,
+  currentNight,
+  defaultPlanView,
+  groupByWindow,
+  isNightKey,
+  itemMessageKey,
+  lastTenVisible,
+  matchDefaultKey,
+  nightTimes,
+  oddNightRows,
+  rowInstant,
+  windowFromTitle,
+  bnOrdinal,
+  nextPara,
+  type DefaultItem,
+  type PlanItem,
+} from "./plan-logic";
+import { ProgressCard } from "./progress-card";
+import { usePlanItems } from "./use-plan-items";
+import { usePlanTimetable, useQuranProgress, useSadaqahDismissal } from "./use-plan-context";
+
+const DEFAULTS_BY_KEY: Record<string, DefaultItem> = Object.fromEntries(
+  [...DAY_DEFAULTS, ...NIGHT_DEFAULTS].map((d) => [d.key, d]),
+);
+// Plain durations and the source line; "sehri", "fajr", "ishaTaraweeh" and "tahajjud" show times instead.
+const STATIC_META = new Set(["morningDhikr", "quran", "sleepDhikr", "nightQuran", "qadrDua"]);
+
+const subscribeNoop = () => () => {};
+
+/** "শুক্রবার, ২০ ফেব্রুয়ারি" for a YYYY-MM-DD date (null on the server, the date is the device's). */
+function longDate(iso: string, locale: Locale): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  const tag = locale === "bn" ? "bn-BD" : "en-GB";
+  const at = new Date(Date.UTC(y, m - 1, d, 12));
+  const weekday = new Intl.DateTimeFormat(tag, { weekday: "long", timeZone: "UTC" }).format(at);
+  const date = new Intl.DateTimeFormat(tag, { day: "numeric", month: "long", timeZone: "UTC" }).format(at);
+  return `${weekday}, ${date}`;
+}
+
+function deviceZone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Dhaka";
+  } catch {
+    return "Asia/Dhaka";
+  }
+}
 
 export function PlanContent() {
   const t = useTranslations("plan");
-  const tCommon = useTranslations("common");
-  const { isGuest, loading } = useAuth();
+  const locale = useLocale() as Locale;
+  const mounted = useSyncExternalStore(subscribeNoop, () => true, () => false);
 
-  const [serverGoals, setServerGoals] = useState<PrayerGoalDTO[]>([]);
-  const [serverTasks, setServerTasks] = useState<PlanTaskDTO[]>([]);
-  const {
-    data: guestGoals,
-    updateData: updateGuestGoals,
-  } = useGuestData<PrayerGoalDTO[]>(getTodayKey("plan_goals"), []);
-  const {
-    data: guestTasks,
-    updateData: updateGuestTasks,
-  } = useGuestData<PlanTaskDTO[]>(getTodayKey("plan_tasks"), []);
+  const plan = usePlanItems();
+  const { notes, remember, forget } = useItemNotes();
+  const quran = useQuranProgress();
+  const ramadanDay = useRamadanDay();
+  const now = useNowTick();
+  const { timetable, failed: timetableFailed } = usePlanTimetable(ramadanDay !== null);
+  const [viewChoice, setViewChoice] = useState<"day" | "nights" | null>(null);
+  const [editing, setEditing] = useState(false);
+  // Suggested night practices being added (a second tap must not add a duplicate).
+  const [adding, setAdding] = useState<ReadonlySet<string>>(() => new Set());
+  const sadaqah = useSadaqahDismissal();
 
-  const [newGoalTitle, setNewGoalTitle] = useState("");
-  const [newGoalTargetCount, setNewGoalTargetCount] = useState("1");
-  const [newTaskTitle, setNewTaskTitle] = useState("");
+  // ── Ramadan day, today's times, the last ten nights ──
+  const tz = timetable?.timezone ?? deviceZone();
+  const days = useMemo(() => timetable?.days ?? [], [timetable]);
+  const todayRow = ramadanDay !== null ? days.find((d) => d.day === ramadanDay) : undefined;
+  const fajrToday = rowInstant(todayRow, "fajr", tz);
+  const maghribToday = rowInstant(todayRow, "maghrib", tz);
+  const showNights = lastTenVisible(ramadanDay, now, maghribToday);
+  const view = showNights ? (viewChoice ?? defaultPlanView(true, now, fajrToday, maghribToday)) : "day";
+  const night = ramadanDay !== null ? currentNight(ramadanDay, now, fajrToday) : 0;
+  const tonight = showNights ? nightTimes(days, night, tz) : null;
+  const known = useKnownTimings(view === "nights");
+  const todayISO = todayISOInZone(now, tz);
+  const knownToday = known && known.date === todayISOInZone(now, known.timezone) ? known : null;
 
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-  const goals = isGuest ? guestGoals : serverGoals;
-  const tasks = isGuest ? guestTasks : serverTasks;
+  // ── Items: the plan's tasks and goals with their window, suggestion key and meta line ──
+  const titleOf = (key: string) => t(`items.${itemMessageKey(key)}` as "items.sehri");
+  const titlesByKey: Record<string, string[]> = Object.fromEntries(Object.keys(DEFAULTS_BY_KEY).map((k) => [k, [titleOf(k)]]));
 
-  const setAllGoals = (
-    updater:
-      | PrayerGoalDTO[]
-      | ((prev: PrayerGoalDTO[]) => PrayerGoalDTO[]),
-  ) => {
-    if (isGuest) {
-      updateGuestGoals(updater);
-      return;
+  const metaFor = (key: string | undefined): string | undefined => {
+    if (!key) return undefined;
+    const msg = itemMessageKey(key);
+    if (STATIC_META.has(msg)) return t(`itemMeta.${msg}` as "itemMeta.quran");
+    if (key === "sehri" && todayRow) return formatClock(todayRow.sehri, locale);
+    if (key === "fajr" && todayRow) return formatClock(todayRow.fajr, locale);
+    if (key === "night:ishaTaraweeh" && knownToday) return formatClock(knownToday.prayerTimes.isha, locale);
+    if (key === "night:tahajjud" && tonight) {
+      const hhmm = new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(tonight.tahajjud);
+      return t("itemMeta.tahajjudAt", { time: formatClock(hhmm, locale) });
     }
-    setServerGoals(updater);
+    return undefined;
   };
 
-  const setAllTasks = (
-    updater: PlanTaskDTO[] | ((prev: PlanTaskDTO[]) => PlanTaskDTO[]),
-  ) => {
-    if (isGuest) {
-      updateGuestTasks(updater);
-      return;
-    }
-    setServerTasks(updater);
-  };
-  const notifyTrackerUpdate = () => {
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new Event("rp-tracker-updated"));
-    }
-  };
-
-  const goalTemplates = [
-    { title: t("templateGoalQuran"), targetCount: 2 },
-    { title: t("templateGoalHadith"), targetCount: 1 },
-    { title: t("templateGoalDhikr"), targetCount: 100 },
-    { title: t("templateGoalDua"), targetCount: 5 },
+  const items: PlanItem[] = [
+    ...plan.tasks.map((task): PlanItem => {
+      const note = notes[task.id];
+      const key = matchDefaultKey(task.title, note?.key, titlesByKey);
+      const para = nextPara(quran.para);
+      return {
+        id: task.id,
+        kind: "task",
+        // The Quran suggestion names the para to read next (from the Quran tracker).
+        title: key === "quran" ? t("items.quranPara", { n: locale === "bn" ? bnOrdinal(para) : String(para) }) : task.title,
+        done: task.isDone,
+        key,
+        window: note?.window ?? (key ? DEFAULTS_BY_KEY[key]?.window : undefined) ?? windowFromTitle(task.title),
+        meta: metaFor(key),
+      };
+    }),
+    ...plan.goals.map((goal): PlanItem => {
+      const note = notes[goal.id];
+      return {
+        id: goal.id,
+        kind: "goal",
+        title: goal.title,
+        done: goal.isCompleted,
+        window: note?.window ?? windowFromTitle(goal.title),
+        meta: t("itemMeta.goalTarget", { count: digits(goal.targetCount, locale), unit: goal.targetUnit }),
+      };
+    }),
   ];
-  const recommendedGoal = {
-    title: t("recommendedGoalName"),
-    targetCount: 1,
-    targetUnit: t("recommendedGoalUnit"),
+  const byId = new Map(items.map((i) => [i.id, i]));
+  const groups = groupByWindow(items);
+  const done = items.filter((i) => i.done).length;
+  const presentKeys = new Set(items.map((i) => i.key).filter(Boolean));
+
+  const toggle = (row: ChecklistRowItem, next: boolean) => {
+    const item = byId.get(row.id);
+    if (item) {
+      plan.toggle(item.kind, item.id, next);
+      return;
+    }
+    // A suggested night practice that is not in the list yet: ticking it adds it, already done.
+    const key = row.id.replace(/^default:/, "");
+    const def = DEFAULTS_BY_KEY[key];
+    if (!def || adding.has(key)) return;
+    setAdding((prev) => new Set(prev).add(key));
+    void plan
+      .addTask(titleOf(key), next)
+      .then((id) => {
+        if (id) remember(id, { window: def.window, key });
+      })
+      .finally(() =>
+        setAdding((prev) => {
+          const rest = new Set(prev);
+          rest.delete(key);
+          return rest;
+        }),
+      );
   };
 
-  const checklistTemplates = [
+  const removeItem = (row: ChecklistRowItem) => {
+    const item = byId.get(row.id);
+    if (!item) return;
+    plan.remove(item.kind, item.id);
+    forget(item.id);
+  };
+
+  const addDefaults = async (defaults: readonly DefaultItem[]) => {
+    for (const def of defaults) {
+      if (presentKeys.has(def.key)) continue;
+      const id = await plan.addTask(titleOf(def.key));
+      if (id) remember(id, { window: def.window, key: def.key });
+    }
+  };
+
+  const addAmal = async ({ title, window, targetCount }: NewAmal): Promise<boolean> => {
+    const id = targetCount
+      ? await plan.addGoal(title, targetCount, t("defaultTargetUnit"))
+      : await plan.addTask(title);
+    if (!id) return false;
+    remember(id, { window });
+    return true;
+  };
+
+  const suggestions = [
+    ...DAY_DEFAULTS.filter((d) => !presentKeys.has(d.key)).map((d) => titleOf(d.key)),
     t("templateTaskMealPlan"),
-    t("templateTaskSleep"),
     t("templateTaskFamily"),
     t("templateTaskCharity"),
   ];
 
-  useEffect(() => {
-    if (loading) return;
-    if (isGuest) return;
+  // Tonight's practices: the ones in the list plus the suggestions not added yet.
+  const nightRows: ChecklistRowItem[] = NIGHT_DEFAULTS.map((def) => {
+    const existing = items.find((i) => i.key === def.key);
+    return existing ?? { id: `default:${def.key}`, title: titleOf(def.key), done: adding.has(def.key), meta: metaFor(def.key) };
+  });
+  const otherNightItems = items.filter((i) => isNightKey(i.key) && !NIGHT_DEFAULTS.some((d) => d.key === i.key));
 
-    startTransition(async () => {
-      const [goalsRes, tasksRes] = await Promise.all([
-        listPrayerGoalsAction(),
-        listPlanTasksAction(),
-      ]);
+  // Sadaqah card: the shared visibility rule (never in the sehri phase or within 15 minutes of a prayer).
+  const phaseTimings = knownToday
+    ? timingsFromPrayerTimes(knownToday.prayerTimes, todayISOInZone(now, knownToday.timezone), knownToday.timezone, knownToday.prayerTimes.fajr)
+    : null;
+  const showSupport =
+    view === "nights" && phaseTimings !== null && shouldShowSadaqah(now, phaseTimings, { ramadanDay, dismissedAt: sadaqah.dismissedAt });
 
-      if (goalsRes.ok) setServerGoals(goalsRes.data);
-      if (tasksRes.ok) setServerTasks(tasksRes.data);
-
-      if (!goalsRes.ok || !tasksRes.ok) {
-        setError(t("genericError"));
-      }
-    });
-  }, [isGuest, loading, t]);
-
-  const addGoal = () => {
-    const title = newGoalTitle.trim();
-    const count = Number.parseInt(newGoalTargetCount, 10) || 1;
-    if (!title) return;
-
-    if (isGuest) {
-      const next: PrayerGoalDTO = {
-        id: crypto.randomUUID(),
-        title,
-        targetCount: Math.max(1, count),
-        targetUnit: t("defaultTargetUnit"),
-        isCompleted: false,
-        sortOrder: goals.length,
-      };
-      setAllGoals((prev) => [...prev, next]);
-      setNewGoalTitle("");
-      setNewGoalTargetCount("1");
-      notifyTrackerUpdate();
-      return;
-    }
-
-    setError(null);
-    startTransition(async () => {
-      const res = await createPrayerGoalAction({
-        title,
-        targetCount: Math.max(1, count),
-        targetUnit: t("defaultTargetUnit"),
-      });
-
-      if (!res.ok) {
-        setError(t("genericError"));
-        return;
-      }
-
-      setServerGoals((prev) => [...prev, res.data]);
-      setNewGoalTitle("");
-      setNewGoalTargetCount("1");
-      notifyTrackerUpdate();
-    });
-  };
-
-  const addGoalTemplate = (title: string, targetCount: number) => {
-    if (isGuest) {
-      const next: PrayerGoalDTO = {
-        id: crypto.randomUUID(),
-        title: title.trim(),
-        targetCount: Math.max(1, targetCount),
-        targetUnit: t("defaultTargetUnit"),
-        isCompleted: false,
-        sortOrder: goals.length,
-      };
-      setAllGoals((prev) => [...prev, next]);
-      notifyTrackerUpdate();
-      return;
-    }
-
-    setError(null);
-    startTransition(async () => {
-      const res = await createPrayerGoalAction({
-        title: title.trim(),
-        targetCount: Math.max(1, targetCount),
-        targetUnit: t("defaultTargetUnit"),
-      });
-
-      if (!res.ok) {
-        setError(t("genericError"));
-        return;
-      }
-
-      setServerGoals((prev) => [...prev, res.data]);
-      notifyTrackerUpdate();
-    });
-  };
-
-  const addRecommendedGoal = () => {
-    if (isGuest) {
-      const next: PrayerGoalDTO = {
-        id: crypto.randomUUID(),
-        title: recommendedGoal.title,
-        targetCount: recommendedGoal.targetCount,
-        targetUnit: recommendedGoal.targetUnit,
-        isCompleted: false,
-        sortOrder: goals.length,
-      };
-      setAllGoals((prev) => [...prev, next]);
-      notifyTrackerUpdate();
-      return;
-    }
-
-    setError(null);
-    startTransition(async () => {
-      const res = await createPrayerGoalAction({
-        title: recommendedGoal.title,
-        targetCount: recommendedGoal.targetCount,
-        targetUnit: recommendedGoal.targetUnit,
-      });
-
-      if (!res.ok) {
-        setError(t("genericError"));
-        return;
-      }
-
-      setServerGoals((prev) => [...prev, res.data]);
-      notifyTrackerUpdate();
-    });
-  };
-
-  const saveGoal = (goal: PrayerGoalDTO) => {
-    if (isGuest) {
-      setAllGoals((prev) =>
-        prev.map((item) => (item.id === goal.id ? goal : item)),
-      );
-      notifyTrackerUpdate();
-      return;
-    }
-
-    startTransition(async () => {
-      const res = await updatePrayerGoalAction(goal);
-      if (!res.ok) {
-        setError(t("genericError"));
-        return;
-      }
-      setServerGoals((prev) => prev.map((item) => (item.id === goal.id ? res.data : item)));
-      notifyTrackerUpdate();
-    });
-  };
-
-  const removeGoal = (id: string) => {
-    if (isGuest) {
-      setAllGoals((prev) => prev.filter((item) => item.id !== id));
-      notifyTrackerUpdate();
-      return;
-    }
-
-    startTransition(async () => {
-      const res = await deletePrayerGoalAction(id);
-      if (!res.ok) {
-        setError(t("genericError"));
-        return;
-      }
-      setServerGoals((prev) => prev.filter((item) => item.id !== id));
-      notifyTrackerUpdate();
-    });
-  };
-
-  const addTask = () => {
-    const title = newTaskTitle.trim();
-    if (!title) return;
-
-    if (isGuest) {
-      const next: PlanTaskDTO = {
-        id: crypto.randomUUID(),
-        title,
-        isDone: false,
-        dueDate: null,
-        sortOrder: tasks.length,
-      };
-      setAllTasks((prev) => [...prev, next]);
-      setNewTaskTitle("");
-      notifyTrackerUpdate();
-      return;
-    }
-
-    setError(null);
-    startTransition(async () => {
-      const res = await createPlanTaskAction({ title });
-      if (!res.ok) {
-        setError(t("genericError"));
-        return;
-      }
-      setServerTasks((prev) => [...prev, res.data]);
-      setNewTaskTitle("");
-      notifyTrackerUpdate();
-    });
-  };
-
-  const addTaskTemplate = (title: string) => {
-    if (isGuest) {
-      const next: PlanTaskDTO = {
-        id: crypto.randomUUID(),
-        title: title.trim(),
-        isDone: false,
-        dueDate: null,
-        sortOrder: tasks.length,
-      };
-      setAllTasks((prev) => [...prev, next]);
-      notifyTrackerUpdate();
-      return;
-    }
-
-    setError(null);
-    startTransition(async () => {
-      const res = await createPlanTaskAction({ title: title.trim() });
-      if (!res.ok) {
-        setError(t("genericError"));
-        return;
-      }
-      setServerTasks((prev) => [...prev, res.data]);
-      notifyTrackerUpdate();
-    });
-  };
-
-  const saveTask = (task: PlanTaskDTO) => {
-    if (isGuest) {
-      setAllTasks((prev) =>
-        prev.map((item) => (item.id === task.id ? task : item)),
-      );
-      notifyTrackerUpdate();
-      return;
-    }
-
-    startTransition(async () => {
-      const res = await updatePlanTaskAction(task);
-      if (!res.ok) {
-        setError(t("genericError"));
-        return;
-      }
-      setServerTasks((prev) => prev.map((item) => (item.id === task.id ? res.data : item)));
-      notifyTrackerUpdate();
-    });
-  };
-
-  const removeTask = (id: string) => {
-    if (isGuest) {
-      setAllTasks((prev) => prev.filter((item) => item.id !== id));
-      notifyTrackerUpdate();
-      return;
-    }
-
-    startTransition(async () => {
-      const res = await deletePlanTaskAction(id);
-      if (!res.ok) {
-        setError(t("genericError"));
-        return;
-      }
-      setServerTasks((prev) => prev.filter((item) => item.id !== id));
-      notifyTrackerUpdate();
-    });
-  };
+  // ── Header ──
+  const eveningRow = days.find((d) => d.day === night - 1);
+  const caption = !mounted
+    ? null
+    : view === "nights" && eveningRow
+      ? t("captionNight", { night: digits(night, locale), date: longDate(ddmmyyyyToISO(eveningRow.gregorianDate), locale) })
+      : ramadanDay !== null
+        ? t("captionRoza", { day: digits(ramadanDay, locale), date: longDate(todayISO, locale) })
+        : longDate(todayISO, locale);
 
   return (
-    <>
-      <div className="space-y-6">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
-          <p className="text-sm text-muted-foreground">{t("plannerSubtitle")}</p>
-        </div>
-
-        {!loading && isGuest && (
-          <p className="text-sm text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
-            {t("guestLocalNotice")}
-          </p>
-        )}
-
-        {error && (
-          <p className="text-sm text-destructive bg-destructive/10 rounded-md px-3 py-2">
-            {error}
-          </p>
-        )}
-
-        <Card className="surface-soft border-primary/20">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Sparkles className="h-4 w-4 text-primary" />
-              {t("gettingStarted")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm text-muted-foreground">
-            <p>{t("guideStep1")}</p>
-            <p>{t("guideStep2")}</p>
-            <p>{t("guideStep3")}</p>
-          </CardContent>
-        </Card>
-
-        <Card className="surface-soft border-primary/20">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Target className="h-4 w-4 text-primary" />
-              {t("goals")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="space-y-1">
-                  <p className="text-sm font-semibold">{t("recommendedGoalTitle")}</p>
-                  <p className="text-xs text-muted-foreground">{t("recommendedGoalDesc")}</p>
-                </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={addRecommendedGoal}
-                  disabled={isPending}
-                >
-                  {t("addRecommendedGoal")}
-                </Button>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground">
-                {t("quickGoalTemplates")}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {goalTemplates.map((template) => (
-                  <Button
-                    key={template.title}
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={isPending}
-                    onClick={() => addGoalTemplate(template.title, template.targetCount)}
-                    className="h-8"
-                  >
-                    {template.title}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid gap-2 sm:grid-cols-[1fr_140px_auto]">
-              <Input
-                value={newGoalTitle}
-                onChange={(e) => setNewGoalTitle(e.target.value)}
-                placeholder={t("goalTitle")}
-              />
-              <Input
-                type="number"
-                min="1"
-                value={newGoalTargetCount}
-                onChange={(e) => setNewGoalTargetCount(e.target.value)}
-                placeholder={t("targetCount")}
-              />
-              <Button onClick={addGoal} disabled={isPending}>
-                {t("addGoal")}
-              </Button>
-            </div>
-
-            {goals.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-border/80 bg-background/60 p-4">
-                <p className="text-sm font-medium">{t("noGoals")}</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {t("noGoalsHint")}
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {goals.map((goal) => (
-                  <div key={goal.id} className="rounded-lg border p-3 space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        checked={goal.isCompleted}
-                        onCheckedChange={(checked) => {
-                          setAllGoals((prev) =>
-                            prev.map((item) =>
-                              item.id === goal.id
-                                ? { ...item, isCompleted: Boolean(checked) }
-                                : item,
-                            ),
-                          );
-                        }}
-                      />
-                      <Label className="text-xs text-muted-foreground">
-                        {t("completed")}
-                      </Label>
-                    </div>
-
-                    <div className="grid gap-2 sm:grid-cols-[1fr_140px_120px]">
-                      <Input
-                        value={goal.title}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          setAllGoals((prev) =>
-                            prev.map((item) =>
-                              item.id === goal.id ? { ...item, title: value } : item,
-                            ),
-                          );
-                        }}
-                      />
-                      <Input
-                        type="number"
-                        min="1"
-                        value={String(goal.targetCount)}
-                        onChange={(e) => {
-                          const value = Math.max(
-                            1,
-                            Number.parseInt(e.target.value || "1", 10) || 1,
-                          );
-                          setAllGoals((prev) =>
-                            prev.map((item) =>
-                              item.id === goal.id
-                                ? { ...item, targetCount: value }
-                                : item,
-                            ),
-                          );
-                        }}
-                      />
-                      <Input
-                        value={goal.targetUnit}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          setAllGoals((prev) =>
-                            prev.map((item) =>
-                              item.id === goal.id
-                                ? { ...item, targetUnit: value }
-                                : item,
-                            ),
-                          );
-                        }}
-                      />
-                    </div>
-
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => saveGoal(goal)}
-                        disabled={isPending}
-                      >
-                        {tCommon("save")}
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => removeGoal(goal.id)}
-                        disabled={isPending}
-                      >
-                        {tCommon("delete")}
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="surface-soft border-primary/20">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <CheckSquare className="h-4 w-4 text-primary" />
-              {t("preRamadanChecklist")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground">
-                {t("quickChecklistTemplates")}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {checklistTemplates.map((template) => (
-                  <Button
-                    key={template}
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={isPending}
-                    onClick={() => addTaskTemplate(template)}
-                    className="h-8"
-                  >
-                    {template}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
-              <Input
-                value={newTaskTitle}
-                onChange={(e) => setNewTaskTitle(e.target.value)}
-                placeholder={t("taskTitle")}
-              />
-              <Button onClick={addTask} disabled={isPending}>
-                {t("addTask")}
-              </Button>
-            </div>
-
-            {tasks.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-border/80 bg-background/60 p-4">
-                <p className="text-sm font-medium">{t("noTasks")}</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {t("noTasksHint")}
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {tasks.map((task) => (
-                  <div key={task.id} className="rounded-lg border p-3 space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        checked={task.isDone}
-                        onCheckedChange={(checked) => {
-                          setAllTasks((prev) =>
-                            prev.map((item) =>
-                              item.id === task.id
-                                ? { ...item, isDone: Boolean(checked) }
-                                : item,
-                            ),
-                          );
-                        }}
-                      />
-                      <Label className="text-xs text-muted-foreground">
-                        {t("completed")}
-                      </Label>
-                    </div>
-
-                    <Input
-                      value={task.title}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setAllTasks((prev) =>
-                          prev.map((item) =>
-                            item.id === task.id ? { ...item, title: value } : item,
-                          ),
-                        );
-                      }}
-                    />
-
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => saveTask(task)}
-                        disabled={isPending}
-                      >
-                        {tCommon("save")}
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => removeTask(task.id)}
-                        disabled={isPending}
-                      >
-                        {tCommon("delete")}
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4" data-view={view}>
+      <div className="space-y-1">
+        <h1 className="rp-h1 text-rp-ink">{view === "nights" ? t("nightsTitle") : t("dayTitle")}</h1>
+        <p className="rp-small min-h-[22px] text-rp-muted" data-testid="plan-caption" suppressHydrationWarning>
+          {caption}
+        </p>
       </div>
 
-    </>
+      {showNights ? (
+        <div role="group" aria-label={t("views")} className="flex gap-2">
+          <Chip selected={view === "day"} onClick={() => setViewChoice("day")}>
+            {t("dayTitle")}
+          </Chip>
+          <Chip selected={view === "nights"} onClick={() => setViewChoice("nights")}>
+            {t("nightsTitle")}
+          </Chip>
+        </div>
+      ) : null}
+
+      {!plan.loading && plan.isGuest ? (
+        <p className="rp-caption rounded-rp-md bg-rp-accent-tint px-3 py-2 text-rp-ink">{t("guestLocalNotice")}</p>
+      ) : null}
+      {plan.error ? (
+        <p role="alert" className="rp-small rounded-rp-md bg-destructive/10 px-3 py-2 text-destructive">
+          {t("genericError")}
+        </p>
+      ) : null}
+
+      {view === "nights" ? (
+        <>
+          {tonight && timetable ? (
+            <NightHero times={tonight} now={now} night={night} timeZone={tz} location={timetable.location} hijriYear={timetable.hijriYear} />
+          ) : timetableFailed ? (
+            <p className="rp-small rounded-rp-lg bg-rp-surface p-5 text-rp-muted shadow-rp-soft">{t("nightsError")}</p>
+          ) : (
+            <div role="status" aria-label={t("nightsLoading")}>
+              <Skeleton className="h-[300px] rounded-rp-xl" />
+            </div>
+          )}
+          {days.length > 0 ? <OddNightsCard rows={oddNightRows(days, night)} /> : null}
+          <section aria-labelledby="tonight-amal" className="flex flex-col gap-3">
+            <ChecklistOverline id="tonight-amal">{t("tonightAmal")}</ChecklistOverline>
+            <ChecklistCards items={[...nightRows, ...otherNightItems]} onToggle={toggle} labelledBy="tonight-amal" />
+          </section>
+          {showSupport ? <PlanSupportCard onDismiss={sadaqah.dismiss} /> : null}
+        </>
+      ) : (
+        <>
+          <ProgressCard done={done} total={items.length} quranPara={quran.para} streak={quran.streak} />
+          {items.length === 0 ? (
+            <section aria-labelledby="plan-empty" className="flex flex-col gap-3 rounded-rp-lg bg-rp-surface p-5 shadow-rp-soft">
+              <h2 id="plan-empty" className="rp-row font-semibold text-rp-ink">
+                {t("emptyTitle")}
+              </h2>
+              <p className="rp-small text-rp-muted">{t("emptyBody")}</p>
+              <Button type="button" onClick={() => void addDefaults(DAY_DEFAULTS)} disabled={plan.isPending}>
+                {t("addSuggested")}
+              </Button>
+            </section>
+          ) : null}
+          {items.length > 0
+            ? PLAN_WINDOWS.map((w) => (
+                <section key={w} aria-labelledby={`plan-${w}`} data-window={w} className="flex flex-col gap-3">
+                  <ChecklistOverline id={`plan-${w}`}>{t(`windows.${w}`)}</ChecklistOverline>
+                  {groups[w].length > 0 ? (
+                    <ChecklistCards
+                      items={groups[w]}
+                      onToggle={toggle}
+                      onRemove={removeItem}
+                      editing={editing}
+                      labelledBy={`plan-${w}`}
+                    />
+                  ) : (
+                    <p className="rp-small rounded-rp-lg border border-dashed border-rp-rule px-4 py-3 text-rp-muted">{t("groupEmpty")}</p>
+                  )}
+                </section>
+              ))
+            : null}
+          <AddAmalSheet onAdd={addAmal} suggestions={suggestions} />
+          {items.length > 0 ? (
+            <Button type="button" variant="quiet" className="self-center" aria-pressed={editing} onClick={() => setEditing((e) => !e)}>
+              {editing ? t("doneEditing") : t("editList")}
+            </Button>
+          ) : null}
+        </>
+      )}
+    </div>
   );
 }
