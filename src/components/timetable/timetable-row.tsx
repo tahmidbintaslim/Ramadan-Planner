@@ -1,13 +1,15 @@
 import { cn } from "@/lib/utils";
 import type { TimetableDay } from "@/lib/ramadan-timetable";
-import { type Locale, type RowState, digits, formatClock, formatRowDate, isOddNight } from "./timetable-logic";
+import { oddNightStartingAfter } from "@/lib/ramadan-nights";
+import { type Locale, type RowState, digits, formatClock, formatRowDate } from "./timetable-logic";
 
 export interface TimetableRowLabels {
   weekday: string;
   sehri: string;
   iftar: string;
   today: string;
-  oddNight: string;
+  /** Caption for the odd night that begins after this row's iftar (null when none). */
+  oddNight: string | null;
   roza: string;
 }
 
@@ -23,7 +25,7 @@ export function TimetableRow({
   locale: Locale;
   labels: TimetableRowLabels;
 }) {
-  const odd = isOddNight(day.day);
+  const odd = oddNightStartingAfter(day.day) !== null;
   const isToday = state === "today";
   const past = state === "past";
   return (

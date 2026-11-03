@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { TimetableDay } from "@/lib/ramadan-timetable";
 import {
+  coarse,
   ddmmyyyyToISO,
   decadeDays,
   decadeIndex,
@@ -8,7 +9,6 @@ import {
   formatClock,
   formatRange,
   formatRowDate,
-  isOddNight,
   isRamadanNow,
   rowState,
 } from "./timetable-logic";
@@ -33,14 +33,6 @@ describe("row state", () => {
   it("treats everything as upcoming before Ramadan and past after it", () => {
     expect(days.every((d) => rowState(d, "2026-11-03") === "upcoming")).toBe(true);
     expect(days.every((d) => rowState(d, "2027-03-11") === "past")).toBe(true);
-  });
-});
-
-describe("odd nights", () => {
-  it("flags exactly 21, 23, 25, 27 and 29", () => {
-    expect(days.filter((d) => isOddNight(d.day)).map((d) => d.day)).toEqual([21, 23, 25, 27, 29]);
-    expect(isOddNight(11)).toBe(false);
-    expect(isOddNight(30)).toBe(false);
   });
 });
 
@@ -83,4 +75,12 @@ describe("formatting", () => {
     expect(formatClock("00:30", "en")).toBe("12:30");
   });
   it("formats a row date", () => expect(formatRowDate(days[0], "মঙ্গল", "bn")).toBe("মঙ্গল · ৯ ফেব্রুয়ারি"));
+});
+
+describe("coarse", () => {
+  it("rounds coordinates to 2 decimals", () => {
+    expect(coarse(23.810331)).toBe("23.81");
+    expect(coarse(90.412518)).toBe("90.41");
+    expect(coarse(-0.1278)).toBe("-0.13");
+  });
 });

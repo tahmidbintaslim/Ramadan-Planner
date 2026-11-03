@@ -9,12 +9,14 @@ import { Chip } from "@/components/ui/chip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ShareIcon } from "@/components/icons/islamic-icons";
 import { Printer } from "lucide-react";
+import { oddNightStartingAfter } from "@/lib/ramadan-nights";
 import { todayISOInZone } from "@/lib/prayer-phase";
 import type { RamadanTimetable, TimetableDay } from "@/lib/ramadan-timetable";
 import { TimetableRow } from "./timetable-row";
 import {
   DECADES,
   type Locale,
+  coarse,
   dateRange,
   decadeDays,
   defaultDecade,
@@ -29,8 +31,9 @@ type WeekdayKey = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun";
 async function loadTimetable(tz: string, coords?: { lat: number; lng: number }): Promise<RamadanTimetable> {
   const params = new URLSearchParams({ tz });
   if (coords) {
-    params.set("lat", String(coords.lat));
-    params.set("lng", String(coords.lng));
+    // 2 decimals (~1 km): keeps the public cacheable API from fragmenting and the exact position off the wire.
+    params.set("lat", coarse(coords.lat));
+    params.set("lng", coarse(coords.lng));
   }
   const res = await fetch(`/api/ramadan-timetable?${params.toString()}`);
   if (!res.ok) throw new Error(`timetable ${res.status}`);
@@ -91,7 +94,7 @@ export function TimetableScreen() {
       sehri: t("sehri"),
       iftar: t("iftar"),
       today: t("today"),
-      oddNight: t("oddNight"),
+      oddNight: oddNightStartingAfter(d.day) !== null ? t("oddNight", { n: digits(oddNightStartingAfter(d.day)!, locale) }) : null,
       roza: t("rozaLabel", { day: digits(d.day, locale) }),
     }),
     [t, tNav, locale],
@@ -109,7 +112,7 @@ export function TimetableScreen() {
     } catch (e) {
       // The visitor closing the share sheet is not an error.
       if (e instanceof DOMException && e.name === "AbortError") return;
-      toast.error(t("error"));
+      toast.error(t("shareError"));
     }
   }
 

@@ -5,9 +5,6 @@ import { toBengaliDigits } from "@/lib/prayer-phase";
 
 export type Locale = "bn" | "en";
 
-/** Nights the Prophet (peace be upon him) told us to seek Laylat al-Qadr in. */
-export const ODD_NIGHTS: readonly number[] = [21, 23, 25, 27, 29];
-
 export const DECADES = [
   { id: "rahmat", from: 1, to: 10 },
   { id: "maghfirah", from: 11, to: 20 },
@@ -16,10 +13,6 @@ export const DECADES = [
 
 export type DecadeId = (typeof DECADES)[number]["id"];
 export type RowState = "past" | "today" | "upcoming";
-
-export function isOddNight(day: number): boolean {
-  return ODD_NIGHTS.includes(day);
-}
 
 /** 0, 1 or 2 for Ramadan day 1-10, 11-20, 21-30. */
 export function decadeIndex(day: number): 0 | 1 | 2 {
@@ -37,7 +30,8 @@ export function ddmmyyyyToISO(s: string): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-/** Past rows are before today, the today row matches the calendar date in the timetable's time zone. */
+/** Past rows are before today, the today row matches the calendar date in the timetable's time zone. "Today" is
+ *  calendar-day based (like the rest of the app), not switched at maghrib. */
 export function rowState(day: TimetableDay, todayISO: string): RowState {
   const iso = ddmmyyyyToISO(day.gregorianDate);
   return iso < todayISO ? "past" : iso === todayISO ? "today" : "upcoming";
@@ -108,4 +102,9 @@ export function formatClock(hhmm: string, locale: Locale): string {
 /** Weekday and day-month for a row, e.g. "সোম · ৯ ফেব্রুয়ারি". */
 export function formatRowDate(day: TimetableDay, weekdayLabel: string, locale: Locale): string {
   return `${weekdayLabel} · ${formatDayMonth(ddmmyyyyToISO(day.gregorianDate), locale)}`;
+}
+
+/** Coordinates rounded to 2 decimals (~1 km) before they go to the public cacheable API. */
+export function coarse(n: number): string {
+  return n.toFixed(2);
 }

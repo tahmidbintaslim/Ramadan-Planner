@@ -49,10 +49,13 @@ test.describe("timetable (mobile)", () => {
     // Past rows are muted, odd nights sit in the last decade.
     await expect(page.locator('[data-decade-panel="maghfirah"] li[data-state="past"]').first()).toHaveClass(/text-rp-muted/);
     await page.getByRole("button", { name: "নাজাতের দশক" }).click();
+    // A night starts after iftar: rozas 20, 22, 24, 26, 28 carry nights 21, 23, 25, 27, 29.
+    await expect(page.locator('[data-decade-panel="maghfirah"] li[data-odd-night]')).toHaveCount(1);
     const odd = page.locator('[data-decade-panel="najat"] li[data-odd-night]');
-    await expect(odd).toHaveCount(5);
+    await expect(odd).toHaveCount(4);
     await expect(odd.first()).toHaveClass(/bg-rp-gold-tint/);
-    await expect(odd.first()).toContainText("বেজোড় রাত · লাইলাতুল কদরের সন্ধান");
+    await expect(odd.first()).toContainText("ইফতারের পর ২৩তম রাত · বেজোড় রাত");
+    await expect(page.locator('[data-decade-panel="najat"] li').first()).not.toHaveAttribute("data-odd-night", "true");
     await expect(page.locator('[data-decade-panel="najat"] li').first()).toBeVisible();
     await expect(page.locator('[data-decade-panel="rahmat"]')).toBeHidden();
 
@@ -86,6 +89,18 @@ test.describe("timetable (mobile)", () => {
     await expect(page.getByText("লিংক কপি হয়েছে")).toBeVisible();
     expect(await page.evaluate(() => navigator.clipboard.readText())).toMatch(/\/timetable$/);
   });
+});
+
+test("a failed share shows the share message, not the load error", async ({ page }) => {
+  await page.goto("/timetable");
+  await mockTimetable(page);
+  await page.reload({ waitUntil: "load" });
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, "share", { value: () => Promise.reject(new Error("nope")), configurable: true });
+  });
+  await page.getByRole("button", { name: /শেয়ার|Share/ }).click();
+  await expect(page.getByText(/লিংক কপি করা যায়নি|Could not copy the link/)).toBeVisible();
+  await expect(page.getByText(/সময়সূচি লোড করা যায়নি|Could not load the timetable/)).toHaveCount(0);
 });
 
 test("the timetable page loads without console errors when the API is unavailable", async ({ page, appErrors }) => {
