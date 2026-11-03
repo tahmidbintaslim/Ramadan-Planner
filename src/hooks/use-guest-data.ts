@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useSyncExternalStore } from "react";
 import { useAuth } from "@/components/providers/auth-provider";
 import { pruneLocalHistory } from "@/lib/local-history";
 
@@ -24,6 +24,8 @@ function loadFromStorage<T>(key: string, defaultValue: T): T {
  * @param key - Storage key (date-scoped, e.g. "salah-2026-03-01")
  * @param defaultValue - Default value when no stored data exists
  */
+const subscribeNoop = () => () => {};
+
 export function useGuestData<T>(key: string, defaultValue: T) {
     const { isGuest } = useAuth();
     const [data, setData] = useState<T>(() => loadFromStorage(key, defaultValue));
@@ -57,7 +59,11 @@ export function useGuestData<T>(key: string, defaultValue: T) {
         setShowPrompt(false);
     }, []);
 
-    return { data, updateData, showPrompt, dismissPrompt };
+    // The server cannot read localStorage: the server render and the hydrating render show the default value, then
+    // the stored data (avoids a hydration mismatch, React #418, once a guest has saved anything).
+    const mounted = useSyncExternalStore(subscribeNoop, () => true, () => false);
+
+    return { data: mounted ? data : defaultValue, updateData, showPrompt, dismissPrompt };
 }
 
 /**
