@@ -9,7 +9,15 @@
  *   .rp-greeting 24/34 (Tiro)  .rp-h1 28/40 (Tiro)  .rp-time-xl 56/64 600  .rp-time-l 36/44 600
  *   .rp-h2 20/30 600  .rp-row 16/24 500  .rp-body 16/26  .rp-small 14/22  .rp-button 16/22 600
  *   .rp-caption 12/18 500  .rp-overline 13/18 500
- * Colour utilities: bg-rp-surface, text-rp-accent, border-rp-rule ... (see --color-rp-* below).
+ * Colour utilities (Tailwind key -> CSS var; use as bg-/text-/border-/from-/ring- + key):
+ *   rp-page (bg-page)  rp-surface (bg-surface)  rp-live (bg-live)  rp-accent-tint (bg-accent-tint)
+ *   rp-inverse (bg-inverse)  rp-gold-tint (bg-gold-tint)  rp-ink (text-primary)  rp-muted (text-secondary)
+ *   rp-on-live (text-on-live)  rp-on-inverse (text-on-inverse)  rp-accent (text-accent)  rp-gold-text (text-gold)
+ *   rp-gold (accent-gold)  rp-rule (border-rule)  rp-strong (border-strong)  rp-input (border-input, >=3:1 field border)
+ *   rp-done (state-done). e.g. bg-rp-surface, text-rp-accent, border-rp-rule, from-rp-accent-tint, text-rp-ink.
+ * Contrast (body text >=4.5:1): text-accent on page/surface/accent-tint/gold-tint = Light 5.97/6.41/5.55/5.70,
+ *   Night 7.73/6.41/5.03/5.03; text-gold = Light 5.73/6.15/5.33/5.47, Night 9.85/8.17/6.40/6.40;
+ *   border-input = Light 3.20 page/3.43 surface, Night 4.04/3.35.
  * Hero gradients: --rp-hero-sehri / -day / -iftar / -night (top to bottom) for the Prayer Hero.
  */
 @import "@fontsource/hind-siliguri/bengali-400.css";
@@ -67,22 +75,23 @@
   --radius-rp-xl: var(--rp-radius-xl);
   --radius-rp-full: var(--rp-radius-full);
   --shadow-rp-soft: var(--rp-shadow-soft);
-  --color-rp-bg-page: var(--rp-bg-page);
-  --color-rp-bg-surface: var(--rp-bg-surface);
-  --color-rp-bg-live: var(--rp-bg-live);
-  --color-rp-bg-accent-tint: var(--rp-bg-accent-tint);
-  --color-rp-bg-inverse: var(--rp-bg-inverse);
-  --color-rp-bg-gold-tint: var(--rp-bg-gold-tint);
-  --color-rp-text-primary: var(--rp-text-primary);
-  --color-rp-text-secondary: var(--rp-text-secondary);
-  --color-rp-text-on-live: var(--rp-text-on-live);
-  --color-rp-text-on-inverse: var(--rp-text-on-inverse);
-  --color-rp-text-accent: var(--rp-text-accent);
-  --color-rp-text-gold: var(--rp-text-gold);
-  --color-rp-accent-gold: var(--rp-accent-gold);
-  --color-rp-border-rule: var(--rp-border-rule);
-  --color-rp-border-strong: var(--rp-border-strong);
-  --color-rp-state-done: var(--rp-state-done);
+  --color-rp-page: var(--rp-bg-page);
+  --color-rp-surface: var(--rp-bg-surface);
+  --color-rp-live: var(--rp-bg-live);
+  --color-rp-accent-tint: var(--rp-bg-accent-tint);
+  --color-rp-inverse: var(--rp-bg-inverse);
+  --color-rp-gold-tint: var(--rp-bg-gold-tint);
+  --color-rp-ink: var(--rp-text-primary);
+  --color-rp-muted: var(--rp-text-secondary);
+  --color-rp-on-live: var(--rp-text-on-live);
+  --color-rp-on-inverse: var(--rp-text-on-inverse);
+  --color-rp-accent: var(--rp-text-accent);
+  --color-rp-gold-text: var(--rp-text-gold);
+  --color-rp-gold: var(--rp-accent-gold);
+  --color-rp-rule: var(--rp-border-rule);
+  --color-rp-strong: var(--rp-border-strong);
+  --color-rp-done: var(--rp-state-done);
+  --color-rp-input: var(--rp-border-input);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -149,11 +158,12 @@
   --rp-text-secondary: var(--rp-ink-500);
   --rp-text-on-live: var(--rp-mist-0);
   --rp-text-on-inverse: var(--rp-mist-0);
-  --rp-text-accent: var(--rp-teal-600);
-  --rp-text-gold: var(--rp-gold-700);
+  --rp-text-accent: var(--rp-teal-700);
+  --rp-text-gold: #7a5d1f; /* darker than gold-700 for 4.5:1 on tints */
   --rp-accent-gold: var(--rp-gold-500);
   --rp-border-rule: var(--rp-ink-150);
   --rp-border-strong: var(--rp-ink-300);
+  --rp-border-input: #7a8f8a; /* field borders, >=3:1 */
   --rp-state-done: var(--rp-teal-600);
 
   /* shadcn mapping */
@@ -173,7 +183,7 @@
   --accent-foreground: var(--rp-teal-700);
   --destructive: #dc2626;
   --border: var(--rp-border-rule);
-  --input: var(--rp-border-strong);
+  --input: var(--rp-border-input);
   --ring: var(--rp-teal-600);
   --chart-1: var(--rp-teal-600);
   --chart-2: var(--rp-gold-500);
@@ -207,6 +217,7 @@
   --rp-accent-gold: var(--rp-gold-300);
   --rp-border-rule: var(--rp-night-800);
   --rp-border-strong: var(--rp-night-700);
+  --rp-border-input: #55847f;
   --rp-state-done: var(--rp-teal-300);
   --rp-shadow-soft: 0 8px 24px rgba(0, 0, 0, 0.32), 0 1px 2px rgba(0, 0, 0, 0.2);
   --accent-foreground: var(--rp-text-accent);
