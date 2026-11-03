@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore, type ComponentType } from "react";
+import { useState, type ComponentType } from "react";
 import { useLocale, useTranslations } from "@/i18n/use-intl";
 import { SectionHeader } from "@/components/design/section-header";
 import { Link } from "@/components/shared/link";
@@ -15,7 +15,7 @@ import {
 import { formatLocalizedNumber } from "@/lib/locale-number";
 import { IFTAR_WINDOW_MS, type PhaseTimings, type PrayerPhase } from "@/lib/prayer-phase";
 import { cn } from "@/lib/utils";
-import { CHECKLIST_ITEMS, type ChecklistKey, type DailyChecklistState } from "./use-daily-checklist";
+import { planDisplayOrder, type PlanWindow } from "@/components/plan/plan-logic";
 
 // ── Phase card: Sehri niyyah / Iftar dua ──────────────
 
@@ -102,29 +102,44 @@ export function FeatureTiles({ className }: { className?: string }) {
 // ── Today's plan preview ──────────────────────────────
 
 export const PLAN_PREVIEW_COUNT = 3;
-const subscribeNoop = () => () => {};
 export const PLAN_HREF = "/plan";
 
-export function PlanPreview({ state, className }: { state: DailyChecklistState; className?: string }) {
+export interface PlanPreviewRow {
+  id: string;
+  kind: "task" | "goal";
+  title: string;
+  done: boolean;
+  window: PlanWindow;
+  scopeISO: string;
+}
+
+/** What the preview needs from today's plan (useTodayPlan): the same rows and counts as /plan. */
+export interface PlanPreviewState {
+  rows: readonly PlanPreviewRow[];
+  done: number;
+  total: number;
+  /** The list is known (guest storage read or the first server load finished). */
+  ready: boolean;
+  pending: ReadonlySet<string>;
+  toggleRow: (row: PlanPreviewRow, next: boolean) => void;
+}
+
+export function PlanPreview({ state, className }: { state: PlanPreviewState; className?: string }) {
   const t = useTranslations("home");
-  const tItem = useTranslations("checklist");
   const locale = useLocale();
-  const items: readonly ChecklistKey[] = CHECKLIST_ITEMS.slice(0, PLAN_PREVIEW_COUNT);
-  // Guest checklist data comes from localStorage, which the server cannot see: render the neutral (unchecked)
-  // state until hydration is done, so the server and the hydrating render match.
-  const mounted = useSyncExternalStore(subscribeNoop, () => true, () => false);
-  const checkedMap: Record<string, boolean> = mounted ? state.checked : {};
-  const done = CHECKLIST_ITEMS.filter((k) => checkedMap[k]).length;
+  const items = planDisplayOrder(state.rows).slice(0, PLAN_PREVIEW_COUNT);
 
   return (
-    <section aria-labelledby="home-plan" className={cn("flex flex-col gap-3", className)}>
+    <section aria-labelledby="home-plan" data-testid="plan-preview" className={cn("flex flex-col gap-3", className)}>
       <SectionHeader
         title={
           <span id="home-plan">
-            {t("planTitle", {
-              done: formatLocalizedNumber(done, locale),
-              total: formatLocalizedNumber(CHECKLIST_ITEMS.length, locale),
-            })}
+            {state.ready
+              ? t("planTitle", {
+                  done: formatLocalizedNumber(state.done, locale),
+                  total: formatLocalizedNumber(state.total, locale),
+                })
+              : t("planTitleNoCount")}
           </span>
         }
         action={
@@ -133,35 +148,43 @@ export function PlanPreview({ state, className }: { state: DailyChecklistState; 
           </Link>
         }
       />
-      <ul className="flex flex-col gap-3">
-        {items.map((key) => {
-          const checked = Boolean(checkedMap[key]);
-          return (
-            <li key={key}>
+      {!state.ready ? (
+        <div aria-hidden="true" className="min-h-[72px] rounded-rp-lg bg-rp-surface shadow-rp-soft" />
+      ) : items.length === 0 ? (
+        <div data-testid="plan-preview-empty" className="flex flex-col items-start gap-2 rounded-rp-lg bg-rp-surface p-5 shadow-rp-soft">
+          <p className="rp-small text-rp-muted">{t("planEmpty")}</p>
+          <Link href={PLAN_HREF} className={cn(buttonVariants({ variant: "soft" }))}>
+            {t("planEmptyAction")}
+          </Link>
+        </div>
+      ) : (
+        <ul className="flex flex-col gap-3">
+          {items.map((row) => (
+            <li key={row.id}>
               <button
                 type="button"
                 role="checkbox"
-                aria-checked={checked}
-                disabled={state.isPending}
-                onClick={() => state.toggle(key)}
-                data-testid={`plan-item-${key}`}
+                aria-checked={row.done}
+                disabled={state.pending.has(row.id)}
+                onClick={() => state.toggleRow(row, !row.done)}
+                data-testid={`plan-item-${row.id}`}
                 className="flex min-h-[72px] w-full items-center gap-4 rounded-rp-lg bg-rp-surface px-4 py-3 text-left text-rp-ink shadow-rp-soft outline-none focus-visible:ring-[3px] focus-visible:ring-ring disabled:opacity-60"
               >
                 <span
                   aria-hidden="true"
                   className={cn(
                     "flex size-7 shrink-0 items-center justify-center rounded-rp-full border-2",
-                    checked ? "border-rp-done bg-rp-done text-rp-surface" : "border-rp-input",
+                    row.done ? "border-rp-done bg-rp-done text-rp-surface" : "border-rp-input",
                   )}
                 >
-                  {checked ? <CheckIcon size={16} strokeWidth={2.4} /> : null}
+                  {row.done ? <CheckIcon size={16} strokeWidth={2.4} /> : null}
                 </span>
-                <span className={cn("rp-row", checked && "text-rp-muted")}>{tItem(key)}</span>
+                <span className={cn("rp-row", row.done && "text-rp-muted")}>{row.title}</span>
               </button>
             </li>
-          );
-        })}
-      </ul>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

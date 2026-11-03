@@ -11,6 +11,7 @@ import { DailyPractices } from "./daily-practices";
 import { HomeOverview, ramadanDayOf } from "./home-overview";
 import { useSadaqahDismissal } from "./sadaqah-dismissal";
 import { useDailyChecklist } from "./use-daily-checklist";
+import { useTodayPlan } from "@/components/plan/use-today-plan";
 import { deviceTimeZone, nextDayISO, useHomeTimings } from "./use-home-timings";
 import { usePrayerReminders } from "./use-prayer-reminders";
 
@@ -65,7 +66,17 @@ export function TodayContent({ initialNow }: { initialNow?: Date }) {
   }, [home.timings, home.tomorrow, dateISO, timeZone]);
 
   const ramadanDay = ramadanDayOf(home.ramadan);
+  // The daily dhikr checklist (its own card below) and today's plan (the same rows and counts as /plan).
   const checklist = useDailyChecklist(ramadanDay ?? 1);
+  const today = useTodayPlan(dateISO ?? todayISO);
+  const plan = {
+    rows: today.rows,
+    done: today.done,
+    total: today.total,
+    ready: today.plan.ready,
+    pending: today.plan.pending,
+    toggleRow: today.toggleRow,
+  };
   const { reminders, toggle } = usePrayerReminders();
   const sadaqah = useSadaqahDismissal();
   // The district chosen at onboarding names the hero's location pill (in the UI language).
@@ -88,7 +99,7 @@ export function TodayContent({ initialNow }: { initialNow?: Date }) {
         initialNow={initialNow}
         reminders={reminders}
         onToggleReminder={toggle}
-        checklist={checklist}
+        plan={plan}
         sadaqahDismissedAt={sadaqah.dismissedAt}
         onDismissSadaqah={() => sadaqah.dismiss()}
         onRetry={home.retry}

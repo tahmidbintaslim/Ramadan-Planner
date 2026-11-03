@@ -206,3 +206,29 @@ test.describe("last ten nights (mobile, night)", () => {
     await expect(page.getByRole("button", { name: "শেষ দশ রাত" })).toHaveCount(0);
   });
 });
+
+test.describe("Home plan preview matches /plan", () => {
+  test.use({ viewport: { width: 390, height: 844 }, appLocale: "bn", timezoneId: TZ });
+
+  test("empty on both, then the same rows and count after adding on /plan", async ({ page, appErrors }) => {
+    await mockRamadan(page, 12, dhakaToday(12));
+    await visit(page, "/today");
+    const preview = page.getByTestId("plan-preview");
+    await expect(preview.getByRole("heading", { level: 2 })).toHaveText("আজকের পরিকল্পনা · ০/০");
+    await expect(preview.getByTestId("plan-preview-empty")).toBeVisible();
+
+    await visit(page, "/plan");
+    await page.getByRole("button", { name: "প্রস্তাবিত আমল যোগ করুন" }).click();
+    await expect(page.getByTestId("plan-item")).toHaveCount(7);
+    await page.getByRole("checkbox", { name: /সেহরি ও নিয়ত/ }).click();
+    await expect(page.getByTestId("plan-progress").getByRole("img")).toHaveText("১/৭");
+
+    await visit(page, "/today");
+    await expect(preview.getByRole("heading", { level: 2 })).toHaveText("আজকের পরিকল্পনা · ১/৭");
+    const boxes = preview.getByRole("checkbox");
+    await expect(boxes).toHaveCount(3);
+    await expect(boxes.first()).toContainText("সেহরি ও নিয়ত");
+    await expect(boxes.first()).toHaveAttribute("aria-checked", "true");
+    expect(appErrors()).toEqual([]);
+  });
+});

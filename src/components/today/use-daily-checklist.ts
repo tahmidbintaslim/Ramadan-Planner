@@ -23,8 +23,8 @@ export interface DailyChecklistState {
 }
 
 /**
- * Today's checklist: guest local storage (rp_checklist_<date>) or the signed-in daily log. Shared by the Home
- * plan preview and the full checklist card, so both show (and toggle) the same state.
+ * The daily dhikr checklist: guest local storage (rp_checklist_<date>) or the signed-in daily log, for the
+ * checklist card under the Home practices.
  */
 export function useDailyChecklist(day: number): DailyChecklistState {
   const { isGuest, loading } = useAuth();

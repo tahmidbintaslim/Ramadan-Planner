@@ -82,7 +82,12 @@
         "noAccount": "অ্যাকাউন্ট নেই?",
         "hasAccount": "ইতিমধ্যে অ্যাকাউন্ট আছে?",
         "signupHere": "এখানে নিবন্ধন করুন",
-        "loginHere": "এখানে লগইন করুন"
+        "loginHere": "এখানে লগইন করুন",
+        "unavailableSignInTitle": "এই মুহূর্তে সাইন ইন করা যাচ্ছে না",
+        "unavailableSignUpTitle": "এই মুহূর্তে নিবন্ধন করা যাচ্ছে না",
+        "unavailableBody": "অ্যাকাউন্ট পরিষেবা লোড হচ্ছে না। অ্যাকাউন্ট ছাড়াই অ্যাপটি কাজ করে: আপনার পরিকল্পনা ও ট্র্যাকার এই ডিভাইসে সংরক্ষিত থাকে।",
+        "unavailableContinue": "অ্যাকাউন্ট ছাড়াই চালিয়ে যান",
+        "unavailableRetry": "আবার চেষ্টা করুন"
     },
     "greetings": {
         "ramadanMubarak": "রমযান মোবারক",
@@ -155,7 +160,8 @@
         "fallbackDuaBn": "হে আল্লাহ! তুমি ক্ষমাশীল, ক্ষমা করতে ভালোবাসো, তাই আমাকে ক্ষমা করো।",
         "fallbackDuaEn": "হে আল্লাহ! তুমি ক্ষমাশীল, ক্ষমা করতে ভালোবাসো, তাই আমাকে ক্ষমা করো।",
         "fallbackDayTaskBn": "আজ একজন মানুষকে ইফতার করান",
-        "fallbackDayTaskEn": "আজ একজন মানুষকে ইফতার করান"
+        "fallbackDayTaskEn": "আজ একজন মানুষকে ইফতার করান",
+        "dhikrChecklist": "যিকির ও নেক আমলের চেকলিস্ট"
     },
     "salah": {
         "fajr": "ফজর",
@@ -678,7 +684,7 @@
         "empty": "কোনো হাদিস পাওয়া যায়নি।",
         "edition": "{edition} — #{no}",
         "dailyEdition": "দৈনিক হাদিস",
-        "loadError": "প্রাথমিক হাদিস উৎস লোড করা যায়নি। বিকল্প কনটেন্ট দেখানো হচ্ছে।",
+        "loadError": "হাদিস এখন লোড করা যায়নি।",
         "arabicLabel": "আরবি",
         "englishLabel": "ইংরেজি",
         "bengaliLabel": "বাংলা",
@@ -708,7 +714,12 @@
         "resume": "চালিয়ে যান",
         "stopAudio": "বন্ধ করুন",
         "mute": "মিউট",
-        "unmute": "আনমিউট"
+        "unmute": "আনমিউট",
+        "loadErrorTitle": "হাদিস এখন লোড করা যায়নি",
+        "loadErrorBody": "হাদিস সংগ্রহের সাথে এই মুহূর্তে সংযোগ করা যাচ্ছে না। একটু পরে আবার চেষ্টা করুন। অ্যাপের বাকি অংশ স্বাভাবিকভাবে কাজ করছে।",
+        "emptyTitle": "এখনও কোনো হাদিস সংগ্রহ যোগ হয়নি",
+        "emptyBody": "হাদিস সংগ্রহ যোগ হলে এখানে দেখা যাবে।",
+        "tryAgain": "আবার চেষ্টা করুন"
     },
     "accessibility": {
         "title": "অ্যাক্সেসিবিলিটি",
@@ -798,7 +809,10 @@
         "sourceIslamicApi": "IslamicAPI",
         "sourceUnverified": "যাচাই সাপেক্ষে",
         "hijri": "{day} {month} {year}",
-        "tomorrow": "আগামীকাল"
+        "tomorrow": "আগামীকাল",
+        "planTitleNoCount": "আজকের পরিকল্পনা",
+        "planEmpty": "আজকের পরিকল্পনায় এখনও কোনো আমল নেই।",
+        "planEmptyAction": "পরিকল্পনা সাজান"
     },
     "supportPage": {
         "metaTitle": "সাদাকা ও অংশগ্রহণ",

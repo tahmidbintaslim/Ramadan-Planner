@@ -17,7 +17,7 @@ import { TIMINGS, TZ, WithIntl, at } from "@/components/prayer/test-utils";
 import { HomeOverview, districtOf, hijriLabelOf, isEidOf, ramadanDayOf, type HomeOverviewProps } from "./home-overview";
 import { FEATURE_TILES, PlanPreview, SupportCard, phaseCardKind } from "./home-sections";
 import { SADAQAH_DISMISSED_KEY, parseDismissedAt, useSadaqahDismissal } from "./sadaqah-dismissal";
-import type { DailyChecklistState } from "./use-daily-checklist";
+import type { PlanPreviewRow, PlanPreviewState } from "./home-sections";
 
 afterEach(cleanup);
 window.scrollTo = (() => {}) as typeof window.scrollTo;
@@ -56,8 +56,20 @@ function ramadanStatus(day: number | null, extra: Partial<RamadanStatus> = {}): 
   };
 }
 
-function checklistState(checked: Record<string, boolean> = {}): DailyChecklistState {
-  return { checked, toggle: vi.fn(), isPending: false, showPrompt: false, dismissPrompt: vi.fn() };
+function row(id: string, title: string, done: boolean, window: PlanPreviewRow["window"]): PlanPreviewRow {
+  return { id, kind: "task", title, done, window, scopeISO: "2027-03-01" };
+}
+
+function planState(rows: PlanPreviewRow[] = [], extra: Partial<PlanPreviewState> = {}): PlanPreviewState {
+  return {
+    rows,
+    done: rows.filter((r) => r.done).length,
+    total: rows.length,
+    ready: true,
+    pending: new Set(),
+    toggleRow: vi.fn(),
+    ...extra,
+  };
 }
 
 async function renderInRouter(node: ReactNode, locale: "bn" | "en" = "bn") {
@@ -88,7 +100,7 @@ function renderHome(time: string, props: Partial<HomeOverviewProps> = {}, locale
       now={now}
       frozenNow={now}
       reminders={{}}
-      checklist={checklistState()}
+      plan={planState()}
       sadaqahDismissedAt={null}
       onDismissSadaqah={vi.fn()}
       {...props}
@@ -320,22 +332,38 @@ describe("feature tiles", () => {
 });
 
 describe("today's plan preview", () => {
-  it("shows the first three checklist items with their state, the count and an 'all' link", async () => {
-    const state = checklistState({ morningDhikr: true, charity: true });
+  const rows = [
+    row("a", "কুরআন পড়ুন", true, "dhuhrToIftar"),
+    row("b", "তারাবি", false, "afterIftar"),
+    row("c", "সেহরি খান", false, "sehriToDhuhr"),
+    row("d", "ফজর", true, "sehriToDhuhr"),
+  ];
+
+  it("shows the first three /plan rows in window order, the /plan count and an 'all' link", async () => {
+    const state = planState(rows);
     await renderInRouter(<PlanPreview state={state} />);
     const section = screen.getByRole("region", { name: /আজকের পরিকল্পনা/ });
-    expect(within(section).getByRole("heading")).toHaveTextContent("আজকের পরিকল্পনা · ২/৬");
+    expect(within(section).getByRole("heading")).toHaveTextContent("আজকের পরিকল্পনা · ২/৪");
     const boxes = within(section).getAllByRole("checkbox");
-    expect(boxes.map((b) => b.textContent)).toEqual(["সকালের যিকর", "সন্ধ্যার যিকর", "৭০ বার ইস্তিগফার"]);
-    expect(boxes.map((b) => b.getAttribute("aria-checked"))).toEqual(["true", "false", "false"]);
+    expect(boxes.map((b) => b.textContent)).toEqual(["সেহরি খান", "ফজর", "কুরআন পড়ুন"]);
+    expect(boxes.map((b) => b.getAttribute("aria-checked"))).toEqual(["false", "true", "true"]);
     expect(within(section).getByRole("link", { name: "আজকের সব পরিকল্পনা দেখুন" })).toHaveAttribute("href", "/plan");
-    fireEvent.click(boxes[1]);
-    expect(state.toggle).toHaveBeenCalledWith("eveningDhikr");
+    fireEvent.click(boxes[0]);
+    expect(state.toggleRow).toHaveBeenCalledWith(rows[2], true);
   });
 
-  it("uses English labels in en", async () => {
-    await renderInRouter(<PlanPreview state={checklistState()} />, "en");
-    expect(screen.getByRole("heading")).toHaveTextContent("Today's plan · 0/6");
+  it("an empty plan shows ০/০ and a link to set it up, like /plan", async () => {
+    await renderInRouter(<PlanPreview state={planState()} />);
+    expect(screen.getByRole("heading")).toHaveTextContent("আজকের পরিকল্পনা · ০/০");
+    expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
+    expect(screen.getByTestId("plan-preview-empty")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "পরিকল্পনা সাজান" })).toHaveAttribute("href", "/plan");
+  });
+
+  it("shows no count before the list is known, and English labels in en", async () => {
+    await renderInRouter(<PlanPreview state={planState(rows, { ready: false })} />, "en");
+    expect(screen.getByRole("heading")).toHaveTextContent(/^Today's plan$/);
+    expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
   });
 });
 

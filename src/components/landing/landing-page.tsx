@@ -1,5 +1,6 @@
 import { useSyncExternalStore, type ComponentType } from "react";
-import { useTranslations } from "@/i18n/use-intl";
+import { useLocale, useTranslations } from "@/i18n/use-intl";
+import { formatLocalizedNumber } from "@/lib/locale-number";
 import { Link } from "@/components/shared/link";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -100,10 +101,20 @@ function SampleTimesCard() {
   );
 }
 
-export function LandingPage() {
+/**
+ * The copyright year: the server's year (from the route loader, so the hydrating render matches the HTML), then
+ * the device's year after mount.
+ */
+export function useFooterYear(serverYear: number): number {
+  return useSyncExternalStore(noSubscribe, () => new Date().getFullYear(), () => serverYear);
+}
+
+export function LandingPage({ serverYear = new Date().getFullYear() }: { serverYear?: number }) {
   const t = useTranslations("landing");
   const tCommon = useTranslations("common");
+  const locale = useLocale();
   const startHref = useStartHref();
+  const year = useFooterYear(serverYear);
 
   return (
     <div className="min-h-screen bg-rp-page">
@@ -226,7 +237,7 @@ export function LandingPage() {
             ))}
           </nav>
           <p className="rp-caption text-rp-muted">
-            &copy; {new Date().getFullYear()} {tCommon("appName")}
+            &copy; {formatLocalizedNumber(year, locale)} {tCommon("appName")}
           </p>
         </div>
       </footer>

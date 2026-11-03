@@ -7,7 +7,10 @@ import { Label } from "@/components/ui/label";
 import { SignupPrompt } from "@/components/shared/signup-prompt";
 import { CHECKLIST_ITEMS, useDailyChecklist, type DailyChecklistState } from "./use-daily-checklist";
 
-/** The full checklist card. Pass `state` to share it with the Home plan preview; otherwise it loads its own. */
+/**
+ * The daily dhikr and good-deeds checklist (a different list from today's plan on /plan). Pass `state` to share
+ * the parent's copy; otherwise it loads its own.
+ */
 export function DailyChecklist({ day, state }: { day: number; state?: DailyChecklistState }) {
   if (state) return <DailyChecklistCard state={state} />;
   return <OwnDailyChecklist day={day} />;
@@ -29,7 +32,7 @@ function DailyChecklistCard({ state }: { state: DailyChecklistState }) {
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base">{tToday("checklist")}</CardTitle>
+            <CardTitle className="text-base">{tToday("dhikrChecklist")}</CardTitle>
             <span className="text-xs text-muted-foreground">
               {completedCount}/{CHECKLIST_ITEMS.length}
             </span>

@@ -82,7 +82,12 @@
         "noAccount": "Don't have an account?",
         "hasAccount": "Already have an account?",
         "signupHere": "Sign up here",
-        "loginHere": "Login here"
+        "loginHere": "Login here",
+        "unavailableSignInTitle": "Sign-in is unavailable right now",
+        "unavailableSignUpTitle": "Sign-up is unavailable right now",
+        "unavailableBody": "The account service isn't loading. The app still works without an account: your plan and trackers are saved on this device.",
+        "unavailableContinue": "Continue without an account",
+        "unavailableRetry": "Try again"
     },
     "greetings": {
         "ramadanMubarak": "Ramadan Mubarak",
@@ -155,7 +160,8 @@
         "fallbackDuaBn": "O Allah, You are Most Forgiving and love forgiveness, so forgive me.",
         "fallbackDuaEn": "O Allah, You are Most Forgiving and love forgiveness, so forgive me.",
         "fallbackDayTaskBn": "Arrange iftar for one person today.",
-        "fallbackDayTaskEn": "Arrange iftar for one person today."
+        "fallbackDayTaskEn": "Arrange iftar for one person today.",
+        "dhikrChecklist": "Dhikr and good deeds checklist"
     },
     "salah": {
         "fajr": "Fajr",
@@ -678,7 +684,7 @@
         "empty": "No hadiths found.",
         "edition": "{edition} — #{no}",
         "dailyEdition": "Daily Hadith",
-        "loadError": "Primary hadith source failed to load. Showing fallback content.",
+        "loadError": "Hadith couldn't load right now.",
         "arabicLabel": "Arabic",
         "englishLabel": "English",
         "bengaliLabel": "Bengali",
@@ -708,7 +714,12 @@
         "resume": "Resume",
         "stopAudio": "Stop",
         "mute": "Mute",
-        "unmute": "Unmute"
+        "unmute": "Unmute",
+        "loadErrorTitle": "Hadith couldn't load right now",
+        "loadErrorBody": "We can't reach the hadith collection at the moment. Please try again in a little while; the rest of the app still works.",
+        "emptyTitle": "No hadith collections yet",
+        "emptyBody": "Collections will appear here once they are added.",
+        "tryAgain": "Try again"
     },
     "accessibility": {
         "title": "Accessibility",
@@ -798,7 +809,10 @@
         "sourceIslamicApi": "IslamicAPI",
         "sourceUnverified": "pending verification",
         "hijri": "{day} {month} {year}",
-        "tomorrow": "Tomorrow"
+        "tomorrow": "Tomorrow",
+        "planTitleNoCount": "Today's plan",
+        "planEmpty": "Nothing in today's plan yet.",
+        "planEmptyAction": "Set up today's plan"
     },
     "supportPage": {
         "metaTitle": "Sadaqah & contribute",
