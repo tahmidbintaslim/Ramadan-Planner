@@ -6,6 +6,7 @@ import {
     shouldShowSadaqah,
     timingsFromPrayerTimes,
     toBengaliDigits,
+    todayISOInZone,
     zonedTime,
     type PhaseTimings,
 } from "./prayer-phase";
@@ -54,6 +55,7 @@ describe("zonedTime / timingsFromPrayerTimes", () => {
                 { fajr: "x", dhuhr: "12:00", asr: "15:00", maghrib: "18:00", isha: "19:00" },
                 DATE,
                 TZ,
+                "05:14",
             ),
         ).toBeNull();
         expect(zonedTime("20-02-2027", "05:00", TZ)).toBeNull();
@@ -110,13 +112,10 @@ describe("getPrayerPhase", () => {
         expect(getPrayerPhase(at("00:00", "2027-02-21"), t).phase).toBe("night");
     });
 
-    it("falls back when sehriEnd / nextFajr are absent", () => {
-        const bare: PhaseTimings = { ...t, sehriEnd: undefined, nextFajr: undefined };
-        const early = getPrayerPhase(at("03:00"), bare);
-        expect(early.next).toEqual({ key: "fajr", at: t.fajr });
-        const late = getPrayerPhase(at("21:00"), bare);
-        expect(late.next.key).toBe("fajr");
-        expect(late.next.at.getTime()).toBe(t.fajr.getTime() + 24 * 3_600_000);
+    it("works without sehriEnd", () => {
+        const bare: PhaseTimings = { ...t, sehriEnd: undefined };
+        expect(getPrayerPhase(at("03:00"), bare).next).toEqual({ key: "fajr", at: t.fajr });
+        expect(getPrayerPhase(at("21:00"), bare).next.at).toEqual(t.nextFajr);
     });
 
     it("never returns negative remaining time", () => {
@@ -208,5 +207,51 @@ describe("formatRemaining", () => {
     ])("%d ms", (ms, bn, en) => {
         expect(formatRemainingBn(ms)).toBe(bn);
         expect(formatRemainingEn(ms)).toBe(en);
+    });
+});
+
+describe("todayISOInZone", () => {
+    it("differs between Dhaka and UTC near midnight", () => {
+        const now = new Date("2027-02-20T19:00:00Z"); // 01:00 on the 21st in Dhaka
+        expect(todayISOInZone(now, "Asia/Dhaka")).toBe("2027-02-21");
+        expect(todayISOInZone(now, "UTC")).toBe("2027-02-20");
+    });
+});
+
+describe("DST days (Europe/London)", () => {
+    const L = "Europe/London";
+    const pt = { fajr: "04:30", dhuhr: "12:00", asr: "15:30", maghrib: "18:00", isha: "19:30", sehri: "04:20" };
+    const H = 3_600_000;
+
+    it("spring forward 2027-03-28 is a 23h day", () => {
+        const d = "2027-03-28";
+        const tt = timingsFromPrayerTimes(pt, d, L, "04:25")!;
+        expect(tt.dayStart.toISOString()).toBe("2027-03-28T00:00:00.000Z");
+        expect(tt.dayEnd.toISOString()).toBe("2027-03-28T23:00:00.000Z");
+        expect(tt.dayEnd.getTime() - tt.dayStart.getTime()).toBe(23 * H);
+        const z = (h: string) => zonedTime(d, h, L)!;
+        expect(getPrayerPhase(z("03:00"), tt).phase).toBe("sehri");
+        expect(getPrayerPhase(z("12:00"), tt).phase).toBe("day");
+        expect(getPrayerPhase(z("17:30"), tt).phase).toBe("iftar");
+        const post = getPrayerPhase(z("20:00"), tt);
+        expect(post.phase).toBe("night");
+        expect(post.next).toEqual({ key: "fajr", at: zonedTime("2027-03-29", "04:25", L)! });
+        expect(post.remainingMs).toBe(post.next.at.getTime() - z("20:00").getTime());
+        expect(getPrayerPhase(tt.dayEnd, tt).progress).toBe(1);
+    });
+
+    it("fall back 2027-10-31 is a 25h day", () => {
+        const d = "2027-10-31";
+        const tt = timingsFromPrayerTimes(pt, d, L, "06:10")!;
+        expect(tt.dayStart.toISOString()).toBe("2027-10-30T23:00:00.000Z");
+        expect(tt.dayEnd.toISOString()).toBe("2027-11-01T00:00:00.000Z");
+        expect(tt.dayEnd.getTime() - tt.dayStart.getTime()).toBe(25 * H);
+        const z = (h: string) => zonedTime(d, h, L)!;
+        expect(getPrayerPhase(z("03:00"), tt).phase).toBe("sehri");
+        expect(getPrayerPhase(z("12:00"), tt).phase).toBe("day");
+        const post = getPrayerPhase(z("20:00"), tt);
+        expect(post.phase).toBe("night");
+        expect(post.next.at.toISOString()).toBe("2027-11-01T06:10:00.000Z");
+        expect(post.remainingMs).toBe(10 * H + 10 * 60_000);
     });
 });
