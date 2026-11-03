@@ -1,6 +1,7 @@
 import { cachedFetch } from "@/lib/ttl-cache";
 import type { PrayerTimes, TimingData } from "@/types/database";
 import { fetchIslamicApiPrayerTimes } from "./islamic-api";
+import { HIJRI_MONTHS_BN } from "./hijri-months";
 import { getHijriAdjustmentParams, getHijriOffsetForLocation, getCountryCodeForTimezone } from "./hijri-offsets";
 
 // AlAdhan API response types
@@ -45,21 +46,7 @@ interface AlAdhanResponse {
     };
 }
 
-// Hijri month names in Bengali
-const HIJRI_MONTHS_BN: Record<number, string> = {
-    1: "মুহাররম",
-    2: "সফর",
-    3: "রবিউল আউয়াল",
-    4: "রবিউস সানি",
-    5: "জমাদিউল আউয়াল",
-    6: "জমাদিউস সানি",
-    7: "রজব",
-    8: "শাবান",
-    9: "রমযান",
-    10: "শাওয়াল",
-    11: "জিলকদ",
-    12: "জিলহজ",
-};
+
 
 // ── Cache ──────────────────────────────────────────────
 // In-memory cache with 24-hour TTL keyed by "lat,lng,date"

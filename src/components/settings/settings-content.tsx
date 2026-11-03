@@ -404,11 +404,19 @@ export function SettingsContent() {
             </div>
           </div>
 
+          {isGuest ? (
+            <p id="calendar-signin-reason" className="rp-small rounded-rp-md bg-rp-accent-tint px-3 py-2 text-rp-ink">
+              {t("signInRequired")}{" "}
+              <Link href="/sign-in" className="font-semibold text-rp-accent underline-offset-4 hover:underline">
+                {tAuth("login")}
+              </Link>
+            </p>
+          ) : null}
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={generateIcsLink} disabled={isPending || isGuest}>
+            <Button variant="outline" onClick={generateIcsLink} disabled={isPending || isGuest} aria-describedby={isGuest ? "calendar-signin-reason" : undefined}>
               {t("generateIcs")}
             </Button>
-            <Button variant="destructive" onClick={revokeIcsLink} disabled={isPending || isGuest || !icsLink}>
+            <Button variant="destructive" onClick={revokeIcsLink} disabled={isPending || isGuest || !icsLink} aria-describedby={isGuest ? "calendar-signin-reason" : undefined}>
               {t("revokeIcs")}
             </Button>
           </div>
@@ -429,7 +437,15 @@ export function SettingsContent() {
               count: formatLocalizedNumber(pushCount, locale),
             })}
           </p>
-          <Button variant="outline" onClick={enablePush} disabled={isGuest}>
+          {isGuest ? (
+            <p id="push-signin-reason" className="rp-small rounded-rp-md bg-rp-accent-tint px-3 py-2 text-rp-ink">
+              {t("signInRequired")}{" "}
+              <Link href="/sign-in" className="font-semibold text-rp-accent underline-offset-4 hover:underline">
+                {tAuth("login")}
+              </Link>
+            </p>
+          ) : null}
+          <Button variant="outline" onClick={enablePush} disabled={isGuest} aria-describedby={isGuest ? "push-signin-reason" : undefined}>
             {t("enablePush")}
           </Button>
         </CardContent>

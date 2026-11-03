@@ -24,7 +24,7 @@ export function FloatingQuickNav({
   if (!isAuthPage) return null;
 
   return (
-    <div className="fixed left-1/2 bottom-5 z-50 flex flex-col gap-2 -translate-x-1/2">
+    <nav aria-label={tNav("quickNav")} className="fixed left-1/2 bottom-5 z-50 flex flex-col gap-2 -translate-x-1/2">
       <Button asChild size="sm" className="shadow-lg rounded-full">
         <Link href="/" aria-label={tNav("home")}>
           <Home className="h-4 w-4 mr-2" />
@@ -44,6 +44,6 @@ export function FloatingQuickNav({
           </Link>
         </Button>
       )}
-    </div>
+    </nav>
   );
 }

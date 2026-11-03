@@ -6,7 +6,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { CrescentIcon } from "@/components/icons/islamic-icons";
 
 /** How long the sign-in/sign-up form may take to appear before the fallback card replaces the wait. */
-export const CLERK_FALLBACK_MS = 6000;
+export const CLERK_FALLBACK_MS = 4000;
 
 /** Card shown when the account service is unavailable: the app keeps working without an account. */
 export function ClerkUnavailableCard({ mode }: { mode: "signIn" | "signUp" }) {

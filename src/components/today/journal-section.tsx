@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "@/i18n/use-intl";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useGuestData, getTodayKey } from "@/hooks/use-guest-data";
 import { SignupPrompt } from "@/components/shared/signup-prompt";
@@ -69,34 +69,34 @@ export function JournalSection({ day }: { day: number }) {
   return (
     <>
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">{t("journal")}</CardTitle>
+        <CardHeader>
+          <h3 className="rp-h2 text-rp-ink">{t("journal")}</h3>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="reflection" className="text-xs">
+            <Label htmlFor="reflection" className="rp-small text-rp-ink">
               {t("reflection")}
             </Label>
             <textarea
               id="reflection"
               rows={3}
-              placeholder={t("reflection")}
+              placeholder={t("reflectionPlaceholder")}
               value={data.reflection}
               onChange={(e) => updateField("reflection", e.target.value)}
-              className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
+              className="rp-body flex min-h-24 w-full resize-none rounded-rp-md border border-rp-input bg-rp-surface px-4 py-3 text-rp-ink placeholder:text-rp-muted focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="my-dua" className="text-xs">
+            <Label htmlFor="my-dua" className="rp-small text-rp-ink">
               {t("myDua")}
             </Label>
             <textarea
               id="my-dua"
               rows={3}
-              placeholder={t("myDua")}
+              placeholder={t("myDuaPlaceholder")}
               value={data.myDua}
               onChange={(e) => updateField("myDua", e.target.value)}
-              className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
+              className="rp-body flex min-h-24 w-full resize-none rounded-rp-md border border-rp-input bg-rp-surface px-4 py-3 text-rp-ink placeholder:text-rp-muted focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
             />
           </div>
         </CardContent>

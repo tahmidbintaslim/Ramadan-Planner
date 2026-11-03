@@ -1,9 +1,10 @@
 "use client";
 
-import { useTranslations } from "@/i18n/use-intl";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useLocale, useTranslations } from "@/i18n/use-intl";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { formatLocalizedNumber } from "@/lib/locale-number";
+import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import { SignupPrompt } from "@/components/shared/signup-prompt";
 import { CHECKLIST_ITEMS, useDailyChecklist, type DailyChecklistState } from "./use-daily-checklist";
 
@@ -24,36 +25,41 @@ function OwnDailyChecklist({ day }: { day: number }) {
 function DailyChecklistCard({ state }: { state: DailyChecklistState }) {
   const t = useTranslations("checklist");
   const tToday = useTranslations("today");
+  const locale = useLocale();
   const { checked, toggle, isPending, showPrompt, dismissPrompt } = state;
   const completedCount = CHECKLIST_ITEMS.filter((item) => checked[item]).length;
 
   return (
     <>
       <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base">{tToday("dhikrChecklist")}</CardTitle>
-            <span className="text-xs text-muted-foreground">
-              {completedCount}/{CHECKLIST_ITEMS.length}
+        <CardHeader>
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="rp-h2 text-rp-ink">{tToday("dhikrChecklist")}</h3>
+            <span className="rp-small rounded-rp-full bg-rp-accent-tint px-3 py-1 font-semibold tabular-nums text-rp-accent">
+              {formatLocalizedNumber(completedCount, locale)}/{formatLocalizedNumber(CHECKLIST_ITEMS.length, locale)}
             </span>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
+          <ul className="flex flex-col gap-2">
             {CHECKLIST_ITEMS.map((item) => (
-              <div key={item} className="flex items-center gap-3">
-                <Checkbox
-                  id={item}
-                  checked={checked[item] || false}
-                  onCheckedChange={() => toggle(item)}
-                  disabled={isPending}
-                />
-                <Label htmlFor={item} className="text-sm font-normal cursor-pointer">
-                  {t(item)}
-                </Label>
-              </div>
+              <li key={item}>
+                <label
+                  htmlFor={item}
+                  className="flex min-h-12 cursor-pointer items-center gap-3 rounded-rp-md bg-rp-page px-4 py-2 text-rp-ink has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring"
+                >
+                  <Checkbox
+                    id={item}
+                    checked={checked[item] || false}
+                    onCheckedChange={() => toggle(item)}
+                    disabled={isPending}
+                    className="size-5"
+                  />
+                  <span className={cn("rp-row", checked[item] && "text-rp-muted")}>{t(item)}</span>
+                </label>
+              </li>
             ))}
-          </div>
+          </ul>
         </CardContent>
       </Card>
       <SignupPrompt open={showPrompt} onClose={dismissPrompt} />

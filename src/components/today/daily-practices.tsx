@@ -8,7 +8,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { useLocale, useTranslations } from "@/i18n/use-intl";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { SalahTracker } from "@/components/today/salah-tracker";
 import { QuranTracker } from "@/components/today/quran-tracker";
@@ -370,11 +370,11 @@ export function DailyPractices({
 
           <div ref={ayahCardRef}>
             <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <BookOpen className="h-4 w-4 text-primary" />
+              <CardHeader>
+                <h3 className="rp-h2 flex items-center gap-2 text-rp-ink">
+                  <BookOpen className="size-5 text-rp-accent" aria-hidden="true" />
                   {t("ayah")}
-                </CardTitle>
+                </h3>
               </CardHeader>
               <CardContent className="space-y-3">
                 <p
@@ -388,7 +388,6 @@ export function DailyPractices({
                   <div className="flex items-center gap-2 flex-wrap">
                     {!isAyahPlaying && !isAyahPaused ? (
                       <Button
-                        size="sm"
                         onClick={() => {
                           void markAutoTracker("quranRead");
                           speakText("ayah", dayContent.ayah_ar);
@@ -399,13 +398,12 @@ export function DailyPractices({
                       </Button>
                     ) : isAyahPaused ? (
                       <>
-                        <Button size="sm" onClick={resumeRecitation}>
+                        <Button onClick={resumeRecitation}>
                           <Play className="h-4 w-4 mr-1.5" />
                           {tQuranReader("resume")}
                         </Button>
                         <Button
-                          size="sm"
-                          variant="destructive"
+                          variant="quiet"
                           onClick={stopRecitation}
                         >
                           <Square className="h-4 w-4 mr-1.5" />
@@ -415,7 +413,6 @@ export function DailyPractices({
                     ) : (
                       <>
                         <Button
-                          size="sm"
                           variant="outline"
                           onClick={pauseRecitation}
                         >
@@ -423,8 +420,7 @@ export function DailyPractices({
                           {tQuranReader("pause")}
                         </Button>
                         <Button
-                          size="sm"
-                          variant="destructive"
+                          variant="quiet"
                           onClick={stopRecitation}
                         >
                           <Square className="h-4 w-4 mr-1.5" />
@@ -434,7 +430,6 @@ export function DailyPractices({
                     )}
 
                     <Button
-                      size="sm"
                       variant="outline"
                       onClick={toggleRecitationMute}
                     >
@@ -449,12 +444,12 @@ export function DailyPractices({
                     </Button>
                   </div>
                 )}
-                <p className="text-sm leading-relaxed">
+                <p className="rp-body text-rp-ink">
                   {showEnglish
                     ? dayContent.ayah_en || dayContent.ayah_bn
                     : dayContent.ayah_bn}
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="rp-caption text-rp-muted">
                   {dayContent.ayah_ref}
                 </p>
               </CardContent>
@@ -463,19 +458,19 @@ export function DailyPractices({
 
           <div ref={hadithCardRef}>
             <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Scroll className="h-4 w-4 text-primary" />
+              <CardHeader>
+                <h3 className="rp-h2 flex items-center gap-2 text-rp-ink">
+                  <Scroll className="size-5 text-rp-accent" aria-hidden="true" />
                   {t("hadith")}
-                </CardTitle>
+                </h3>
               </CardHeader>
               <CardContent className="space-y-2">
-                <p className="text-sm leading-relaxed">
+                <p className="rp-body text-rp-ink">
                   {showEnglish
                     ? dayContent.hadith_en || dayContent.hadith_bn
                     : dayContent.hadith_bn}
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="rp-caption text-rp-muted">
                   {dayContent.hadith_ref}
                 </p>
               </CardContent>
@@ -483,12 +478,12 @@ export function DailyPractices({
           </div>
 
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <PenLine className="h-4 w-4 text-primary" />
-                {t("dua")}
-              </CardTitle>
-            </CardHeader>
+            <CardHeader>
+                <h3 className="rp-h2 flex items-center gap-2 text-rp-ink">
+                  <PenLine className="size-5 text-rp-accent" aria-hidden="true" />
+                  {t("dua")}
+                </h3>
+              </CardHeader>
             <CardContent className="space-y-3">
               <p
                 className="text-right text-lg leading-loose font-arabic"
@@ -501,7 +496,6 @@ export function DailyPractices({
                 <div className="flex items-center gap-2 flex-wrap">
                   {!isDuaPlaying && !isDuaPaused ? (
                     <Button
-                      size="sm"
                       onClick={() => speakText("dua", dayContent.dua_ar)}
                     >
                       <Play className="h-4 w-4 mr-1.5" />
@@ -509,13 +503,12 @@ export function DailyPractices({
                     </Button>
                   ) : isDuaPaused ? (
                     <>
-                      <Button size="sm" onClick={resumeRecitation}>
+                      <Button onClick={resumeRecitation}>
                         <Play className="h-4 w-4 mr-1.5" />
                         {tQuranReader("resume")}
                       </Button>
                       <Button
-                        size="sm"
-                        variant="destructive"
+                        variant="quiet"
                         onClick={stopRecitation}
                       >
                         <Square className="h-4 w-4 mr-1.5" />
@@ -525,7 +518,6 @@ export function DailyPractices({
                   ) : (
                     <>
                       <Button
-                        size="sm"
                         variant="outline"
                         onClick={pauseRecitation}
                       >
@@ -533,8 +525,7 @@ export function DailyPractices({
                         {tQuranReader("pause")}
                       </Button>
                       <Button
-                        size="sm"
-                        variant="destructive"
+                        variant="quiet"
                         onClick={stopRecitation}
                       >
                         <Square className="h-4 w-4 mr-1.5" />
@@ -544,7 +535,6 @@ export function DailyPractices({
                   )}
 
                   <Button
-                    size="sm"
                     variant="outline"
                     onClick={toggleRecitationMute}
                   >
@@ -559,7 +549,7 @@ export function DailyPractices({
                   </Button>
                 </div>
               )}
-              <p className="text-sm leading-relaxed">
+              <p className="rp-body text-rp-ink">
                 {showEnglish
                   ? dayContent.dua_en || dayContent.dua_bn
                   : dayContent.dua_bn}
@@ -568,10 +558,10 @@ export function DailyPractices({
           </Card>
 
           {(showEnglish ? dayContent.day_task_en : dayContent.day_task_bn) && (
-            <Card className="border-primary/30 bg-accent/50">
-              <CardContent className="py-4">
-                <p className="text-sm font-medium text-primary">
-                  🎯 {t("dayTask")}:{" "}
+            <Card className="bg-rp-accent-tint">
+              <CardContent>
+                <p className="rp-row text-rp-ink">
+                  <span className="text-rp-accent">{t("dayTask")}:</span>{" "}
                   {showEnglish
                     ? dayContent.day_task_en || dayContent.day_task_bn
                     : dayContent.day_task_bn}

@@ -164,6 +164,8 @@ export function TimetableScreen() {
                 {t(d.id)}
               </Chip>
             ))}
+            {/* End gutter: a flex scroll container ignores its end padding. */}
+            <span aria-hidden="true" className="w-2 shrink-0" />
           </div>
 
           <Card className="gap-0 overflow-hidden rounded-rp-lg py-0 print:rounded-none print:shadow-none">

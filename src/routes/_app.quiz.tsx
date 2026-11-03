@@ -8,7 +8,6 @@ export const Route = createFileRoute("/_app/quiz")({
     <ComingSoonPage
       titleKey="quiz"
       descKey="featureQuizDesc"
-      note="Coming soon: daily quizzes, score tracking, and detailed explanations."
     />
   ),
 });

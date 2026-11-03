@@ -6,9 +6,9 @@ export function AuthPage({ children }: { children: ReactNode }) {
   return (
     <>
       {/* pb-24 keeps the end of a tall form scrollable above the floating accessibility button. */}
-      <div className="min-h-screen flex items-center justify-center bg-background px-4 pt-10 pb-24">
+      <main id="main-content" className="min-h-screen flex items-center justify-center bg-background px-4 pt-10 pb-24">
         <div className="w-full max-w-md">{children}</div>
-      </div>
+      </main>
       <FloatingQuickNav />
     </>
   );

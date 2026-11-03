@@ -20,7 +20,7 @@
         "language": "Language",
         "switchLanguage": "Switch language",
         "mobileMenu": "Mobile menu",
-        "metaTitle": "Ramadan Planner",
+        "metaTitle": "{appName}",
         "metaDescription": "Plan your Ramadan journey, track daily ibadah, and get accurate prayer times.",
         "metaOgDescription": "Track daily ibadah, stay on time for salah, and strengthen your Ramadan routine.",
         "unknown": "unknown",
@@ -64,7 +64,8 @@
         "more": "More",
         "moreDescription": "Other sections, language and sign-in",
         "mainNav": "Main navigation",
-        "support": "Support"
+        "support": "Support",
+        "quickNav": "Quick navigation"
     },
     "auth": {
         "login": "Login",
@@ -161,7 +162,9 @@
         "fallbackDuaEn": "O Allah, You are Most Forgiving and love forgiveness, so forgive me.",
         "fallbackDayTaskBn": "Arrange iftar for one person today.",
         "fallbackDayTaskEn": "Arrange iftar for one person today.",
-        "dhikrChecklist": "Dhikr and good deeds checklist"
+        "dhikrChecklist": "Dhikr and good deeds checklist",
+        "reflectionPlaceholder": "Write what you learned or felt today",
+        "myDuaPlaceholder": "The duas you want to make today"
     },
     "salah": {
         "fajr": "Fajr",
@@ -330,7 +333,13 @@
         "calendar": "Calendar",
         "chooseChannel": "Choose at least one channel",
         "guestLocalNotice": "Guest mode: your reminder rules are saved locally for the last 7 days on this device.",
-        "genericError": "Something went wrong. Please try again."
+        "genericError": "Something went wrong. Please try again.",
+        "typeLabel": "Remind me about",
+        "labelPlaceholder": "e.g. Wake up before Fajr",
+        "offsetLabel": "How long before or after",
+        "minutesUnit": "minutes",
+        "offsetHint": "A negative value means before: {example} = {minutes} minutes before.",
+        "channelsLabel": "How to remind you"
     },
     "settings": {
         "title": "Settings",
@@ -360,7 +369,7 @@
         "connectGoogle": "Connect Google",
         "syncGoogle": "Sync Now",
         "disconnectGoogle": "Disconnect Google",
-        "googleConnectedHint": "Google Calendar is connected. Sync events to your Ramadan Planner calendar.",
+        "googleConnectedHint": "Google Calendar is connected. Sync events to your {appName} calendar.",
         "googleDisconnectedHint": "Connect Google Calendar to sync your reminder rules as events.",
         "googleConnectRequired": "Connect Google Calendar first.",
         "googleConnected": "Google Calendar connected",
@@ -386,7 +395,8 @@
         "announcementStart": "Start at",
         "announcementEnd": "End at",
         "announcementRequired": "Please fill required announcement fields.",
-        "genericError": "Something went wrong. Please try again."
+        "genericError": "Something went wrong. Please try again.",
+        "signInRequired": "These features are saved to your account, so they need you to sign in."
     },
     "announcements": {
         "title": "Announcements"
@@ -435,7 +445,7 @@
         "worldwide": "Worldwide",
         "whyTitle": "Built for Consistent Ramadan",
         "whyDesc": "Everything in one place: daily tracker, prayer times, Quran reader, reminders, and calendar sync.",
-        "benefitsTitle": "Experience the Benefits of Ramadan Planner",
+        "benefitsTitle": "Experience the Benefits of {appName}",
         "benefitPrivacyTitle": "Privacy first",
         "benefitPrivacyDesc": "Deen is committed to protecting your privacy and keeping your personal information secure.",
         "benefitNoAdsTitle": "No Ads",
@@ -602,7 +612,8 @@
         "restartAuto": "Restart auto",
         "todayTracking": "Today tracking",
         "totalIncrements": "Total increments",
-        "cyclesCompleted": "Cycles completed"
+        "cyclesCompleted": "Cycles completed",
+        "targetTitle": "Target"
     },
     "zakat": {
         "fieldCash": "Cash & Savings",
@@ -816,7 +827,7 @@
     },
     "supportPage": {
         "metaTitle": "Sadaqah & contribute",
-        "metaDescription": "Every Ramadan Planner feature is free. Server, notification and translation costs are covered by your sadaqah; you can also give your time.",
+        "metaDescription": "Every {appName} feature is free. Server, notification and translation costs are covered by your sadaqah; you can also give your time.",
         "title": "Sadaqah & contribute",
         "introTitle": "Keep this good deed going",
         "introText": "No feature is locked. Server, notification and translation costs are covered by your sadaqah.",
@@ -877,7 +888,7 @@
         "mosqueSubject": "Mosque & institution partnership",
         "shareFamily": "Share with family",
         "shareFamilyDesc": "Share the app with family and friends",
-        "shareText": "Ramadan Planner: prayer and iftar times, Quran and deeds in one place. Every feature is free.",
+        "shareText": "{appName}: prayer and iftar times, Quran and deeds in one place. Every feature is free.",
         "linkCopied": "Link copied",
         "shareError": "Could not share",
         "opensNewTab": "opens in a new tab"
@@ -904,5 +915,12 @@
         "geoUnavailable": "Couldn't get your location right now. Pick your district below.",
         "switchLanguage": "বাংলায় দেখুন",
         "ambiguous": "Several districts match. Pick one from the list."
+    },
+    "comingSoon": {
+        "label": "Coming soon:",
+        "duas": "curated duas from Quran and Sunnah with shareable cards.",
+        "books": "curated books, categories, and reading progress.",
+        "quiz": "daily quizzes, score tracking, and detailed explanations.",
+        "backToToday": "Go to Today"
     }
 }

@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useTranslations } from "@/i18n/use-intl";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { useLocale, useTranslations } from "@/i18n/use-intl";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Input, fieldClass } from "@/components/ui/input";
+import { localizeAsciiDigits, toAsciiDigits } from "@/lib/locale-number";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -30,6 +31,7 @@ const LAST_READ_KEY = "rp_quran_last_read_v1";
 export function QuranTracker({ day }: { day: number }) {
   const t = useTranslations("quran");
   const tToday = useTranslations("today");
+  const locale = useLocale();
   const { isGuest, loading } = useAuth();
 
   const { data: guestData, updateData, showPrompt, dismissPrompt } =
@@ -156,7 +158,9 @@ export function QuranTracker({ day }: { day: number }) {
     ? Math.max(0, Math.min(100, Math.round((paraNumber / 30) * 100)))
     : 0;
 
-  const sanitizeNumeric = (value: string) => value.replace(/[^\d]/g, "");
+  // Either digit set is accepted; the stored value is ASCII digits.
+  const sanitizeNumeric = (value: string) => toAsciiDigits(value).replace(/[^0-9]/g, "");
+  const num = (v: number | string) => localizeAsciiDigits(String(v), locale);
 
   const updateField = (field: keyof QuranData, value: string) => {
     const nextValue =
@@ -219,19 +223,19 @@ export function QuranTracker({ day }: { day: number }) {
   };
 
   const activeSummary = data.surah.trim().length > 0
-    ? `${t("surah")} ${data.surah}${data.ayah ? ` • ${t("ayah")} ${data.ayah}` : ""}`
+    ? `${t("surah")} ${data.surah}${data.ayah ? ` • ${t("ayah")} ${localizeAsciiDigits(data.ayah, locale)}` : ""}`
     : data.para
-      ? `${t("para")} ${data.para}`
+      ? `${t("para")} ${localizeAsciiDigits(data.para, locale)}`
       : t("activeSessionEmpty");
 
   return (
     <>
       <Card>
-        <CardHeader className="pb-3 space-y-3">
+        <CardHeader className="gap-3">
           <div className="flex items-center justify-between gap-2">
-            <CardTitle className="text-base">{tToday("quranTracker")}</CardTitle>
+            <h3 className="rp-h2 text-rp-ink">{tToday("quranTracker")}</h3>
             {!isGuest && (
-              <Badge variant="outline">
+              <Badge variant="outline" aria-live="polite">
                 {saveState === "saving"
                   ? t("saveStatusSaving")
                   : saveState === "saved"
@@ -240,31 +244,31 @@ export function QuranTracker({ day }: { day: number }) {
               </Badge>
             )}
           </div>
-          <div className="space-y-2 rounded-lg border border-border/70 bg-background/60 p-3">
-            <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+          <div className="space-y-2 rounded-rp-md bg-rp-page p-4">
+            <div className="rp-caption flex items-center justify-between gap-2 text-rp-muted">
               <span>{t("activeSessionTitle")}</span>
-              {pagesNumber > 0 ? <span>{t("page")} {pagesNumber}</span> : null}
+              {pagesNumber > 0 ? <span>{t("page")} {num(pagesNumber)}</span> : null}
             </div>
-            <p className="text-sm font-medium">{activeSummary}</p>
+            <p className="rp-row text-rp-ink">{activeSummary}</p>
             <div className="space-y-1.5">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <div className="rp-caption flex items-center justify-between text-rp-muted">
                 <span>{t("progress")}</span>
-                <span>{paraProgress}%</span>
+                <span>{num(paraProgress)}%</span>
               </div>
               <Progress value={paraProgress} aria-label={t("progress")} />
             </div>
           </div>
           {lastRead ? (
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-dashed border-border/80 bg-background/40 p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-rp-md border border-dashed border-rp-rule p-4">
               <div className="space-y-0.5">
-                <p className="text-xs text-muted-foreground">{t("lastReadTitle")}</p>
-                <p className="text-sm">
+                <p className="rp-caption text-rp-muted">{t("lastReadTitle")}</p>
+                <p className="rp-small text-rp-ink">
                   {lastRead.surah
-                    ? `${t("surah")} ${lastRead.surah}${lastRead.ayah ? ` • ${t("ayah")} ${lastRead.ayah}` : ""}`
-                    : `${t("para")} ${lastRead.para || "-"}`}
+                    ? `${t("surah")} ${lastRead.surah}${lastRead.ayah ? ` • ${t("ayah")} ${num(lastRead.ayah)}` : ""}`
+                    : `${t("para")} ${lastRead.para ? num(lastRead.para) : "-"}`}
                 </p>
               </div>
-              <Button size="sm" variant="outline" onClick={applyLastRead}>
+              <Button variant="soft" onClick={applyLastRead}>
                 {t("continueFromLast")}
               </Button>
             </div>
@@ -273,33 +277,30 @@ export function QuranTracker({ day }: { day: number }) {
         <CardContent>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="para" className="text-xs">
+              <Label htmlFor="para" className="rp-small text-rp-ink">
                 {t("para")}
               </Label>
               <Input
                 id="para"
-                type="number"
-                min="1"
-                max="30"
-                placeholder="1-30"
-                value={data.para}
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder={`${num(1)}-${num(30)}`}
+                value={num(data.para)}
                 onChange={(e) => updateField("para", e.target.value)}
-                className="h-9"
+                className={fieldClass}
               />
               <div className="flex gap-2">
                 <Button
                   type="button"
-                  size="sm"
-                  variant="outline"
-                  className="h-8 px-2.5 text-xs"
+                  variant="soft"
                   onClick={() => incrementNumberField("para", 1)}
                 >
-                  +1 {t("para")}
+                  +{num(1)} {t("para")}
                 </Button>
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="surah" className="text-xs">
+              <Label htmlFor="surah" className="rp-small text-rp-ink">
                 {t("surah")}
               </Label>
               <Input
@@ -307,62 +308,58 @@ export function QuranTracker({ day }: { day: number }) {
                 placeholder={t("surah")}
                 value={data.surah}
                 onChange={(e) => updateField("surah", e.target.value)}
-                className="h-9"
+                className={fieldClass}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ayah" className="text-xs">
+              <Label htmlFor="ayah" className="rp-small text-rp-ink">
                 {t("ayah")}
               </Label>
               <Input
                 id="ayah"
-                type="number"
-                min="1"
-                placeholder="1"
-                value={data.ayah}
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder={num(1)}
+                value={num(data.ayah)}
                 onChange={(e) => updateField("ayah", e.target.value)}
-                className="h-9"
+                className={fieldClass}
               />
               <div className="flex gap-2">
                 <Button
                   type="button"
-                  size="sm"
-                  variant="outline"
-                  className="h-8 px-2.5 text-xs"
+                  variant="soft"
                   onClick={() => incrementNumberField("ayah", 1)}
                 >
-                  +1 {t("ayah")}
+                  +{num(1)} {t("ayah")}
                 </Button>
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="pages" className="text-xs">
+              <Label htmlFor="pages" className="rp-small text-rp-ink">
                 {t("page")}
               </Label>
               <Input
                 id="pages"
-                type="number"
-                min="0"
-                placeholder="0"
-                value={data.pages}
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder={num(0)}
+                value={num(data.pages)}
                 onChange={(e) => updateField("pages", e.target.value)}
-                className="h-9"
+                className={fieldClass}
               />
               <div className="flex gap-2">
                 <Button
                   type="button"
-                  size="sm"
-                  variant="outline"
-                  className="h-8 px-2.5 text-xs"
+                  variant="soft"
                   onClick={() => incrementNumberField("pages", 1)}
                 >
-                  +1 {t("page")}
+                  +{num(1)} {t("page")}
                 </Button>
               </div>
             </div>
           </div>
           <div className="mt-4 flex justify-end">
-            <Button type="button" size="sm" variant="ghost" onClick={clearToday}>
+            <Button type="button" variant="quiet" onClick={clearToday}>
               {t("clearToday")}
             </Button>
           </div>

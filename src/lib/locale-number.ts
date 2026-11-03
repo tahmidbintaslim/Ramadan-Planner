@@ -40,3 +40,21 @@ export function localizeAsciiDigits(input: string, locale: string): string {
     });
   });
 }
+
+const BENGALI_ZERO = 0x09e6;
+
+/** Bengali digits (০-৯) to ASCII digits; everything else unchanged. Inputs accept both digit sets. */
+export function toAsciiDigits(input: string): string {
+  return input.replace(/[০-৯]/g, (d) => String(d.charCodeAt(0) - BENGALI_ZERO));
+}
+
+/**
+ * A number typed in either digit set ("৮৫০০০", "85000", "১২.৫", "-১৫", "85,000"). Grouping commas and spaces are
+ * ignored. Returns null when the text is not a number.
+ */
+export function parseLocalizedNumber(input: string): number | null {
+  const clean = toAsciiDigits(input).replace(/[,\s]/g, "").replace(/^[−–]/, "-");
+  if (!/^-?(\d+\.?\d*|\.\d+)$/.test(clean)) return null;
+  const n = Number(clean);
+  return Number.isFinite(n) ? n : null;
+}

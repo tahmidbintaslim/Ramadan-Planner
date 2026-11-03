@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { useTranslations } from "@/i18n/use-intl";
-import { Bell } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useLocale, useTranslations } from "@/i18n/use-intl";
+import { BellIcon } from "@/components/icons/islamic-icons";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
+import { Input, fieldClass } from "@/components/ui/input";
+import { formatLocalizedNumber, parseLocalizedNumber } from "@/lib/locale-number";
+import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useGuestReminderRules } from "@/lib/guest-reminders";
@@ -35,6 +37,7 @@ export function RemindersContent() {
   const t = useTranslations("reminders");
   const tCommon = useTranslations("common");
   const tSalah = useTranslations("salah");
+  const locale = useLocale();
   const { isGuest, loading } = useAuth();
 
   const [serverRules, setServerRules] = useState<ReminderRuleDTO[]>([]);
@@ -44,7 +47,9 @@ export function RemindersContent() {
   } = useGuestReminderRules();
   const [newType, setNewType] = useState<ReminderRuleDTO["type"]>("fajr");
   const [newLabel, setNewLabel] = useState("");
-  const [newOffset, setNewOffset] = useState("-15");
+  const [newOffset, setNewOffset] = useState(() => formatLocalizedNumber(-15, locale));
+  // Offsets as typed in the rule list (so "-" or "" can be typed); the rule keeps the parsed number.
+  const [offsetDrafts, setOffsetDrafts] = useState<Record<string, string>>({});
   const [newPush, setNewPush] = useState(true);
   const [newCalendar, setNewCalendar] = useState(false);
 
@@ -91,7 +96,9 @@ export function RemindersContent() {
       return;
     }
 
-    const offset = Number.parseInt(newOffset, 10);
+    // Either digit set ("-১৫" or "-15").
+    const parsedOffset = parseLocalizedNumber(newOffset);
+    const offset = parsedOffset === null ? Number.NaN : Math.trunc(parsedOffset);
 
     if (isGuest) {
       const next: ReminderRuleDTO = {
@@ -104,7 +111,7 @@ export function RemindersContent() {
       };
       setAllRules((prev) => [...prev, next]);
       setNewLabel("");
-      setNewOffset("-15");
+      setNewOffset(formatLocalizedNumber(-15, locale));
       setNewPush(true);
       setNewCalendar(false);
       notifyTrackerUpdate();
@@ -128,7 +135,7 @@ export function RemindersContent() {
 
       setServerRules((prev) => [...prev, res.data]);
       setNewLabel("");
-      setNewOffset("-15");
+      setNewOffset(formatLocalizedNumber(-15, locale));
       setNewPush(true);
       setNewCalendar(false);
       notifyTrackerUpdate();
@@ -208,232 +215,189 @@ export function RemindersContent() {
     return type;
   };
 
-  return (
-    <>
-      <div className="space-y-6">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
-        </div>
+  const num = (n: number) => formatLocalizedNumber(n, locale);
+  const selectClass = cn(fieldClass, "w-full appearance-auto");
 
-        {!loading && isGuest && (
-          <p className="text-sm text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
-            {t("guestLocalNotice")}
-          </p>
-        )}
+  const channelToggle = (id: string, label: string, checked: boolean, onChange: (checked: boolean) => void) => (
+    <label
+      htmlFor={id}
+      className="flex min-h-12 cursor-pointer items-center gap-3 rounded-rp-md border border-rp-rule bg-rp-surface px-4 text-rp-ink has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring"
+    >
+      <Checkbox id={id} checked={checked} onCheckedChange={(c) => onChange(Boolean(c))} className="size-5" />
+      <span className="rp-row">{label}</span>
+    </label>
+  );
 
-        {error && (
-          <p className="text-sm text-destructive bg-destructive/10 rounded-md px-3 py-2">
-            {error}
-          </p>
-        )}
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Bell className="h-4 w-4 text-primary" />
-              {t("addReminder")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="grid gap-2 md:grid-cols-4">
-              <select
-                aria-label={t("prayer")}
-                value={newType}
-                onChange={(e) => setNewType(e.target.value as ReminderRuleDTO["type"])}
-                className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-              >
-                {REMINDER_TYPES.map((type) => (
-                  <option key={type} value={type}>
-                    {typeLabel(type)}
-                  </option>
-                ))}
-              </select>
-
-              <Input
-                value={newLabel}
-                onChange={(e) => setNewLabel(e.target.value)}
-                placeholder={t("label")}
-              />
-
-              <Input
-                type="number"
-                value={newOffset}
-                onChange={(e) => setNewOffset(e.target.value)}
-                placeholder={t("offsetMinutes")}
-              />
-
-              <Button onClick={addRule} disabled={isPending}>
-                {t("addReminder")}
-              </Button>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="new-reminder-push"
-                  checked={newPush}
-                  onCheckedChange={(checked) => setNewPush(Boolean(checked))}
-                />
-                <Label htmlFor="new-reminder-push">{t("push")}</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="new-reminder-calendar"
-                  checked={newCalendar}
-                  onCheckedChange={(checked) => setNewCalendar(Boolean(checked))}
-                />
-                <Label htmlFor="new-reminder-calendar">{t("calendar")}</Label>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">{t("rules")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {rules.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t("noRules")}</p>
-            ) : (
-              <div className="space-y-3">
-                {rules.map((rule) => (
-                  <div key={rule.id} className="rounded-lg border p-3 space-y-3">
-                    <div className="grid gap-2 md:grid-cols-4">
-                      <select
-                        aria-label={t("prayer")}
-                        value={rule.type}
-                        onChange={(e) => {
-                          const type = e.target
-                            .value as ReminderRuleDTO["type"];
-                          setAllRules((prev) =>
-                            prev.map((item) =>
-                              item.id === rule.id ? { ...item, type } : item,
-                            ),
-                          );
-                        }}
-                        className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                      >
-                        {REMINDER_TYPES.map((type) => (
-                          <option key={type} value={type}>
-                            {typeLabel(type)}
-                          </option>
-                        ))}
-                      </select>
-
-                      <Input
-                        value={rule.label}
-                        onChange={(e) => {
-                          const label = e.target.value;
-                          setAllRules((prev) =>
-                            prev.map((item) =>
-                              item.id === rule.id ? { ...item, label } : item,
-                            ),
-                          );
-                        }}
-                        placeholder={t("label")}
-                      />
-
-                      <Input
-                        type="number"
-                        value={String(rule.offsetMinutes)}
-                        onChange={(e) => {
-                          const offsetMinutes = Number.parseInt(e.target.value, 10) || 0;
-                          setAllRules((prev) =>
-                            prev.map((item) =>
-                              item.id === rule.id
-                                ? { ...item, offsetMinutes }
-                                : item,
-                            ),
-                          );
-                        }}
-                        placeholder={t("offsetMinutes")}
-                      />
-
-                      <div className="flex items-center gap-2">
-                        <Checkbox
-                          id={`rule-${rule.id}-enabled`}
-                          checked={rule.enabled}
-                          onCheckedChange={(checked) => {
-                            setAllRules((prev) =>
-                              prev.map((item) =>
-                                item.id === rule.id
-                                  ? { ...item, enabled: Boolean(checked) }
-                                  : item,
-                              ),
-                            );
-                          }}
-                        />
-                        <Label htmlFor={`rule-${rule.id}-enabled`}>{t("enabled")}</Label>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-2">
-                        <Checkbox
-                          id={`rule-${rule.id}-push`}
-                          checked={rule.channels.includes("push")}
-                          onCheckedChange={(checked) => {
-                            setAllRules((prev) =>
-                              prev.map((item) => {
-                                if (item.id !== rule.id) return item;
-                                const next = new Set(item.channels);
-                                if (checked) next.add("push");
-                                else next.delete("push");
-                                return { ...item, channels: Array.from(next) };
-                              }),
-                            );
-                          }}
-                        />
-                        <Label htmlFor={`rule-${rule.id}-push`}>{t("push")}</Label>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <Checkbox
-                          id={`rule-${rule.id}-calendar`}
-                          checked={rule.channels.includes("calendar")}
-                          onCheckedChange={(checked) => {
-                            setAllRules((prev) =>
-                              prev.map((item) => {
-                                if (item.id !== rule.id) return item;
-                                const next = new Set(item.channels);
-                                if (checked) next.add("calendar");
-                                else next.delete("calendar");
-                                return { ...item, channels: Array.from(next) };
-                              }),
-                            );
-                          }}
-                        />
-                        <Label htmlFor={`rule-${rule.id}-calendar`}>{t("calendar")}</Label>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => saveRule(rule)}
-                        disabled={isPending}
-                      >
-                        {tCommon("save")}
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => removeRule(rule.id)}
-                        disabled={isPending}
-                      >
-                        {tCommon("delete")}
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+  const offsetField = (id: string, value: string, onChange: (v: string) => void) => (
+    <div className="space-y-1.5">
+      <Label htmlFor={id} className="rp-small text-rp-ink">
+        {t("offsetLabel")}
+      </Label>
+      <div className="relative">
+        <Input
+          id={id}
+          inputMode="numeric"
+          autoComplete="off"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          aria-describedby={`${id}-hint`}
+          className={cn(fieldClass, "pe-20")}
+        />
+        <span aria-hidden="true" className="rp-small pointer-events-none absolute inset-y-0 end-4 flex items-center text-rp-muted">
+          {t("minutesUnit")}
+        </span>
       </div>
+      <p id={`${id}-hint`} className="rp-caption text-rp-muted">
+        {t("offsetHint", { example: num(-15), minutes: num(15) })}
+      </p>
+    </div>
+  );
 
-    </>
+  return (
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
+      <h1 className="rp-h1 text-rp-ink">{t("title")}</h1>
+
+      {!loading && isGuest && (
+        <p className="rp-small rounded-rp-md bg-rp-accent-tint px-4 py-3 text-rp-ink">{t("guestLocalNotice")}</p>
+      )}
+
+      {error && (
+        <p role="alert" className="rp-small rounded-rp-md bg-destructive/10 px-4 py-3 text-destructive">
+          {error}
+        </p>
+      )}
+
+      <Card className="px-5" data-testid="reminder-form">
+        <h2 className="rp-h2 flex items-center gap-2 text-rp-ink">
+          <BellIcon size={24} className="text-rp-accent" />
+          {t("addReminder")}
+        </h2>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="new-reminder-type" className="rp-small text-rp-ink">
+              {t("typeLabel")}
+            </Label>
+            <select
+              id="new-reminder-type"
+              value={newType}
+              onChange={(e) => setNewType(e.target.value as ReminderRuleDTO["type"])}
+              className={selectClass}
+            >
+              {REMINDER_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {typeLabel(type)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="new-reminder-label" className="rp-small text-rp-ink">
+              {t("label")}
+            </Label>
+            <Input
+              id="new-reminder-label"
+              value={newLabel}
+              onChange={(e) => setNewLabel(e.target.value)}
+              placeholder={t("labelPlaceholder")}
+              className={fieldClass}
+            />
+          </div>
+          {offsetField("new-reminder-offset", newOffset, setNewOffset)}
+        </div>
+        <fieldset className="space-y-2">
+          <legend className="rp-small mb-1.5 text-rp-ink">{t("channelsLabel")}</legend>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {channelToggle("new-reminder-push", t("push"), newPush, setNewPush)}
+            {channelToggle("new-reminder-calendar", t("calendar"), newCalendar, setNewCalendar)}
+          </div>
+        </fieldset>
+        <Button onClick={addRule} disabled={isPending} className="w-full sm:w-auto sm:self-start">
+          {t("addReminder")}
+        </Button>
+      </Card>
+
+      <Card className="px-5">
+        <h2 className="rp-h2 text-rp-ink">{t("rules")}</h2>
+        {rules.length === 0 ? (
+          <p className="rp-small text-rp-muted">{t("noRules")}</p>
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {rules.map((rule) => (
+              <li key={rule.id} className="space-y-4 rounded-rp-md border border-rp-rule p-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor={`rule-${rule.id}-type`} className="rp-small text-rp-ink">
+                      {t("typeLabel")}
+                    </Label>
+                    <select
+                      id={`rule-${rule.id}-type`}
+                      value={rule.type}
+                      onChange={(e) => {
+                        const type = e.target.value as ReminderRuleDTO["type"];
+                        setAllRules((prev) => prev.map((item) => (item.id === rule.id ? { ...item, type } : item)));
+                      }}
+                      className={selectClass}
+                    >
+                      {REMINDER_TYPES.map((type) => (
+                        <option key={type} value={type}>
+                          {typeLabel(type)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor={`rule-${rule.id}-label`} className="rp-small text-rp-ink">
+                      {t("label")}
+                    </Label>
+                    <Input
+                      id={`rule-${rule.id}-label`}
+                      value={rule.label}
+                      onChange={(e) => {
+                        const label = e.target.value;
+                        setAllRules((prev) => prev.map((item) => (item.id === rule.id ? { ...item, label } : item)));
+                      }}
+                      placeholder={t("labelPlaceholder")}
+                      className={fieldClass}
+                    />
+                  </div>
+                  {offsetField(`rule-${rule.id}-offset`, offsetDrafts[rule.id] ?? num(rule.offsetMinutes), (value) => {
+                    setOffsetDrafts((prev) => ({ ...prev, [rule.id]: value }));
+                    const parsed = parseLocalizedNumber(value);
+                    const offsetMinutes = parsed === null ? 0 : Math.trunc(parsed);
+                    setAllRules((prev) => prev.map((item) => (item.id === rule.id ? { ...item, offsetMinutes } : item)));
+                  })}
+                </div>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {channelToggle(`rule-${rule.id}-enabled`, t("enabled"), rule.enabled, (checked) =>
+                    setAllRules((prev) => prev.map((item) => (item.id === rule.id ? { ...item, enabled: checked } : item))),
+                  )}
+                  {(["push", "calendar"] as const).map((channel) =>
+                    channelToggle(`rule-${rule.id}-${channel}`, t(channel), rule.channels.includes(channel), (checked) =>
+                      setAllRules((prev) =>
+                        prev.map((item) => {
+                          if (item.id !== rule.id) return item;
+                          const next = new Set(item.channels);
+                          if (checked) next.add(channel);
+                          else next.delete(channel);
+                          return { ...item, channels: Array.from(next) };
+                        }),
+                      ),
+                    ),
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="soft" onClick={() => saveRule(rule)} disabled={isPending}>
+                    {tCommon("save")}
+                  </Button>
+                  <Button variant="quiet" className="text-destructive" onClick={() => removeRule(rule.id)} disabled={isPending}>
+                    {tCommon("delete")}
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+    </div>
   );
 }

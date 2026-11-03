@@ -1,5 +1,6 @@
 import { createTranslator, type AbstractIntlMessages } from "use-intl/core";
 import { getUserLocale, parseLocale, type Locale } from "@/lib/locale";
+import { withBrand } from "./brand";
 
 export { LOCALES, DEFAULT_LOCALE, parseLocale, type Locale } from "@/lib/locale";
 
@@ -8,7 +9,8 @@ export const getLocaleFromRequest = (): Promise<Locale> => getUserLocale();
 
 export async function loadMessages(locale: Locale): Promise<AbstractIntlMessages> {
     // parseLocale guards the dynamic path against unexpected values.
-    return (await import(`../messages/${parseLocale(locale)}.json`)).default;
+    // Brand mentions in other messages are filled from common.appName (see brand.ts).
+    return withBrand((await import(`../messages/${parseLocale(locale)}.json`)).default);
 }
 
 export async function getTranslator(locale: Locale, namespace?: string) {

@@ -20,6 +20,7 @@ import type {
 } from "@/lib/ramadan-timetable";
 import { getRamadanDayOrdinal } from "@/lib/ramadan-ordinal";
 import { localizeAsciiDigits } from "@/lib/locale-number";
+import { formatClock, type Locale } from "@/components/timetable/timetable-logic";
 import { storedRequestLocation } from "@/lib/user-location";
 
 interface RamadanTimetableProps {
@@ -203,7 +204,7 @@ export function RamadanTimetable({ compact = false }: RamadanTimetableProps) {
                     <TableCell className="text-center font-medium">
                       {dayOrdinal}
                       {isToday && (
-                        <span className="ml-1 text-[10px] text-primary font-bold align-super">
+                        <span className="ml-1 text-[12px] text-rp-accent font-bold align-super">
                           {t("timetableToday")}
                         </span>
                       )}
@@ -214,15 +215,15 @@ export function RamadanTimetable({ compact = false }: RamadanTimetableProps) {
                       </TableCell>
                     )}
                     <TableCell className="text-center tabular-nums">
-                      {localizeAsciiDigits(day.sehri, locale)}
+                      {formatClock(day.sehri, locale as Locale)}
                     </TableCell>
                     {!compact && (
                       <TableCell className="text-center tabular-nums text-muted-foreground">
-                        {localizeAsciiDigits(day.fajr, locale)}
+                        {formatClock(day.fajr, locale as Locale)}
                       </TableCell>
                     )}
                     <TableCell className="text-center tabular-nums">
-                      {localizeAsciiDigits(day.iftar, locale)}
+                      {formatClock(day.iftar, locale as Locale)}
                     </TableCell>
                   </TableRow>
                 );
