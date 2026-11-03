@@ -39,7 +39,16 @@ export function needsCsrfCheck(ctx: { request: Request; handlerType: string }): 
 const csrfMiddleware = createCsrfMiddleware({ filter: needsCsrfCheck });
 
 export const startInstance = createStart(() => ({
-  requestMiddleware: [csrfMiddleware, clerkMiddleware()],
+  requestMiddleware: [
+    csrfMiddleware,
+    // Falls back to the Next.js-era env name so deployments that have not renamed it keep working.
+    clerkMiddleware({
+      publishableKey:
+        process.env.CLERK_PUBLISHABLE_KEY ||
+        process.env.VITE_CLERK_PUBLISHABLE_KEY ||
+        process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+    }),
+  ],
   // Runs around every server function (outermost): masks unexpected error text, see error-mask-middleware.ts.
   functionMiddleware: [errorMaskMiddleware],
 }));
