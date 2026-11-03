@@ -40,6 +40,16 @@ const RING_R = (RING_SIZE - RING_STROKE) / 2;
 const RING_C = 2 * Math.PI * RING_R;
 const ANNOUNCE_EVERY_MS = 60_000;
 
+/**
+ * Contrast backdrops (gradients stay as designed). The day and iftar skies get light towards the
+ * bottom (#4FBFA5 / #D9B46C), where white text falls below 4.5:1, so the ring text sits on a faint
+ * ink disc and the source line on an ink pill. Values are checked in prayer-hero.contrast.test.ts.
+ */
+export const HERO_SCRIM_RGB = [8, 26, 30] as const;
+export const HERO_RING_SCRIM_ALPHA = 0.35;
+export const HERO_SOURCE_PILL_ALPHA = 0.5;
+const scrim = (alpha: number) => `rgba(${HERO_SCRIM_RGB.join(", ")}, ${alpha})`;
+
 type Translate = ReturnType<typeof useTranslations>;
 
 /** The hero label for a phase result (see the Figma spec, "Labels per phase"). */
@@ -161,6 +171,13 @@ export function PrayerHero({
             className="-rotate-90"
           >
             <circle
+              data-testid="hero-ring-scrim"
+              cx={RING_SIZE / 2}
+              cy={RING_SIZE / 2}
+              r={RING_R - RING_STROKE / 2}
+              fill={scrim(HERO_RING_SCRIM_ALPHA)}
+            />
+            <circle
               cx={RING_SIZE / 2}
               cy={RING_SIZE / 2}
               r={RING_R}
@@ -203,7 +220,15 @@ export function PrayerHero({
         </div>
       </div>
 
-      <p className="rp-caption text-center text-white/70">{sourceLine}</p>
+      <p className="text-center">
+        <span
+          data-testid="hero-source"
+          className="rp-caption inline-block rounded-rp-full px-3 py-1 text-white/90"
+          style={{ backgroundColor: scrim(HERO_SOURCE_PILL_ALPHA) }}
+        >
+          {sourceLine}
+        </span>
+      </p>
       <p aria-live="polite" aria-atomic="true" className="sr-only" data-testid="hero-live">
         {announced.text}
       </p>
