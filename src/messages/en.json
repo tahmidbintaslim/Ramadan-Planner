@@ -590,5 +590,21 @@
         "dark": "Dark",
         "system": "System",
         "auto": "Auto"
+    },
+    "prayer": {
+        "heroLabel": "Prayer time and countdown",
+        "sehriEnds": "Sehri ends",
+        "iftar": "Iftar",
+        "next": "Next",
+        "nextPrayer": "Next · {name}",
+        "location": "Location: {district}",
+        "source": "Source: {source}",
+        "sampleSource": "Sample times · Source: {source}",
+        "liveRemaining": "{label} {time}, {remaining}",
+        "todayPrayers": "Today's prayers",
+        "reminders": "Reminders",
+        "reminderToggle": "{name} reminder",
+        "reminderManage": "Set a {name} reminder",
+        "progress": "Time progress"
     }
 }

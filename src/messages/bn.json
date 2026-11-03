@@ -590,5 +590,21 @@
         "dark": "ডার্ক",
         "system": "সিস্টেম",
         "auto": "অটো"
+    },
+    "prayer": {
+        "heroLabel": "নামাজের সময় ও কাউন্টডাউন",
+        "sehriEnds": "সেহরি শেষ",
+        "iftar": "ইফতার",
+        "next": "পরবর্তী",
+        "nextPrayer": "পরবর্তী · {name}",
+        "location": "অবস্থান: {district}",
+        "source": "উৎস: {source}",
+        "sampleSource": "নমুনা সময় · উৎস: {source}",
+        "liveRemaining": "{label} {time}, {remaining}",
+        "todayPrayers": "আজকের নামাজ",
+        "reminders": "রিমাইন্ডার",
+        "reminderToggle": "{name} রিমাইন্ডার",
+        "reminderManage": "{name} রিমাইন্ডার সেট করুন",
+        "progress": "সময়ের অগ্রগতি"
     }
 }
