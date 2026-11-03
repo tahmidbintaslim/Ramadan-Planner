@@ -605,6 +605,8 @@
         "reminders": "রিমাইন্ডার",
         "reminderToggle": "{name} রিমাইন্ডার",
         "reminderManage": "{name} রিমাইন্ডার সেট করুন",
-        "progress": "সময়ের অগ্রগতি"
+        "progress": "সময়ের অগ্রগতি",
+        "sehri": "সেহরি",
+        "progressText": "{target} পর্যন্ত {percent}% সময় পেরিয়েছে"
     }
 }

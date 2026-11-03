@@ -605,6 +605,8 @@
         "reminders": "Reminders",
         "reminderToggle": "{name} reminder",
         "reminderManage": "Set a {name} reminder",
-        "progress": "Time progress"
+        "progress": "Time progress",
+        "sehri": "Sehri",
+        "progressText": "{percent}% of the time until {target} has passed"
     }
 }

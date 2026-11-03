@@ -2,7 +2,9 @@
 import "@testing-library/jest-dom/vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { PrayerHero, type PrayerHeroProps } from "./prayer-hero";
+import { renderToString } from "react-dom/server";
+import { hydrateRoot } from "react-dom/client";
+import { PrayerHero, nextAnnouncement, type PrayerHeroProps } from "./prayer-hero";
 import { PRAYER_TICK_MS } from "./use-prayer-phase";
 import { TIMINGS, TZ, WithIntl, at } from "./test-utils";
 
@@ -122,20 +124,35 @@ describe("PrayerHero ring", () => {
 });
 
 describe("PrayerHero live clock", () => {
-  it("ticks every 30 s but announces at most once a minute", () => {
+  it("ticks every 30 s and announces in the tick that enters a new minute", () => {
     vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
-    vi.setSystemTime(at("13:00:45"));
+    vi.setSystemTime(at("13:00:15"));
     renderHero();
     const live = screen.getByTestId("hero-live");
     expect(live.getAttribute("aria-live")).toBe("polite");
     expect(live).toHaveTextContent("আর ৩ ঘণ্টা ২৫ মিনিট");
 
-    act(() => vi.advanceTimersByTime(PRAYER_TICK_MS)); // 13:01:15
-    expect(hero()).toHaveTextContent("আর ৩ ঘণ্টা ২৪ মিনিট");
+    act(() => vi.advanceTimersByTime(PRAYER_TICK_MS)); // 13:00:45, same minute, same text
     expect(live).toHaveTextContent("আর ৩ ঘণ্টা ২৫ মিনিট");
 
-    act(() => vi.advanceTimersByTime(PRAYER_TICK_MS)); // 13:01:45
+    // Jittered tick just into the next minute: announced now, not one tick later.
+    act(() => vi.advanceTimersByTime(PRAYER_TICK_MS + 50)); // 13:01:15.05
+    expect(hero()).toHaveTextContent("আর ৩ ঘণ্টা ২৪ মিনিট");
     expect(live).toHaveTextContent("আর ৩ ঘণ্টা ২৪ মিনিট");
+  });
+
+  it("switching from a frozen to a live clock shows the current time at once", () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
+    vi.setSystemTime(at("17:35:00"));
+    const { rerender } = renderHero({ now: at("13:00") });
+    expect(hero().dataset.phase).toBe("day");
+    rerender(
+      <WithIntl>
+        <PrayerHero timings={TIMINGS} timeZone={TZ} district="ঢাকা" source="IFB" />
+      </WithIntl>,
+    );
+    expect(hero().dataset.phase).toBe("iftar");
+    expect(vi.getTimerCount()).toBe(1);
   });
 
   it("pauses while the document is hidden and clears its timer on unmount", () => {
@@ -164,5 +181,68 @@ describe("PrayerHero live clock", () => {
     unmount();
     expect(vi.getTimerCount()).toBe(0);
     spy.mockRestore();
+  });
+});
+
+describe("nextAnnouncement (live-region gate)", () => {
+  const minute = (d: Date) => Math.floor(d.getTime() / 60_000);
+  const prev = { text: "a", minute: minute(at("13:00:59")) };
+  it("holds a changed text within the same clock minute", () => {
+    expect(nextAnnouncement(prev, "b", at("13:00:59").getTime() + 900)).toBe(prev);
+  });
+  it("announces a changed text as soon as a new minute starts, even < 60 s later", () => {
+    expect(nextAnnouncement(prev, "b", at("13:01:00").getTime() + 100)).toEqual({
+      text: "b",
+      minute: minute(at("13:01")),
+    });
+  });
+  it("keeps an unchanged text", () => {
+    expect(nextAnnouncement(prev, "a", at("13:05").getTime())).toBe(prev);
+  });
+});
+
+describe("PrayerHero a11y labels", () => {
+  it("progressbar has a spoken value and the location pill a labelled prefix", () => {
+    renderHero({ now: at("17:35") }); // 30 of the 60 iftar minutes
+    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuetext", "ইফতার পর্যন্ত ৫০% সময় পেরিয়েছে");
+    expect(screen.getByText("অবস্থান: ঢাকা")).toHaveClass("sr-only");
+    cleanup();
+    renderHero({ now: at("13:00"), district: "Dhaka" }, "en");
+    expect(screen.getByRole("progressbar").getAttribute("aria-valuetext")).toMatch(
+      /^\d+% of the time until Asr has passed$/,
+    );
+    expect(screen.getByText("Location: Dhaka")).toBeInTheDocument();
+  });
+});
+
+describe("PrayerHero hydration", () => {
+  it("hydrates without a mismatch across a phase boundary when given initialNow", async () => {
+    const tree = (
+      <WithIntl>
+        <PrayerHero timings={TIMINGS} timeZone={TZ} district="ঢাকা" source="IFB" initialNow={at("17:04:30")} />
+      </WithIntl>
+    );
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
+    vi.setSystemTime(at("17:04:30"));
+    const html = renderToString(tree); // server: day phase, just before the iftar window
+    expect(html).toContain('data-phase="day"');
+
+    vi.setSystemTime(at("17:06:00")); // the client hydrates after the boundary
+    const container = document.createElement("div");
+    container.innerHTML = html;
+    document.body.appendChild(container);
+    const errors: unknown[] = [];
+    const consoleError = vi.spyOn(console, "error").mockImplementation((...args) => {
+      errors.push(args);
+    });
+    let root: ReturnType<typeof hydrateRoot> | undefined;
+    await act(async () => {
+      root = hydrateRoot(container, tree, { onRecoverableError: (e) => errors.push(e) });
+    });
+    expect(errors).toEqual([]);
+    expect(container.querySelector("section")?.dataset.phase).toBe("iftar"); // live clock took over
+    act(() => root?.unmount());
+    container.remove();
+    consoleError.mockRestore();
   });
 });

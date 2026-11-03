@@ -62,6 +62,8 @@ export interface PrayerListProps {
   onToggleReminder?: (prayer: FivePrayer, enabled: boolean) => void;
   /** Freeze the clock (tests, previews). */
   now?: Date;
+  /** Server render time for hydration-safe first render (see PrayerHero). */
+  initialNow?: Date;
   className?: string;
 }
 
@@ -71,12 +73,13 @@ export function PrayerList({
   reminders,
   onToggleReminder,
   now: nowOverride,
+  initialNow,
   className,
 }: PrayerListProps) {
   const t = useTranslations("prayer");
   const tSalah = useTranslations("salah");
   const locale = useLocale();
-  const now = useNowTick(nowOverride);
+  const now = useNowTick(nowOverride, initialNow);
   const states = prayerRowStates(now, timings);
 
   return (

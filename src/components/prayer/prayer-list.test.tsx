@@ -136,4 +136,13 @@ describe("SehriIftarPair", () => {
     expect(screen.getByTestId("pair-sehri")).toHaveTextContent("4:45");
     expect(screen.getByTestId("pair-iftar")).toHaveTextContent("6:05");
   });
+
+  it("ignores a sehri end at or after fajr (engine guard)", () => {
+    render(
+      <WithIntl>
+        <SehriIftarPair timings={{ ...TIMINGS, sehriEnd: at("05:10") }} timeZone={TZ} />
+      </WithIntl>,
+    );
+    expect(screen.getByTestId("pair-sehri")).toHaveTextContent("৪:৫৫");
+  });
 });

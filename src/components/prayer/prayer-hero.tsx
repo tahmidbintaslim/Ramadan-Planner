@@ -3,9 +3,9 @@ import { useLocale, useTranslations } from "@/i18n/use-intl";
 import { GirihPattern } from "@/components/design/girih-pattern";
 import { MihrabArch } from "@/components/design/mihrab-arch";
 import { CrescentIcon, PinIcon } from "@/components/icons/islamic-icons";
-import type { PhaseTimings, PrayerPhase, PrayerPhaseResult } from "@/lib/prayer-phase";
+import { toBengaliDigits, type PhaseTimings, type PrayerPhase, type PrayerPhaseResult } from "@/lib/prayer-phase";
 import { cn } from "@/lib/utils";
-import { formatPrayerClock, formatRemaining, usePrayerPhase } from "./use-prayer-phase";
+import { formatPrayerClock, formatRemaining, isBnLocale, usePrayerPhase } from "./use-prayer-phase";
 
 export interface PrayerHeroProps {
   /** Today's timings (with tomorrow's fajr), from `timingsFromPrayerTimes`. */
@@ -24,6 +24,12 @@ export interface PrayerHeroProps {
   ramadan?: boolean;
   /** Freeze the clock (tests, previews). */
   now?: Date;
+  /**
+   * The server's render time (e.g. from the route loader). The server render and the hydrating
+   * client render both use it, so phase and minute boundaries cannot cause a hydration mismatch;
+   * the live clock takes over right after hydration.
+   */
+  initialNow?: Date;
   className?: string;
 }
 
@@ -38,7 +44,23 @@ const RING_SIZE = 196;
 const RING_STROKE = 6;
 const RING_R = (RING_SIZE - RING_STROKE) / 2;
 const RING_C = 2 * Math.PI * RING_R;
-const ANNOUNCE_EVERY_MS = 60_000;
+const MINUTE_MS = 60_000;
+
+export interface Announcement {
+  text: string;
+  /** Minute bucket (epoch ms / 60 000, floored) of the last announcement. */
+  minute: number;
+}
+
+/**
+ * Live-region gate: a changed text is announced only in a new clock minute, so screen readers hear
+ * at most one update per minute. Comparing buckets (not elapsed ms) keeps interval jitter from
+ * pushing an announcement to the following tick.
+ */
+export function nextAnnouncement(prev: Announcement, text: string, nowMs: number): Announcement {
+  const minute = Math.floor(nowMs / MINUTE_MS);
+  return text !== prev.text && minute !== prev.minute ? { text, minute } : prev;
+}
 
 /**
  * Contrast backdrops (gradients stay as designed). The day and iftar skies get light towards the
@@ -79,6 +101,13 @@ export function heroLabel(
   }
 }
 
+/** What the ring counts towards, for the progressbar's aria-valuetext ("ইফতার পর্যন্ত …"). */
+function heroTarget(label: string, result: PrayerPhaseResult, t: Translate, tSalah: Translate): string {
+  if (label === t("sehriEnds")) return t("sehri");
+  if (result.phase === "iftar") return t("iftar");
+  return tSalah(result.next.key === "sehri" ? "fajr" : result.next.key);
+}
+
 function Stars() {
   return (
     <svg
@@ -105,12 +134,13 @@ export function PrayerHero({
   sample = false,
   ramadan = false,
   now: nowOverride,
+  initialNow,
   className,
 }: PrayerHeroProps) {
   const t = useTranslations("prayer");
   const tSalah = useTranslations("salah");
   const locale = useLocale();
-  const { now, phase: result } = usePrayerPhase(timings, timeZone, { now: nowOverride });
+  const { now, phase: result } = usePrayerPhase(timings, timeZone, { now: nowOverride, initialNow });
 
   // usePrayerPhase only returns null without timings; timings is required here.
   const r = result as PrayerPhaseResult;
@@ -119,15 +149,22 @@ export function PrayerHero({
   const remaining = formatRemaining(r.remainingMs, locale);
   const progress = Math.min(1, Math.max(0, r.progress));
   const nightSky = r.phase === "sehri" || r.phase === "night";
+  const percent = String(Math.round(progress * 100));
+  const progressText = t("progressText", {
+    target: heroTarget(label, r, t, tSalah),
+    percent: isBnLocale(locale) ? toBengaliDigits(percent) : percent,
+  });
   const sourceLine = sample ? t("sampleSource", { source }) : t("source", { source });
 
   // Screen readers hear the countdown at most once a minute (the clock ticks every 30 s).
   const liveText = t("liveRemaining", { label, time, remaining });
   // State adjusted during render (no effect): React re-renders once with the new announcement.
-  const [announced, setAnnounced] = useState(() => ({ text: liveText, at: now.getTime() }));
-  if (liveText !== announced.text && now.getTime() - announced.at >= ANNOUNCE_EVERY_MS) {
-    setAnnounced({ text: liveText, at: now.getTime() });
-  }
+  const [announced, setAnnounced] = useState<Announcement>(() => ({
+    text: liveText,
+    minute: Math.floor(now.getTime() / MINUTE_MS),
+  }));
+  const nextAnnounced = nextAnnouncement(announced, liveText, now.getTime());
+  if (nextAnnounced !== announced) setAnnounced(nextAnnounced);
 
   return (
     <section
@@ -155,7 +192,10 @@ export function PrayerHero({
       <div className="flex items-center justify-between gap-3">
         <span className="rp-caption inline-flex min-w-0 items-center gap-1.5 rounded-rp-full bg-white/14 px-3 py-1.5">
           <PinIcon size={16} />
-          <span className="truncate">{district}</span>
+          <span className="sr-only">{t("location", { district })}</span>
+          <span aria-hidden="true" className="truncate">
+            {district}
+          </span>
         </span>
         {hijriLabel ? <span className="rp-caption shrink-0 text-white/85">{hijriLabel}</span> : null}
       </div>
@@ -215,6 +255,7 @@ export function PrayerHero({
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={Math.round(progress * 100)}
+            aria-valuetext={progressText}
             className="sr-only"
           />
         </div>
