@@ -135,7 +135,7 @@ export function SupportPage({ config = SUPPORT_CONFIG }: { config?: SupportConfi
             <li key={key} className="flex min-h-14 items-center justify-between gap-3 px-4">
               <span className="rp-row text-rp-ink">{t(`cost.${key}`)}</span>
               <span className="rp-row shrink-0 tabular-nums text-rp-muted" data-testid={`cost-${key}`}>
-                {config.costs[key] ?? t("costPlaceholder")}
+                {config.costs[key] ?? t("costPending")}
               </span>
             </li>
           ))}

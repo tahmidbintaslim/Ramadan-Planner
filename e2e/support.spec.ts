@@ -66,7 +66,7 @@ test.describe("Support page (mobile)", () => {
     await expect(page.getByRole("heading", { level: 1, name: "সাদাকা ও অংশগ্রহণ" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "এই আমল চলমান থাকুক" })).toBeVisible();
     await expect(page.getByText("রমজান ২০২৭-এর খরচ")).toBeVisible();
-    await expect(page.getByTestId("cost-server")).toHaveText("[৳ পরিমাণ]");
+    await expect(page.getByTestId("cost-server")).toHaveText("শীঘ্রই প্রকাশ করা হবে");
 
     const wallet = page.getByTestId("wallet-button");
     await expect(wallet).toBeDisabled();

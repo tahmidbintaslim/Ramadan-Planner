@@ -30,7 +30,7 @@ import {
 } from "lucide-react";
 import type { SurahDetail, QuranAyah, ReciterInfo } from "@/lib/quran";
 import { cn } from "@/lib/utils";
-import { readLastRead, writeLastRead } from "@/lib/quran-last-read";
+import { writeLastRead } from "@/lib/quran-last-read";
 import { formatLocalizedNumber } from "@/lib/locale-number";
 
 interface QuranReaderProps {
@@ -138,13 +138,35 @@ export function QuranReader({ surahNumber }: QuranReaderProps) {
     }
   }, []);
 
-  // Remember where the reader is, on this device only: the surah on open (keeping the saved ayah when it is the
-  // same surah), then the ayah being recited. The Quran list's "last read" card reads this.
+  // Remember where the reader is, on this device only, and only on real progress: the ayah being recited, or the
+  // furthest-down ayah in view once the reader has scrolled. Merely opening a surah never overwrites the saved
+  // position. The Quran list's "last read" card reads this.
   const surahLoaded = surah !== null;
   useEffect(() => {
-    if (!surahLoaded) return;
-    const saved = readLastRead();
-    writeLastRead({ surah: surahNumber, ayah: saved?.surah === surahNumber ? saved.ayah : 1 });
+    if (!surahLoaded || typeof IntersectionObserver === "undefined") return;
+    let scrolled = false;
+    const onScroll = () => {
+      scrolled = true;
+    };
+    window.addEventListener("scroll", onScroll, { passive: true, once: true });
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!scrolled) return;
+        let best = 0;
+        for (const e of entries) {
+          if (!e.isIntersecting) continue;
+          const n = Number(e.target.id.replace("ayah-", ""));
+          if (Number.isInteger(n) && n > best) best = n;
+        }
+        if (best > 0) writeLastRead({ surah: surahNumber, ayah: best });
+      },
+      { threshold: 0.6 },
+    );
+    document.querySelectorAll('[id^="ayah-"]').forEach((el) => observer.observe(el));
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      observer.disconnect();
+    };
   }, [surahLoaded, surahNumber]);
   useEffect(() => {
     if (audioAyah !== null) writeLastRead({ surah: surahNumber, ayah: audioAyah });

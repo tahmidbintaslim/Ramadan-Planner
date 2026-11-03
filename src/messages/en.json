@@ -774,7 +774,7 @@
             "push": "Push notifications",
             "translation": "Translation & scholar review"
         },
-        "costPlaceholder": "[৳ amount]",
+        "costPending": "To be published",
         "receipts": "A receipt for every transaction",
         "giveTitle": "Give sadaqah",
         "amountLabel": "Amount",

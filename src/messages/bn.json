@@ -774,7 +774,7 @@
             "push": "পুশ নোটিফিকেশন",
             "translation": "অনুবাদ ও আলেম পর্যালোচনা"
         },
-        "costPlaceholder": "[৳ পরিমাণ]",
+        "costPending": "শীঘ্রই প্রকাশ করা হবে",
         "receipts": "প্রতিটি লেনদেনের রসিদ",
         "giveTitle": "সাদাকা দিন",
         "amountLabel": "পরিমাণ",

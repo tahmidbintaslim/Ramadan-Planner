@@ -113,6 +113,14 @@ describe("Last read card", () => {
     expect(link.getAttribute("href")).toContain("ayah-255");
   });
 
+  it("clamps a stale ayah to the surah length", async () => {
+    writeLastRead({ surah: 1, ayah: 200 });
+    await renderList();
+    const card = await screen.findByTestId("last-read-card");
+    expect(card).toHaveTextContent("আয়াত ৭");
+    expect(within(card).getByRole("link", { name: /পড়া চালিয়ে যান/ }).getAttribute("href")).toContain("ayah-7");
+  });
+
   it("falls back to the surah number when its name is not loaded", async () => {
     writeLastRead({ surah: 67, ayah: 1 });
     await renderList();

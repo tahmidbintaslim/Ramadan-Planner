@@ -83,6 +83,14 @@ describe("Card", () => {
 })
 
 describe("Chip", () => {
+  it("keeps the 40px look but extends the hit area 4px each side (48px target)", () => {
+    render(createElement(Chip, null, "Fajr"))
+    const cls = screen.getByRole("button", { name: "Fajr" }).className
+    expect(cls).toContain("h-10")
+    expect(cls).toContain("relative")
+    expect(cls).toContain("before:absolute")
+    expect(cls).toContain("before:-inset-1")
+  })
   it("is a type=button with aria-pressed reflecting selected", () => {
     function Harness() {
       const [on, setOn] = useState(false)

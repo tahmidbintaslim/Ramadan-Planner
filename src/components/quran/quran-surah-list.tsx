@@ -124,8 +124,10 @@ const FALLBACK_SURAHS: SurahInfo[] = [
 // source yet, so those tabs are shown disabled with "শীঘ্রই" (soon) instead of pretending to work.
 const TABS = ["surah", "para", "page", "bookmark"] as const;
 
-function LastReadCard({ surah, lastRead }: { surah: SurahInfo | undefined; lastRead: LastRead }) {
+function LastReadCard({ surah, lastRead: saved }: { surah: SurahInfo | undefined; lastRead: LastRead }) {
   const t = useTranslations("quranReader");
+  // Never point past the end of the surah (stale or hand-edited storage).
+  const lastRead: LastRead = surah ? { ...saved, ayah: Math.max(1, Math.min(saved.ayah, surah.totalAyah)) } : saved;
   const locale = useLocale();
   const name = surah
     ? locale.startsWith("bn")
@@ -154,7 +156,7 @@ function LastReadCard({ surah, lastRead }: { surah: SurahInfo | undefined; lastR
       </div>
       <Link
         href={lastReadHref(lastRead)}
-        className="relative mt-4 inline-flex min-h-12 items-center gap-2 rounded-rp-full bg-white/18 px-5 text-[14px] font-semibold text-white outline-none transition-colors hover:bg-white/25 focus-visible:ring-[3px] focus-visible:ring-white"
+        className="relative mt-4 inline-flex min-h-12 items-center gap-2 rounded-rp-full bg-black/25 px-5 text-[14px] font-semibold text-white outline-none transition-colors hover:bg-black/35 focus-visible:ring-[3px] focus-visible:ring-white"
       >
         {t("continueReading")}
         <span aria-hidden="true">→</span>

@@ -37,7 +37,7 @@ describe("SupportPage, nothing configured", () => {
   it("shows placeholders in the ledger and hides the receipts link", () => {
     setup();
     for (const k of ["server", "push", "translation"]) {
-      expect(screen.getByTestId(`cost-${k}`)).toHaveTextContent("[৳ পরিমাণ]");
+      expect(screen.getByTestId(`cost-${k}`)).toHaveTextContent("শীঘ্রই প্রকাশ করা হবে");
     }
     expect(screen.queryByTestId("ledger-link")).toBeNull();
   });
@@ -142,7 +142,7 @@ describe("SupportPage, configured", () => {
   it("shows configured costs and the mosque mailto", () => {
     setup({ costs: { server: "৳১২,০০০", push: "৳৩,০০০", translation: null }, contactEmail: "hello@example.org" });
     expect(screen.getByTestId("cost-server")).toHaveTextContent("৳১২,০০০");
-    expect(screen.getByTestId("cost-translation")).toHaveTextContent("[৳ পরিমাণ]");
+    expect(screen.getByTestId("cost-translation")).toHaveTextContent("শীঘ্রই প্রকাশ করা হবে");
     expect(screen.getByTestId("mosque-link").getAttribute("href")).toMatch(/^mailto:hello@example\.org\?subject=/);
   });
 
