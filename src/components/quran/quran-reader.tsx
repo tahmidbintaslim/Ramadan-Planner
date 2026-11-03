@@ -358,13 +358,13 @@ export function QuranReader({ surahNumber }: QuranReaderProps) {
   return (
     <div className="space-y-6 max-w-3xl mx-auto pb-32 lg:pb-0">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-center gap-2">
-        <Button variant="ghost" size="icon" asChild>
-          <Link href="/quran">
-            <ArrowLeft className="h-5 w-5" />
+      <div className="flex flex-col items-center gap-2">
+        <Button variant="ghost" size="icon" asChild className="self-start">
+          <Link href="/quran" aria-label={t("allSurahs")}>
+            <ArrowLeft className="h-5 w-5" aria-hidden="true" />
           </Link>
         </Button>
-        <div className="flex-1 text-center min-w-0 w-full sm:w-auto">
+        <div className="text-center min-w-0 w-full">
           <h1 className="text-2xl font-bold">
             {showBengaliName
               ? (surah.nameBengali || surah.nameEnglish)
@@ -640,7 +640,7 @@ export function QuranReader({ surahNumber }: QuranReaderProps) {
                 {ayah.textEnglish && (
                   <>
                     <Separator />
-                    <p className="text-xs text-muted-foreground/70 leading-relaxed italic">
+                    <p lang="en" className="rp-small text-rp-muted">
                       {ayah.textEnglish}
                     </p>
                   </>

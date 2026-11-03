@@ -251,7 +251,7 @@ export function QuranTracker({ day }: { day: number }) {
                 <span>{t("progress")}</span>
                 <span>{paraProgress}%</span>
               </div>
-              <Progress value={paraProgress} />
+              <Progress value={paraProgress} aria-label={t("progress")} />
             </div>
           </div>
           {lastRead ? (

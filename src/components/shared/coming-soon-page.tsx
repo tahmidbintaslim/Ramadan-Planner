@@ -1,5 +1,5 @@
 import { useTranslations } from "@/i18n/use-intl";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 // Shared body of the placeholder pages (/duas, /books, /quiz): nav title, landing blurb, coming-soon note.
 export function ComingSoonPage({
@@ -18,7 +18,7 @@ export function ComingSoonPage({
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>{tNav(titleKey)}</CardTitle>
+          <h1 className="rp-h1 text-rp-ink">{tNav(titleKey)}</h1>
         </CardHeader>
         <CardContent className="space-y-2">
           <p className="text-sm text-muted-foreground">{tLanding(descKey)}</p>

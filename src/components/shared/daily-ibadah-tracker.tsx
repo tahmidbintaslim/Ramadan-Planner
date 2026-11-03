@@ -285,7 +285,7 @@ export function DailyIbadahTracker({ day }: { day: number }) {
               <span>{tDashboard("todayProgress")}</span>
               <span>{formatLocalizedNumber(Math.round(progressValue), locale)}%</span>
             </div>
-            <Progress value={progressValue} className="h-2" />
+            <Progress value={progressValue} className="h-2" aria-label={tDashboard("todayProgress")} />
           </div>
         </CardHeader>
         <CardContent className="space-y-2.5">

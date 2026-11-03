@@ -13,7 +13,7 @@ import {
   Landmark,
   Wallet,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -57,10 +57,10 @@ export function ZakatContent() {
     <div className="space-y-4">
       <Card className="surface-soft border-primary/20">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BadgeDollarSign className="h-5 w-5 text-primary" />
+          <h1 className="rp-h1 flex items-center gap-2 text-rp-ink">
+            <BadgeDollarSign className="h-5 w-5 text-primary" aria-hidden="true" />
             {tNav("zakat")}
-          </CardTitle>
+          </h1>
         </CardHeader>
         <CardContent className="space-y-6">
           <p className="text-sm text-muted-foreground">
@@ -133,7 +133,7 @@ export function ZakatContent() {
                   {tZakat("eligibleDueNow", { amount: formatMoney(zakatDue) })}
                 </p>
               ) : (
-                <p className="inline-flex items-center gap-2 rounded-md bg-muted px-2.5 py-1 text-sm text-muted-foreground">
+                <p className="inline-flex items-center gap-2 rounded-md bg-muted px-2.5 py-1 text-sm text-rp-ink">
                   <CircleAlert className="h-4 w-4" />
                   {tZakat("belowNisabDue", { amount: formatMoney(zakatDue) })}
                 </p>

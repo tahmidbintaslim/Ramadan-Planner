@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { pruneLocalHistory } from "@/lib/local-history";
 
 const TASBIH_PRESETS = [33, 99, 100];
@@ -169,7 +169,7 @@ export function TasbihContent() {
     <div className="space-y-4">
       <Card className="surface-soft border-primary/20">
         <CardHeader>
-          <CardTitle>{tNav("tasbih")}</CardTitle>
+          <h1 className="rp-h1 text-rp-ink">{tNav("tasbih")}</h1>
         </CardHeader>
         <CardContent className="space-y-6">
           <p className="text-sm text-muted-foreground">
@@ -184,7 +184,7 @@ export function TasbihContent() {
             <p className="text-sm text-muted-foreground">
               {tTasbih("targetLabel", { target })}
             </p>
-            <Progress value={percent} className="h-2" />
+            <Progress value={percent} className="h-2" aria-label={tTasbih("currentCount")} />
             <p className="text-xs text-muted-foreground">
               {tTasbih("percentComplete", { percent })}
             </p>

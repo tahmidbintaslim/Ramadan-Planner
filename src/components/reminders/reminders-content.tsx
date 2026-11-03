@@ -237,6 +237,7 @@ export function RemindersContent() {
           <CardContent className="space-y-3">
             <div className="grid gap-2 md:grid-cols-4">
               <select
+                aria-label={t("prayer")}
                 value={newType}
                 onChange={(e) => setNewType(e.target.value as ReminderRuleDTO["type"])}
                 className="h-9 rounded-md border border-input bg-background px-3 text-sm"
@@ -269,17 +270,19 @@ export function RemindersContent() {
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <Checkbox
+                  id="new-reminder-push"
                   checked={newPush}
                   onCheckedChange={(checked) => setNewPush(Boolean(checked))}
                 />
-                <Label>{t("push")}</Label>
+                <Label htmlFor="new-reminder-push">{t("push")}</Label>
               </div>
               <div className="flex items-center gap-2">
                 <Checkbox
+                  id="new-reminder-calendar"
                   checked={newCalendar}
                   onCheckedChange={(checked) => setNewCalendar(Boolean(checked))}
                 />
-                <Label>{t("calendar")}</Label>
+                <Label htmlFor="new-reminder-calendar">{t("calendar")}</Label>
               </div>
             </div>
           </CardContent>
@@ -298,6 +301,7 @@ export function RemindersContent() {
                   <div key={rule.id} className="rounded-lg border p-3 space-y-3">
                     <div className="grid gap-2 md:grid-cols-4">
                       <select
+                        aria-label={t("prayer")}
                         value={rule.type}
                         onChange={(e) => {
                           const type = e.target
@@ -348,6 +352,7 @@ export function RemindersContent() {
 
                       <div className="flex items-center gap-2">
                         <Checkbox
+                          id={`rule-${rule.id}-enabled`}
                           checked={rule.enabled}
                           onCheckedChange={(checked) => {
                             setAllRules((prev) =>
@@ -359,13 +364,14 @@ export function RemindersContent() {
                             );
                           }}
                         />
-                        <Label>{t("enabled")}</Label>
+                        <Label htmlFor={`rule-${rule.id}-enabled`}>{t("enabled")}</Label>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-2">
                         <Checkbox
+                          id={`rule-${rule.id}-push`}
                           checked={rule.channels.includes("push")}
                           onCheckedChange={(checked) => {
                             setAllRules((prev) =>
@@ -379,11 +385,12 @@ export function RemindersContent() {
                             );
                           }}
                         />
-                        <Label>{t("push")}</Label>
+                        <Label htmlFor={`rule-${rule.id}-push`}>{t("push")}</Label>
                       </div>
 
                       <div className="flex items-center gap-2">
                         <Checkbox
+                          id={`rule-${rule.id}-calendar`}
                           checked={rule.channels.includes("calendar")}
                           onCheckedChange={(checked) => {
                             setAllRules((prev) =>
@@ -397,7 +404,7 @@ export function RemindersContent() {
                             );
                           }}
                         />
-                        <Label>{t("calendar")}</Label>
+                        <Label htmlFor={`rule-${rule.id}-calendar`}>{t("calendar")}</Label>
                       </div>
                     </div>
 

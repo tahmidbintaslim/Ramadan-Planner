@@ -46,7 +46,7 @@ export function TimetableRow({
         aria-label={labels.roza}
         className={cn(
           "flex size-9 items-center justify-center rounded-rp-full text-[14px] font-semibold leading-none print:bg-transparent print:text-black",
-          isToday ? "bg-white/[0.18] text-rp-on-live" : odd ? "bg-rp-surface text-rp-gold-text" : "bg-rp-accent-tint text-rp-accent",
+          isToday ? "bg-rp-surface text-rp-accent" : odd ? "bg-rp-surface text-rp-gold-text" : "bg-rp-accent-tint text-rp-accent",
         )}
       >
         <span aria-hidden="true">{digits(day.day, locale)}</span>
@@ -55,7 +55,7 @@ export function TimetableRow({
         <p className="rp-row">
           {formatRowDate(day, labels.weekday, locale)}
           {isToday ? (
-            <span className="ms-2 rounded-rp-full bg-white/[0.18] px-2 py-0.5 text-[12px] font-semibold print:hidden">{labels.today}</span>
+            <span className="ms-2 rounded-rp-full bg-rp-surface px-2 py-0.5 text-[12px] font-semibold text-rp-accent print:hidden">{labels.today}</span>
           ) : null}
         </p>
       </div>
