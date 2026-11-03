@@ -28,14 +28,14 @@ const buttonVariants = cva(
           "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
       },
       size: {
-        default: "h-[52px] px-6 has-[>svg]:px-5",
+        default: "h-12 px-6 has-[>svg]:px-5",
         xs: "h-7 gap-1 px-3 text-xs has-[>svg]:px-2.5 [&_svg:not([class*='size-'])]:size-3",
         sm: "h-10 gap-1.5 px-4 has-[>svg]:px-3.5",
-        lg: "h-14 px-8 has-[>svg]:px-6",
-        icon: "size-11",
+        lg: "h-[52px] px-8 has-[>svg]:px-6",
+        icon: "size-12",
         "icon-xs": "size-7 [&_svg:not([class*='size-'])]:size-3",
         "icon-sm": "size-10",
-        "icon-lg": "size-14",
+        "icon-lg": "size-[52px]",
       },
     },
     defaultVariants: {

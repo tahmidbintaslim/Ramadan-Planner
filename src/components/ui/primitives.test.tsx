@@ -13,13 +13,13 @@ import { SectionHeader } from "@/components/design/section-header"
 afterEach(cleanup)
 
 describe("buttonVariants", () => {
-  it("default and primary are the teal pill at 52px", () => {
+  it("default and primary are the teal pill at 48px", () => {
     for (const variant of ["default", "primary"] as const) {
       const c = buttonVariants({ variant })
       expect(c).toContain("bg-rp-live")
       expect(c).toContain("text-rp-on-live")
       expect(c).toContain("rounded-rp-full")
-      expect(c).toContain("h-[52px]")
+      expect(c).toContain("h-12")
     }
   })
   it("soft and its legacy alias secondary share the tint look", () => {
@@ -45,7 +45,8 @@ describe("buttonVariants", () => {
   it("keeps destructive, sizes and focus/disabled styles", () => {
     expect(buttonVariants({ variant: "destructive" })).toContain("bg-destructive")
     expect(buttonVariants({ size: "sm" })).toContain("h-10")
-    expect(buttonVariants({ size: "icon" })).toContain("size-11")
+    expect(buttonVariants({ size: "icon" })).toContain("size-12")
+    expect(buttonVariants({ size: "lg" })).toContain("h-[52px]")
     expect(buttonVariants()).toContain("focus-visible:ring-")
     expect(buttonVariants()).toContain("disabled:opacity-50")
   })
