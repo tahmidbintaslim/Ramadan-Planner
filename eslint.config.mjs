@@ -11,6 +11,8 @@ export default defineConfig([
     "coverage/**",
     "src/generated/**",
     "src/routeTree.gen.ts",
+    // Agent worktrees (local only, git-excluded) contain full checkouts and build output.
+    ".claude/**",
   ]),
   ...tseslint.configs.recommended,
   {
