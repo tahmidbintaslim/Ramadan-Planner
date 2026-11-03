@@ -1,10 +1,9 @@
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import type { RamadanTimetable } from "@/lib/ramadan-timetable";
 import { paraFromText, quranStreak } from "./plan-logic";
 
 // Data the plan screen reads from elsewhere in the app: the Ramadan timetable (night times and odd-night rows),
-// the Quran tracker's progress (para and streak, from its localStorage entries), and the sadaqah card dismissal
-// shared with the Home screen.
+// and the Quran tracker's progress (para and streak, from its localStorage entries).
 
 /** The Ramadan timetable for the device time zone (same public API as the timetable screen). */
 export function usePlanTimetable(enabled: boolean): { timetable: RamadanTimetable | null; failed: boolean } {
@@ -91,45 +90,4 @@ export function useQuranProgress(): { para: number | null; streak: number } {
     const todayISO = new Date().toISOString().slice(0, 10);
     return { para, streak: quranStreak(todayISO, (iso) => days.has(iso)) };
   }, [snapshot]);
-}
-
-
-// ── Sadaqah card dismissal (same key as the Home screen's card) ──
-
-export const SADAQAH_DISMISSED_KEY = "rp_sadaqah_dismissed_at";
-const SADAQAH_DISMISSED_EVENT = "rp:sadaqah-dismissed";
-
-function readDismissed(): string | null {
-  try {
-    return localStorage.getItem(SADAQAH_DISMISSED_KEY);
-  } catch {
-    return null;
-  }
-}
-
-function subscribeDismissed(onChange: () => void) {
-  window.addEventListener(SADAQAH_DISMISSED_EVENT, onChange);
-  window.addEventListener("storage", onChange);
-  return () => {
-    window.removeEventListener(SADAQAH_DISMISSED_EVENT, onChange);
-    window.removeEventListener("storage", onChange);
-  };
-}
-
-export function useSadaqahDismissal(): { dismissedAt: Date | null; dismiss: () => void } {
-  const raw = useSyncExternalStore(subscribeDismissed, readDismissed, () => null);
-  const dismissedAt = useMemo(() => {
-    if (!raw) return null;
-    const d = new Date(raw);
-    return Number.isNaN(d.getTime()) ? null : d;
-  }, [raw]);
-  const dismiss = useCallback(() => {
-    try {
-      localStorage.setItem(SADAQAH_DISMISSED_KEY, new Date().toISOString());
-    } catch {
-      // Storage unavailable: the card still hides for this page view.
-    }
-    window.dispatchEvent(new Event(SADAQAH_DISMISSED_EVENT));
-  }, []);
-  return { dismissedAt, dismiss };
 }

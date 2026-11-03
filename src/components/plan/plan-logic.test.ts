@@ -1,14 +1,18 @@
 import { describe, expect, it } from "vitest";
 import type { TimetableDay } from "@/lib/ramadan-timetable";
 import { zonedTime } from "@/lib/prayer-phase";
-import { parseItemNotes } from "./plan-item-meta";
+import { parseItemNotes, pruneItemNotes } from "./plan-item-meta";
 import {
   DAY_DEFAULTS,
   NIGHT_DEFAULTS,
   bnOrdinal,
   currentNight,
   defaultPlanView,
+  doneForDay,
+  goalDoneForDay,
   groupByWindow,
+  nightsViewAvailable,
+  tickScopeISO,
   lastTenVisible,
   matchDefaultKey,
   nextPara,
@@ -216,5 +220,50 @@ describe("odd-night rows", () => {
   it("has no tonight on an even night", () => {
     expect(oddNightRows(DAYS, 26).map((r) => r.state)).toEqual(["past", "past", "past", "upcoming", "upcoming"]);
     expect(oddNightRows(DAYS, 21).map((r) => r.state)).toEqual(["tonight", "upcoming", "upcoming", "upcoming", "upcoming"]);
+  });
+});
+
+describe("night view availability", () => {
+  it("roza 30: the 30th night before fajr, nothing after fajr (the next night is Eid night)", () => {
+    const fajr30 = at(isoOf(30), "05:00");
+    const maghrib30 = at(isoOf(30), "18:00");
+    expect(nightsViewAvailable(30, at(isoOf(30), "03:00"), fajr30, maghrib30)).toBe(true);
+    expect(currentNight(30, at(isoOf(30), "03:00"), fajr30)).toBe(30);
+    expect(nightsViewAvailable(30, at(isoOf(30), "05:00"), fajr30, maghrib30)).toBe(false);
+    expect(nightsViewAvailable(30, at(isoOf(30), "12:00"), fajr30, maghrib30)).toBe(false);
+    expect(nightsViewAvailable(30, at(isoOf(30), "19:00"), fajr30, maghrib30)).toBe(false);
+  });
+  it("roza 20: from maghrib only", () => {
+    const fajr20 = at(isoOf(20), "05:00");
+    const maghrib20 = at(isoOf(20), "18:00");
+    expect(nightsViewAvailable(20, at(isoOf(20), "17:59"), fajr20, maghrib20)).toBe(false);
+    expect(nightsViewAvailable(20, at(isoOf(20), "18:00"), fajr20, maghrib20)).toBe(true);
+    expect(currentNight(20, at(isoOf(20), "18:00"), fajr20)).toBe(21);
+  });
+  it("roza 29 after fajr is the 30th night; outside Ramadan never", () => {
+    expect(nightsViewAvailable(29, at(isoOf(29), "20:00"), at(isoOf(29), "05:00"), at(isoOf(29), "18:00"))).toBe(true);
+    expect(nightsViewAvailable(null, at(isoOf(29), "20:00"), null, null)).toBe(false);
+  });
+});
+
+describe("done for the day", () => {
+  it("a signed-in task tick counts only for the day it was made", () => {
+    expect(doneForDay({ isDone: true, dueDate: "2027-03-01" }, "2027-03-01")).toBe(true);
+    expect(doneForDay({ isDone: true, dueDate: "2027-02-28" }, "2027-03-01")).toBe(false);
+    expect(doneForDay({ isDone: true, dueDate: null }, "2027-03-01")).toBe(false);
+    expect(doneForDay({ isDone: false, dueDate: "2027-03-01" }, "2027-03-01")).toBe(false);
+    expect(goalDoneForDay(true, "2027-03-01", "2027-03-01")).toBe(true);
+    expect(goalDoneForDay(true, undefined, "2027-03-01")).toBe(false);
+    expect(goalDoneForDay(false, "2027-03-01", "2027-03-01")).toBe(false);
+  });
+  it("night practices belong to the night's evening, so a tick after midnight stays with that night", () => {
+    expect(tickScopeISO(true, "2027-03-07", "2027-03-06")).toBe("2027-03-06");
+    expect(tickScopeISO(false, "2027-03-07", "2027-03-06")).toBe("2027-03-07");
+    expect(tickScopeISO(true, "2027-03-07", null)).toBe("2027-03-07");
+  });
+  it("prunes notes of items that no longer exist, keeping a just-created id", () => {
+    const notes = { a: { key: "sehri" }, b: { window: "afterIftar" as const }, c: {} };
+    expect(pruneItemNotes(notes, new Set(["a"]), ["c"])).toEqual({ a: { key: "sehri" }, c: {} });
+    expect(pruneItemNotes(notes, null)).toBe(notes);
   });
 });

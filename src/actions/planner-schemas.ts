@@ -120,6 +120,8 @@ export const updateTaskSchema = z.object({
   id: z.string().uuid(),
   title: z.string().trim().min(1).max(180),
   isDone: z.boolean(),
+  /** The plan uses it as the day the done state belongs to (YYYY-MM-DD); omitted = unchanged. */
+  dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
 });
 
 export const deleteSchema = z.object({

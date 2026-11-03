@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { useTranslations } from "@/i18n/use-intl";
 import { CheckIcon } from "@/components/icons/islamic-icons";
-import { Trash2 } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface ChecklistRowItem {
@@ -24,30 +24,37 @@ export function ChecklistOverline({ id, children }: { id?: string; children: Rea
 export function ChecklistCards({
   items,
   onToggle,
-  onRemove,
-  editing = false,
+  onEdit,
+  canEdit,
   disabled = false,
+  pending,
   labelledBy,
   className,
 }: {
   items: readonly ChecklistRowItem[];
   onToggle: (item: ChecklistRowItem, done: boolean) => void;
-  onRemove?: (item: ChecklistRowItem) => void;
-  editing?: boolean;
+  /** Shows a 48px pencil button per row (not on rows `canEdit` rejects). */
+  onEdit?: (item: ChecklistRowItem) => void;
+  canEdit?: (item: ChecklistRowItem) => boolean;
   disabled?: boolean;
+  /** Ids with a request in flight: their rows are locked. */
+  pending?: ReadonlySet<string>;
   labelledBy?: string;
   className?: string;
 }) {
   const t = useTranslations("plan");
   return (
     <ul aria-labelledby={labelledBy} className={cn("flex flex-col gap-3", className)}>
-      {items.map((item) => (
+      {items.map((item) => {
+        const locked = disabled || Boolean(pending?.has(item.id));
+        return (
         <li key={item.id} className="flex items-stretch gap-2" data-testid="plan-item" data-done={item.done || undefined}>
           <button
             type="button"
             role="checkbox"
             aria-checked={item.done}
-            disabled={disabled}
+            disabled={locked}
+            aria-busy={pending?.has(item.id) || undefined}
             onClick={() => onToggle(item, !item.done)}
             className="flex min-h-[72px] min-w-0 flex-1 items-center gap-4 rounded-rp-lg bg-rp-surface px-4 py-3 text-start text-rp-ink shadow-rp-soft outline-none focus-visible:ring-[3px] focus-visible:ring-ring disabled:opacity-60"
           >
@@ -65,19 +72,20 @@ export function ChecklistCards({
               {item.meta ? <span className="rp-caption text-rp-muted">{item.meta}</span> : null}
             </span>
           </button>
-          {editing && onRemove ? (
+          {onEdit && (canEdit?.(item) ?? true) ? (
             <button
               type="button"
-              onClick={() => onRemove(item)}
-              disabled={disabled}
-              aria-label={t("removeItem", { title: item.title })}
-              className="flex w-12 shrink-0 items-center justify-center rounded-rp-lg bg-rp-surface text-destructive shadow-rp-soft outline-none focus-visible:ring-[3px] focus-visible:ring-ring disabled:opacity-60"
+              onClick={() => onEdit(item)}
+              disabled={locked}
+              aria-label={t("editItem", { title: item.title })}
+              className="flex w-12 shrink-0 items-center justify-center rounded-rp-lg bg-rp-surface text-rp-muted shadow-rp-soft outline-none hover:text-rp-accent focus-visible:ring-[3px] focus-visible:ring-ring disabled:opacity-60"
             >
-              <Trash2 aria-hidden="true" className="size-5" />
+              <Pencil aria-hidden="true" className="size-5" />
             </button>
           ) : null}
         </li>
-      ))}
+        );
+      })}
     </ul>
   );
 }

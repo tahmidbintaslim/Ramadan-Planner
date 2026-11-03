@@ -83,16 +83,40 @@ test.describe("day plan (mobile)", () => {
     await page.getByRole("button", { name: "+ নতুন আমল যোগ করুন" }).click();
     const sheet = page.getByRole("dialog");
     await sheet.getByLabel("আমলের নাম").fill("পরিবারের সাথে দোয়া");
-    await sheet.getByRole("radio", { name: "ইফতারের পর" }).click();
+    const after = sheet.getByRole("button", { name: "ইফতারের পর" });
+    await after.click();
+    await expect(after).toHaveAttribute("aria-pressed", "true");
     await sheet.getByRole("button", { name: "যোগ করুন", exact: true }).click();
     await expect(sheet).toBeHidden();
     await expect(page.locator('[data-window="afterIftar"]')).toContainText("পরিবারের সাথে দোয়া");
     await expect(progress.getByRole("img")).toHaveText("১/৮");
 
+    // A goal template from the sheet keeps its target.
+    await page.getByRole("button", { name: "+ নতুন আমল যোগ করুন" }).click();
+    await sheet.getByRole("button", { name: "দৈনিক যিকর" }).click();
+    await expect(sheet.getByLabel("লক্ষ্যমাত্রা (ঐচ্ছিক)")).toHaveValue("100");
+    await sheet.getByRole("button", { name: "যোগ করুন", exact: true }).click();
+    await expect(sheet).toBeHidden();
+    await expect(page.getByRole("checkbox", { name: /দৈনিক যিকর/ })).toContainText("লক্ষ্য ১০০ বার");
+
+    // Edit: rename and move a deed, then delete another.
+    await page.getByRole("button", { name: "পরিবারের সাথে দোয়া সম্পাদনা করুন" }).click();
+    await expect(sheet.getByRole("heading", { name: "আমল সম্পাদনা" })).toBeVisible();
+    await sheet.getByLabel("আমলের নাম").fill("পরিবারের সাথে ইফতারের দোয়া");
+    await sheet.getByRole("button", { name: "যোহর থেকে ইফতার" }).click();
+    await sheet.getByRole("button", { name: "সংরক্ষণ করুন" }).click();
+    await expect(sheet).toBeHidden();
+    await expect(page.locator('[data-window="dhuhrToIftar"]')).toContainText("পরিবারের সাথে ইফতারের দোয়া");
+    await page.getByRole("button", { name: "তারাবি সম্পাদনা করুন" }).click();
+    await sheet.getByRole("button", { name: "আমলটি মুছুন" }).click();
+    await expect(sheet).toBeHidden();
+    await expect(page.getByRole("checkbox", { name: /^তারাবি/ })).toHaveCount(0);
+    await expect(progress.getByRole("img")).toHaveText("১/৮");
+
     // Guest data stays on the device.
     await page.reload({ waitUntil: "load" });
     await expect(page.getByTestId("plan-item")).toHaveCount(8);
-    await expect(page.locator('[data-window="afterIftar"]')).toContainText("পরিবারের সাথে দোয়া");
+    await expect(page.locator('[data-window="dhuhrToIftar"]')).toContainText("পরিবারের সাথে ইফতারের দোয়া");
 
     expect(appErrors()).toEqual([]);
     expect(consoleEntries.filter((e) => HYDRATION.test(e.text))).toEqual([]);
@@ -137,7 +161,8 @@ test.describe("last ten nights (mobile, night)", () => {
 
     // Tonight's practices are suggestions in the plan's checklist: ticking one adds it, already done.
     await expect(page.getByRole("heading", { level: 2, name: "আজ রাতের আমল" })).toBeVisible();
-    await expect(page.getByText("সূত্র: তিরমিজি ৩৫১৩")).toBeVisible();
+    await expect(page.getByRole("checkbox", { name: /লাইলাতুল কদরের দোয়া/ })).toContainText("সূত্র: তিরমিজি ৩৫১৩");
+    await expect(page.getByTestId("qadr-dua")).toContainText("اللَّهُمَّ إِنَّكَ عَفُوٌّ تُحِبُّ الْعَفْوَ فَاعْفُ عَنِّي");
     const tahajjud = page.getByRole("checkbox", { name: /^তাহাজ্জুদ/ });
     await tahajjud.click();
     await expect(tahajjud).toHaveAttribute("aria-checked", "true");
@@ -150,6 +175,27 @@ test.describe("last ten nights (mobile, night)", () => {
     await expect(page.getByTestId("plan-progress").getByRole("img")).toHaveText("১/১");
     await expect(page.locator('[data-window="afterIftar"]')).toContainText("তাহাজ্জুদ");
     expect(appErrors()).toEqual([]);
+  });
+
+  test("roza 20 reserves the switch row by day and shows it from maghrib", async ({ page }) => {
+    await mockRamadan(page, 20, dhakaToday(12));
+    await visit(page, "/plan");
+    await expect(page.getByTestId("plan-progress")).toBeVisible();
+    await expect(page.getByTestId("plan-views-placeholder")).toHaveCount(1);
+    await expect(page.getByRole("button", { name: "শেষ দশ রাত" })).toHaveCount(0);
+    await page.clock.setFixedTime(dhakaToday(19));
+    await page.reload({ waitUntil: "load" });
+    await expect(page.getByRole("button", { name: "শেষ দশ রাত" })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator('li[data-night="21"]')).toHaveAttribute("data-state", "tonight");
+  });
+
+  test("roza 30 after fajr shows the day plan only", async ({ page }) => {
+    await mockRamadan(page, 30, dhakaToday(12));
+    await visit(page, "/plan");
+    await expect(page.getByRole("heading", { level: 1, name: "আজকের পরিকল্পনা" })).toBeVisible();
+    await expect(page.getByTestId("plan-progress")).toBeVisible();
+    await expect(page.getByRole("button", { name: "শেষ দশ রাত" })).toHaveCount(0);
+    await expect(page.getByRole("status", { name: "শেষ দশ রাতের সময় লোড হচ্ছে" })).toHaveCount(0);
   });
 
   test("roza 19 has no last-ten-nights switch", async ({ page }) => {

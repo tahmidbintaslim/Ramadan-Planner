@@ -249,3 +249,40 @@ export function bnOrdinal(n: number): string {
 export function nextPara(lastPara: number | null): number {
   return lastPara === null ? 1 : Math.min(30, lastPara + 1);
 }
+
+/**
+ * The night view is offered while the last ten nights are on (lastTenVisible) and the current night is one of
+ * Ramadan's (<= 30): after the fajr of roza 30 the next night would be the 31st, which is Eid night.
+ */
+export function nightsViewAvailable(
+  ramadanDay: number | null,
+  now: Date,
+  fajrToday: Date | null,
+  maghribToday: Date | null,
+): boolean {
+  if (!lastTenVisible(ramadanDay, now, maghribToday)) return false;
+  return currentNight(ramadanDay as number, now, fajrToday) <= 30;
+}
+
+// ── Per-day done state ────────────────────────────────
+
+/**
+ * Signed-in plan tasks are kept across days (they are not stored per day), so a tick belongs to one day: a
+ * task is done for `scopeISO` only when it was ticked on that day (`dueDate` holds the day of the last tick).
+ */
+export function doneForDay(task: { isDone: boolean; dueDate: string | null }, scopeISO: string): boolean {
+  return task.isDone && task.dueDate === scopeISO;
+}
+
+/** Same rule for goals, whose tick day is kept per device (the goal records have no date field). */
+export function goalDoneForDay(isCompleted: boolean, doneOn: string | undefined, scopeISO: string): boolean {
+  return isCompleted && doneOn === scopeISO;
+}
+
+/**
+ * The day a tick belongs to: night practices count for the night (the date of its evening, so a tick at 01:00
+ * still belongs to the night that began at yesterday's maghrib); everything else for the calendar day.
+ */
+export function tickScopeISO(nightItem: boolean, todayISO: string, nightEveningISO: string | null): string {
+  return nightItem && nightEveningISO ? nightEveningISO : todayISO;
+}

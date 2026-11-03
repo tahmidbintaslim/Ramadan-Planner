@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useLocale, useTranslations } from "@/i18n/use-intl";
 import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
@@ -9,9 +9,11 @@ import { useKnownTimings, useRamadanDay } from "@/hooks/use-shell-day";
 import { useNowTick } from "@/components/prayer/use-prayer-phase";
 import { digits, ddmmyyyyToISO, formatClock, type Locale } from "@/components/timetable/timetable-logic";
 import { shouldShowSadaqah, timingsFromPrayerTimes, todayISOInZone } from "@/lib/prayer-phase";
-import { AddAmalSheet, type NewAmal } from "./add-amal-sheet";
+import { AddAmalButton, AmalSheet, type AmalDraft, type AmalEditTarget, type AmalSuggestion } from "./add-amal-sheet";
 import { ChecklistCards, ChecklistOverline, type ChecklistRowItem } from "./checklist";
-import { NightHero, OddNightsCard, PlanSupportCard } from "./night-view";
+import { NightHero, OddNightsCard, QadrDuaCard } from "./night-view";
+import { SupportCard } from "@/components/today/home-sections";
+import { useSadaqahDismissal } from "@/components/today/sadaqah-dismissal";
 import { useItemNotes } from "./plan-item-meta";
 import {
   DAY_DEFAULTS,
@@ -19,10 +21,13 @@ import {
   PLAN_WINDOWS,
   currentNight,
   defaultPlanView,
+  doneForDay,
+  goalDoneForDay,
+  nightsViewAvailable,
+  tickScopeISO,
   groupByWindow,
   isNightKey,
   itemMessageKey,
-  lastTenVisible,
   matchDefaultKey,
   nightTimes,
   oddNightRows,
@@ -35,7 +40,7 @@ import {
 } from "./plan-logic";
 import { ProgressCard } from "./progress-card";
 import { usePlanItems } from "./use-plan-items";
-import { usePlanTimetable, useQuranProgress, useSadaqahDismissal } from "./use-plan-context";
+import { usePlanTimetable, useQuranProgress } from "./use-plan-context";
 
 const DEFAULTS_BY_KEY: Record<string, DefaultItem> = Object.fromEntries(
   [...DAY_DEFAULTS, ...NIGHT_DEFAULTS].map((d) => [d.key, d]),
@@ -69,15 +74,21 @@ export function PlanContent() {
   const mounted = useSyncExternalStore(subscribeNoop, () => true, () => false);
 
   const plan = usePlanItems();
-  const { notes, remember, forget } = useItemNotes();
+  const liveIds = useMemo(
+    () => (plan.ready ? new Set([...plan.tasks.map((x) => x.id), ...plan.goals.map((x) => x.id)]) : null),
+    [plan.ready, plan.tasks, plan.goals],
+  );
+  const { notes, remember, forget } = useItemNotes(liveIds);
   const quran = useQuranProgress();
   const ramadanDay = useRamadanDay();
   const now = useNowTick();
   const { timetable, failed: timetableFailed } = usePlanTimetable(ramadanDay !== null);
   const [viewChoice, setViewChoice] = useState<"day" | "nights" | null>(null);
-  const [editing, setEditing] = useState(false);
+  const [sheet, setSheet] = useState<{ open: boolean; editing: AmalEditTarget | null }>({ open: false, editing: null });
   // Suggested night practices being added (a second tap must not add a duplicate).
   const [adding, setAdding] = useState<ReadonlySet<string>>(() => new Set());
+  const addingDefaults = useRef(false);
+  const [defaultsBusy, setDefaultsBusy] = useState(false);
   const sadaqah = useSadaqahDismissal();
 
   // ── Ramadan day, today's times, the last ten nights ──
@@ -86,15 +97,17 @@ export function PlanContent() {
   const todayRow = ramadanDay !== null ? days.find((d) => d.day === ramadanDay) : undefined;
   const fajrToday = rowInstant(todayRow, "fajr", tz);
   const maghribToday = rowInstant(todayRow, "maghrib", tz);
-  const showNights = lastTenVisible(ramadanDay, now, maghribToday);
+  const showNights = nightsViewAvailable(ramadanDay, now, fajrToday, maghribToday);
   const view = showNights ? (viewChoice ?? defaultPlanView(true, now, fajrToday, maghribToday)) : "day";
   const night = ramadanDay !== null ? currentNight(ramadanDay, now, fajrToday) : 0;
   const tonight = showNights ? nightTimes(days, night, tz) : null;
   const known = useKnownTimings(view === "nights");
   const todayISO = todayISOInZone(now, tz);
   const knownToday = known && known.date === todayISOInZone(now, known.timezone) ? known : null;
+  const eveningRow = showNights ? days.find((d) => d.day === night - 1) : undefined;
+  const eveningISO = eveningRow ? ddmmyyyyToISO(eveningRow.gregorianDate) : null;
 
-  // ── Items: the plan's tasks and goals with their window, suggestion key and meta line ──
+  // ── Items: the plan's tasks and goals with their window, suggestion key, meta line and done-for-the-day ──
   const titleOf = (key: string) => t(`items.${itemMessageKey(key)}` as "items.sehri");
   const titlesByKey: Record<string, string[]> = Object.fromEntries(Object.keys(DEFAULTS_BY_KEY).map((k) => [k, [titleOf(k)]]));
 
@@ -112,29 +125,37 @@ export function PlanContent() {
     return undefined;
   };
 
-  const items: PlanItem[] = [
-    ...plan.tasks.map((task): PlanItem => {
+  const para = nextPara(quran.para);
+  type Item = PlanItem & { rawTitle: string; scopeISO: string; targetCount?: number };
+  const items: Item[] = [
+    ...plan.tasks.map((task): Item => {
       const note = notes[task.id];
       const key = matchDefaultKey(task.title, note?.key, titlesByKey);
-      const para = nextPara(quran.para);
+      const scopeISO = tickScopeISO(isNightKey(key), todayISO, eveningISO);
       return {
         id: task.id,
         kind: "task",
+        rawTitle: task.title,
         // The Quran suggestion names the para to read next (from the Quran tracker).
         title: key === "quran" ? t("items.quranPara", { n: locale === "bn" ? bnOrdinal(para) : String(para) }) : task.title,
-        done: task.isDone,
+        // Guest lists are stored per day; signed-in ticks count for the day they were made.
+        done: plan.isGuest ? task.isDone : doneForDay(task, scopeISO),
         key,
+        scopeISO,
         window: note?.window ?? (key ? DEFAULTS_BY_KEY[key]?.window : undefined) ?? windowFromTitle(task.title),
         meta: metaFor(key),
       };
     }),
-    ...plan.goals.map((goal): PlanItem => {
+    ...plan.goals.map((goal): Item => {
       const note = notes[goal.id];
       return {
         id: goal.id,
         kind: "goal",
+        rawTitle: goal.title,
         title: goal.title,
-        done: goal.isCompleted,
+        done: plan.isGuest ? goal.isCompleted : goalDoneForDay(goal.isCompleted, note?.doneOn, todayISO),
+        scopeISO: todayISO,
+        targetCount: goal.targetCount,
         window: note?.window ?? windowFromTitle(goal.title),
         meta: t("itemMeta.goalTarget", { count: digits(goal.targetCount, locale), unit: goal.targetUnit }),
       };
@@ -144,11 +165,14 @@ export function PlanContent() {
   const groups = groupByWindow(items);
   const done = items.filter((i) => i.done).length;
   const presentKeys = new Set(items.map((i) => i.key).filter(Boolean));
+  const locked = !plan.ready;
 
   const toggle = (row: ChecklistRowItem, next: boolean) => {
+    if (locked) return;
     const item = byId.get(row.id);
     if (item) {
-      plan.toggle(item.kind, item.id, next);
+      plan.toggle(item.kind, item.id, next, item.scopeISO);
+      if (item.kind === "goal" && !plan.isGuest) remember(item.id, { doneOn: item.scopeISO });
       return;
     }
     // A suggested night practice that is not in the list yet: ticking it adds it, already done.
@@ -157,7 +181,7 @@ export function PlanContent() {
     if (!def || adding.has(key)) return;
     setAdding((prev) => new Set(prev).add(key));
     void plan
-      .addTask(titleOf(key), next)
+      .addTask(titleOf(key), next ? tickScopeISO(true, todayISO, eveningISO) : undefined)
       .then((id) => {
         if (id) remember(id, { window: def.window, key });
       })
@@ -170,35 +194,68 @@ export function PlanContent() {
       );
   };
 
-  const removeItem = (row: ChecklistRowItem) => {
-    const item = byId.get(row.id);
-    if (!item) return;
-    plan.remove(item.kind, item.id);
-    forget(item.id);
-  };
-
   const addDefaults = async (defaults: readonly DefaultItem[]) => {
-    for (const def of defaults) {
-      if (presentKeys.has(def.key)) continue;
-      const id = await plan.addTask(titleOf(def.key));
-      if (id) remember(id, { window: def.window, key: def.key });
+    if (addingDefaults.current || locked) return;
+    addingDefaults.current = true;
+    setDefaultsBusy(true);
+    try {
+      for (const def of defaults) {
+        if (presentKeys.has(def.key)) continue;
+        const id = await plan.addTask(titleOf(def.key));
+        if (id) remember(id, { window: def.window, key: def.key });
+      }
+    } finally {
+      addingDefaults.current = false;
+      setDefaultsBusy(false);
     }
   };
 
-  const addAmal = async ({ title, window, targetCount }: NewAmal): Promise<boolean> => {
-    const id = targetCount
-      ? await plan.addGoal(title, targetCount, t("defaultTargetUnit"))
-      : await plan.addTask(title);
+  const addAmal = async ({ title, window, targetCount }: AmalDraft): Promise<boolean> => {
+    const id = targetCount ? await plan.addGoal(title, targetCount, t("defaultTargetUnit")) : await plan.addTask(title);
     if (!id) return false;
     remember(id, { window });
     return true;
   };
 
-  const suggestions = [
-    ...DAY_DEFAULTS.filter((d) => !presentKeys.has(d.key)).map((d) => titleOf(d.key)),
-    t("templateTaskMealPlan"),
-    t("templateTaskFamily"),
-    t("templateTaskCharity"),
+  const saveAmal = async (item: AmalEditTarget, { title, window, targetCount }: AmalDraft): Promise<boolean> => {
+    const current = byId.get(item.id);
+    if (!current) return false;
+    if (title !== current.rawTitle || (item.kind === "goal" && targetCount && targetCount !== current.targetCount)) {
+      const ok =
+        item.kind === "goal"
+          ? await plan.updateGoal(item.id, title, targetCount ?? current.targetCount ?? 1)
+          : await plan.updateTask(item.id, title);
+      if (!ok) return false;
+    }
+    remember(item.id, { window });
+    return true;
+  };
+
+  const deleteAmal = async (item: AmalEditTarget): Promise<boolean> => {
+    const ok = await plan.remove(item.kind, item.id);
+    if (ok) forget(item.id);
+    return ok;
+  };
+
+  const openEdit = (row: ChecklistRowItem) => {
+    const item = byId.get(row.id);
+    if (!item) return;
+    setSheet({
+      open: true,
+      editing: { id: item.id, kind: item.kind, title: item.rawTitle, window: item.window, targetCount: item.targetCount },
+    });
+  };
+
+  const suggestions: AmalSuggestion[] = [
+    ...DAY_DEFAULTS.filter((d) => !presentKeys.has(d.key)).map((d) => ({ title: titleOf(d.key) })),
+    // The earlier goal templates (target in "times").
+    { title: t("templateGoalQuran"), targetCount: 2 },
+    { title: t("templateGoalHadith"), targetCount: 1 },
+    { title: t("templateGoalDhikr"), targetCount: 100 },
+    { title: t("templateGoalDua"), targetCount: 5 },
+    { title: t("templateTaskMealPlan") },
+    { title: t("templateTaskFamily") },
+    { title: t("templateTaskCharity") },
   ];
 
   // Tonight's practices: the ones in the list plus the suggestions not added yet.
@@ -207,6 +264,7 @@ export function PlanContent() {
     return existing ?? { id: `default:${def.key}`, title: titleOf(def.key), done: adding.has(def.key), meta: metaFor(def.key) };
   });
   const otherNightItems = items.filter((i) => isNightKey(i.key) && !NIGHT_DEFAULTS.some((d) => d.key === i.key));
+  const nightPending = new Set([...plan.pending, ...[...adding].map((k) => `default:${k}`)]);
 
   // Sadaqah card: the shared visibility rule (never in the sehri phase or within 15 minutes of a prayer).
   const phaseTimings = knownToday
@@ -216,7 +274,6 @@ export function PlanContent() {
     view === "nights" && phaseTimings !== null && shouldShowSadaqah(now, phaseTimings, { ramadanDay, dismissedAt: sadaqah.dismissedAt });
 
   // ── Header ──
-  const eveningRow = days.find((d) => d.day === night - 1);
   const caption = !mounted
     ? null
     : view === "nights" && eveningRow
@@ -226,7 +283,7 @@ export function PlanContent() {
         : longDate(todayISO, locale);
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4" data-view={view}>
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4" data-view={view} data-ready={plan.ready || undefined}>
       <div className="space-y-1">
         <h1 className="rp-h1 text-rp-ink">{view === "nights" ? t("nightsTitle") : t("dayTitle")}</h1>
         <p className="rp-small min-h-[22px] text-rp-muted" data-testid="plan-caption" suppressHydrationWarning>
@@ -243,9 +300,12 @@ export function PlanContent() {
             {t("nightsTitle")}
           </Chip>
         </div>
+      ) : ramadanDay === 20 ? (
+        // Roza 20: the switch appears at maghrib; keep its row so the page does not jump.
+        <div aria-hidden="true" className="h-10" data-testid="plan-views-placeholder" />
       ) : null}
 
-      {!plan.loading && plan.isGuest ? (
+      {plan.ready && plan.isGuest ? (
         <p className="rp-caption rounded-rp-md bg-rp-accent-tint px-3 py-2 text-rp-ink">{t("guestLocalNotice")}</p>
       ) : null}
       {plan.error ? (
@@ -258,7 +318,7 @@ export function PlanContent() {
         <>
           {tonight && timetable ? (
             <NightHero times={tonight} now={now} night={night} timeZone={tz} location={timetable.location} hijriYear={timetable.hijriYear} />
-          ) : timetableFailed ? (
+          ) : timetableFailed || timetable ? (
             <p className="rp-small rounded-rp-lg bg-rp-surface p-5 text-rp-muted shadow-rp-soft">{t("nightsError")}</p>
           ) : (
             <div role="status" aria-label={t("nightsLoading")}>
@@ -268,20 +328,27 @@ export function PlanContent() {
           {days.length > 0 ? <OddNightsCard rows={oddNightRows(days, night)} /> : null}
           <section aria-labelledby="tonight-amal" className="flex flex-col gap-3">
             <ChecklistOverline id="tonight-amal">{t("tonightAmal")}</ChecklistOverline>
-            <ChecklistCards items={[...nightRows, ...otherNightItems]} onToggle={toggle} labelledBy="tonight-amal" />
+            <ChecklistCards
+              items={[...nightRows, ...otherNightItems]}
+              onToggle={toggle}
+              disabled={locked}
+              pending={nightPending}
+              labelledBy="tonight-amal"
+            />
           </section>
-          {showSupport ? <PlanSupportCard onDismiss={sadaqah.dismiss} /> : null}
+          <QadrDuaCard />
+          {showSupport ? <SupportCard lastTen onDismiss={() => sadaqah.dismiss()} /> : null}
         </>
       ) : (
         <>
           <ProgressCard done={done} total={items.length} quranPara={quran.para} streak={quran.streak} />
-          {items.length === 0 ? (
+          {items.length === 0 && plan.ready ? (
             <section aria-labelledby="plan-empty" className="flex flex-col gap-3 rounded-rp-lg bg-rp-surface p-5 shadow-rp-soft">
               <h2 id="plan-empty" className="rp-row font-semibold text-rp-ink">
                 {t("emptyTitle")}
               </h2>
               <p className="rp-small text-rp-muted">{t("emptyBody")}</p>
-              <Button type="button" onClick={() => void addDefaults(DAY_DEFAULTS)} disabled={plan.isPending}>
+              <Button type="button" onClick={() => void addDefaults(DAY_DEFAULTS)} disabled={defaultsBusy}>
                 {t("addSuggested")}
               </Button>
             </section>
@@ -294,8 +361,9 @@ export function PlanContent() {
                     <ChecklistCards
                       items={groups[w]}
                       onToggle={toggle}
-                      onRemove={removeItem}
-                      editing={editing}
+                      onEdit={openEdit}
+                      disabled={locked}
+                      pending={plan.pending}
                       labelledBy={`plan-${w}`}
                     />
                   ) : (
@@ -304,14 +372,18 @@ export function PlanContent() {
                 </section>
               ))
             : null}
-          <AddAmalSheet onAdd={addAmal} suggestions={suggestions} />
-          {items.length > 0 ? (
-            <Button type="button" variant="quiet" className="self-center" aria-pressed={editing} onClick={() => setEditing((e) => !e)}>
-              {editing ? t("doneEditing") : t("editList")}
-            </Button>
-          ) : null}
+          <AddAmalButton disabled={locked} onClick={() => setSheet({ open: true, editing: null })} />
         </>
       )}
+      <AmalSheet
+        open={sheet.open}
+        onOpenChange={(open) => setSheet((s) => ({ ...s, open }))}
+        editing={sheet.editing}
+        suggestions={suggestions}
+        onAdd={addAmal}
+        onSave={saveAmal}
+        onDelete={deleteAmal}
+      />
     </div>
   );
 }

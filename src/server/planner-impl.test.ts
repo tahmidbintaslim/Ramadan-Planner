@@ -251,6 +251,17 @@ describe("plan tasks", () => {
       data: { ...dto, isDone: true },
     });
     expect(chains()[0].ops).toContainEqual(["eq", "id", ID]);
+    expect(opsOf(chains()[0], "update")[0][1]).not.toHaveProperty("due_date");
+    queue({ data: { ...row, is_done: true, due_date: "2027-03-01" }, error: null });
+    await expect(updatePlanTaskImpl(USER, { id: ID, title: "Zakat", isDone: true, dueDate: "2027-03-01" })).resolves.toEqual({
+      ok: true,
+      data: { ...dto, isDone: true, dueDate: "2027-03-01" },
+    });
+    expect(opsOf(chains()[1], "update")[0][1]).toMatchObject({ is_done: true, due_date: "2027-03-01" });
+    await expect(updatePlanTaskImpl(USER, { id: ID, title: "a", isDone: true, dueDate: "03-01-2027" })).resolves.toEqual({
+      ok: false,
+      error: "invalid_input",
+    });
     await expect(updatePlanTaskImpl(USER, { id: ID, title: "", isDone: true })).resolves.toEqual({
       ok: false,
       error: "invalid_input",

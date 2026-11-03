@@ -1,10 +1,7 @@
-import { useState } from "react";
 import { useLocale, useTranslations } from "@/i18n/use-intl";
-import { Link } from "@/components/shared/link";
-import { buttonVariants } from "@/components/ui/button";
 import { GirihPattern } from "@/components/design/girih-pattern";
 import { MihrabArch } from "@/components/design/mihrab-arch";
-import { CrescentIcon, LanternIcon, PinIcon } from "@/components/icons/islamic-icons";
+import { CrescentIcon, PinIcon } from "@/components/icons/islamic-icons";
 import { HERO_SCRIM_RGB, HERO_RING_SCRIM_ALPHA, HERO_SOURCE_PILL_ALPHA } from "@/components/prayer/prayer-hero";
 import { formatPrayerClock } from "@/components/prayer/use-prayer-phase";
 import { formatClock, formatRowDate, digits, type Locale } from "@/components/timetable/timetable-logic";
@@ -189,48 +186,22 @@ function NightTime({ caption, value }: { caption: string; value: string }) {
   );
 }
 
-/** Placeholder until the Support page lands (Task 10). */
-export const SUPPORT_HREF = "/support";
+/** The Laylat al-Qadr dua (Tirmidhi 3513): Arabic, transliteration and meaning, with its source. */
+export const QADR_DUA_ARABIC = "اللَّهُمَّ إِنَّكَ عَفُوٌّ تُحِبُّ الْعَفْوَ فَاعْفُ عَنِّي";
 
-/**
- * Gold sadaqah card for the last ten nights. A minimal local version of the Home screen's SupportCard (not yet on
- * this branch; the Home work will reconcile them). It shares the Home card's dismissal key.
- */
-export function PlanSupportCard({ onDismiss }: { onDismiss: () => void }) {
+export function QadrDuaCard() {
   const t = useTranslations("plan");
-  const [hidden, setHidden] = useState(false);
-  if (hidden) return null;
   return (
-    <section
-      aria-labelledby="plan-support"
-      data-testid="support-card"
-      className="flex items-start gap-4 rounded-rp-lg bg-rp-gold-tint p-5 text-rp-ink shadow-rp-soft"
-    >
-      <span className="flex size-11 shrink-0 items-center justify-center rounded-rp-full bg-rp-surface text-rp-gold-text">
-        <LanternIcon size={24} />
-      </span>
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <h2 id="plan-support" className="rp-row font-semibold">
-          {t("supportTitle")}
-        </h2>
-        <p className="rp-small text-rp-muted">{t("supportBody")}</p>
-        <div className="mt-1 flex flex-wrap items-center gap-2">
-          <Link href={SUPPORT_HREF} className="rp-small inline-flex min-h-12 items-center font-semibold text-rp-gold-text underline-offset-4 hover:underline">
-            {t("supportAction")}
-          </Link>
-          <button
-            type="button"
-            onClick={() => {
-              setHidden(true);
-              onDismiss();
-            }}
-            aria-label={t("supportDismissLabel")}
-            className={cn(buttonVariants({ variant: "quiet", size: "sm" }), "ms-auto min-h-12 text-rp-muted")}
-          >
-            {t("supportDismiss")}
-          </button>
-        </div>
-      </div>
+    <section aria-labelledby="qadr-dua-title" data-testid="qadr-dua" className="flex flex-col gap-2 rounded-rp-lg bg-rp-surface p-5 text-rp-ink shadow-rp-soft">
+      <h2 id="qadr-dua-title" className="rp-row font-semibold">
+        {t("items.qadrDua")}
+      </h2>
+      <p lang="ar" dir="rtl" className="text-[22px] leading-[40px]">
+        {QADR_DUA_ARABIC}
+      </p>
+      <p className="rp-small italic text-rp-ink">{t("qadrDuaTranslit")}</p>
+      <p className="rp-small text-rp-ink">{t("qadrDuaMeaning")}</p>
+      <p className="rp-caption text-rp-muted">{t("qadrDuaSource")}</p>
     </section>
   );
 }

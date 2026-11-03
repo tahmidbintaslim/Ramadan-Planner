@@ -444,6 +444,7 @@ export async function updatePlanTaskImpl(
     .update({
       title: parsed.data.title,
       is_done: parsed.data.isDone,
+      ...(parsed.data.dueDate !== undefined ? { due_date: parsed.data.dueDate } : {}),
       updated_at: new Date().toISOString(),
     })
     .eq("id", parsed.data.id)

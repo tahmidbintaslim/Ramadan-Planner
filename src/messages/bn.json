@@ -264,10 +264,10 @@
             "quranPara": "কুরআন · {n} পারা"
         },
         "itemMeta": {
-            "morningDhikr": "১০ মিনিট",
-            "quran": "২০ মিনিট",
-            "sleepDhikr": "৫ মিনিট",
-            "nightQuran": "৩০ মিনিট",
+            "morningDhikr": "প্রস্তাবিত ১০ মিনিট",
+            "quran": "প্রস্তাবিত ২০ মিনিট",
+            "sleepDhikr": "প্রস্তাবিত ৫ মিনিট",
+            "nightQuran": "প্রস্তাবিত ৩০ মিনিট",
             "qadrDua": "সূত্র: তিরমিজি ৩৫১৩",
             "goalTarget": "লক্ষ্য {count} {unit}",
             "tahajjudAt": "প্রস্তাবিত {time}"
@@ -285,9 +285,6 @@
         "amalTargetHint": "সংখ্যা দিলে এটি লক্ষ্য হিসেবে যোগ হবে, যেমন ১০০ বার যিকির।",
         "suggestions": "প্রস্তাবিত",
         "add": "যোগ করুন",
-        "editList": "তালিকা সম্পাদনা",
-        "doneEditing": "সম্পাদনা শেষ",
-        "removeItem": "{title} মুছুন",
         "nightHeroLabel": "আজ রাতের তাহাজ্জুদ",
         "nightHeroAria": "আজ রাতের তাহাজ্জুদের প্রস্তাবিত সময়",
         "sehriEndsAt": "সেহরি শেষ {time}",
@@ -302,11 +299,13 @@
         "tonightAmal": "আজ রাতের আমল",
         "nightsLoading": "শেষ দশ রাতের সময় লোড হচ্ছে",
         "nightsError": "সময়সূচি আনা যায়নি। পরে আবার চেষ্টা করুন।",
-        "supportTitle": "শেষ দশকে সাদাকায়ে জারিয়া",
-        "supportBody": "আগামী রমজানের সার্ভার ও অনুবাদ খরচে অংশ নিন",
-        "supportAction": "অংশ নিন →",
-        "supportDismiss": "এখন নয়",
-        "supportDismissLabel": "সাদাকার কার্ডটি এখন লুকান"
+        "editSheetTitle": "আমল সম্পাদনা",
+        "save": "সংরক্ষণ করুন",
+        "deleteItem": "আমলটি মুছুন",
+        "editItem": "{title} সম্পাদনা করুন",
+        "qadrDuaTranslit": "আল্লাহুম্মা ইন্নাকা আফুউউন তুহিব্বুল আফওয়া ফাফু আন্নি",
+        "qadrDuaMeaning": "হে আল্লাহ, আপনি ক্ষমাশীল, ক্ষমা করতে ভালোবাসেন; অতএব আমাকে ক্ষমা করুন।",
+        "qadrDuaSource": "সূত্র: তিরমিজি ৩৫১৩"
     },
     "reminders": {
         "title": "রিমাইন্ডার",

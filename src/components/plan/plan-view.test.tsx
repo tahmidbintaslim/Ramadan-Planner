@@ -8,7 +8,7 @@ import type { TimetableDay } from "@/lib/ramadan-timetable";
 import { zonedTime } from "@/lib/prayer-phase";
 import { WithIntl } from "@/components/prayer/test-utils";
 import { ChecklistCards } from "./checklist";
-import { NightHero, OddNightsCard } from "./night-view";
+import { NightHero, OddNightsCard, QADR_DUA_ARABIC, QadrDuaCard } from "./night-view";
 import { nightTimes, oddNightRows } from "./plan-logic";
 import { ProgressCard } from "./progress-card";
 
@@ -89,6 +89,31 @@ describe("ChecklistCards", () => {
     fireEvent.click(boxes[1]);
     expect(onToggle).toHaveBeenCalledWith(expect.objectContaining({ id: "b" }), true);
   });
+
+  it("locks a row while its request is in flight and offers a 48px edit button", () => {
+    const onEdit = vi.fn();
+    render(
+      <WithIntl>
+        <ChecklistCards
+          items={[
+            { id: "a", title: "সেহরি ও নিয়ত", done: false },
+            { id: "b", title: "তারাবি", done: false },
+          ]}
+          onToggle={() => {}}
+          onEdit={onEdit}
+          pending={new Set(["a"])}
+        />
+      </WithIntl>,
+    );
+    const [a, b] = screen.getAllByRole("checkbox");
+    expect(a).toBeDisabled();
+    expect(a).toHaveAttribute("aria-busy", "true");
+    expect(b).toBeEnabled();
+    const edit = screen.getByRole("button", { name: "তারাবি সম্পাদনা করুন" });
+    expect(edit).toHaveClass("w-12");
+    fireEvent.click(edit);
+    expect(onEdit).toHaveBeenCalledWith(expect.objectContaining({ id: "b" }));
+  });
 });
 
 describe("last ten nights", () => {
@@ -132,5 +157,20 @@ describe("last ten nights", () => {
     expect(within(hero).getByText("সেহরি শেষ ৪:৪৮")).toBeInTheDocument();
     expect(within(hero).getByText("২৭ রমজান ১৪৪৮")).toBeInTheDocument();
     expect(within(hero).getByText(/প্রস্তাবিত: রাতের শেষ তৃতীয়াংশ/)).toBeInTheDocument();
+  });
+});
+
+describe("QadrDuaCard", () => {
+  it("shows the Arabic, transliteration, meaning and source", () => {
+    render(
+      <WithIntl>
+        <QadrDuaCard />
+      </WithIntl>,
+    );
+    const card = screen.getByTestId("qadr-dua");
+    expect(within(card).getByText(QADR_DUA_ARABIC)).toHaveAttribute("lang", "ar");
+    expect(within(card).getByText(/আল্লাহুম্মা ইন্নাকা/)).toBeInTheDocument();
+    expect(within(card).getByText(/ক্ষমা করুন/)).toBeInTheDocument();
+    expect(within(card).getByText("সূত্র: তিরমিজি ৩৫১৩")).toBeInTheDocument();
   });
 });

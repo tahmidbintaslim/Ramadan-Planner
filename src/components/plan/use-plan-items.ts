@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useSyncExternalStore, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useAuth } from "@/components/providers/auth-provider";
 import { getTodayKey, useGuestData } from "@/hooks/use-guest-data";
 import {
@@ -14,180 +14,306 @@ import {
   type PrayerGoalDTO,
 } from "@/actions/planner";
 
-// The plan's existing data model, unchanged: prayer goals and plan tasks, in localStorage (per day) for guests and
-// through the planner server functions when signed in. Toggles and deletes are optimistic and roll back on error.
+// The plan's existing data model: prayer goals and plan tasks, in localStorage (per day) for guests and through
+// the planner server functions when signed in. Toggles and deletes are optimistic; a row is locked while its
+// request is in flight, and a failure rolls back only that row. Signed-in task ticks carry the day they belong to
+// in `dueDate` (see doneForDay).
 
 const subscribeNoop = () => () => {};
+const EMPTY_GOALS: PrayerGoalDTO[] = [];
+const EMPTY_TASKS: PlanTaskDTO[] = [];
+/** If the auth client never loads (offline, blocked), the plan works as a guest after this long. */
+export const AUTH_WAIT_MS = 3000;
 
 const notifyTrackerUpdate = () => {
   if (typeof window !== "undefined") window.dispatchEvent(new Event("rp-tracker-updated"));
 };
 
-const EMPTY_GOALS: PrayerGoalDTO[] = [];
-const EMPTY_TASKS: PlanTaskDTO[] = [];
+type Kind = "task" | "goal";
 
 export interface PlanItemsState {
   goals: PrayerGoalDTO[];
   tasks: PlanTaskDTO[];
   isGuest: boolean;
-  loading: boolean;
-  isPending: boolean;
+  /** The list is known (guest storage read, or the first server load finished): editing is allowed. */
+  ready: boolean;
   error: boolean;
-  /** Adds a task; resolves to its id (null on failure). */
-  addTask: (title: string, isDone?: boolean) => Promise<string | null>;
-  /** Adds a goal with a target count; resolves to its id (null on failure). */
+  /** Ids with a request in flight (their rows are locked). */
+  pending: ReadonlySet<string>;
+  /** Adds a task; `doneOn` adds it already ticked for that day. Resolves to its id (null on failure). */
+  addTask: (title: string, doneOn?: string) => Promise<string | null>;
   addGoal: (title: string, targetCount: number, targetUnit: string) => Promise<string | null>;
-  toggle: (kind: "task" | "goal", id: string, done: boolean) => void;
-  remove: (kind: "task" | "goal", id: string) => void;
+  /** Ticks or unticks an item for the day `scopeISO`. */
+  toggle: (kind: Kind, id: string, done: boolean, scopeISO: string) => void;
+  /** Resolves true once deleted (immediately for guests). */
+  remove: (kind: Kind, id: string) => Promise<boolean>;
+  updateTask: (id: string, title: string) => Promise<boolean>;
+  updateGoal: (id: string, title: string, targetCount: number) => Promise<boolean>;
+}
+
+/** Re-insert `item` at `index` unless it is already back. */
+function reinsert<T extends { id: string }>(list: T[], item: T, index: number): T[] {
+  if (list.some((x) => x.id === item.id)) return list;
+  const next = [...list];
+  next.splice(Math.min(index, next.length), 0, item);
+  return next;
 }
 
 export function usePlanItems(): PlanItemsState {
   const { isGuest, loading } = useAuth();
   const [serverGoals, setServerGoals] = useState<PrayerGoalDTO[]>([]);
   const [serverTasks, setServerTasks] = useState<PlanTaskDTO[]>([]);
+  const [serverLoaded, setServerLoaded] = useState(false);
   const { data: guestGoals, updateData: updateGuestGoals } = useGuestData<PrayerGoalDTO[]>(getTodayKey("plan_goals"), []);
   const { data: guestTasks, updateData: updateGuestTasks } = useGuestData<PlanTaskDTO[]>(getTodayKey("plan_tasks"), []);
   const [error, setError] = useState(false);
-  const [isPending, startTransition] = useTransition();
+  const [pending, setPending] = useState<ReadonlySet<string>>(() => new Set());
+  const [authTimedOut, setAuthTimedOut] = useState(false);
 
   // Guest data lives in localStorage: the server render and the hydrating render show none, then it appears.
   const mounted = useSyncExternalStore(subscribeNoop, () => true, () => false);
-  const goals = isGuest ? (mounted ? guestGoals : EMPTY_GOALS) : serverGoals;
-  const tasks = isGuest ? (mounted ? guestTasks : EMPTY_TASKS) : serverTasks;
+  // While the auth client loads it is not yet known whose list this is.
+  const guest = isGuest && (!loading || authTimedOut);
+  const goals = guest ? (mounted ? guestGoals : EMPTY_GOALS) : serverGoals;
+  const tasks = guest ? (mounted ? guestTasks : EMPTY_TASKS) : serverTasks;
+  const ready = mounted && (guest || (!loading && !isGuest && serverLoaded));
+
+  useEffect(() => {
+    if (!loading) return;
+    const id = window.setTimeout(() => setAuthTimedOut(true), AUTH_WAIT_MS);
+    return () => window.clearTimeout(id);
+  }, [loading]);
 
   useEffect(() => {
     if (loading || isGuest) return;
-    startTransition(async () => {
-      const [goalsRes, tasksRes] = await Promise.all([listPrayerGoalsAction(), listPlanTasksAction()]);
+    let cancelled = false;
+    void Promise.all([listPrayerGoalsAction(), listPlanTasksAction()]).then(([goalsRes, tasksRes]) => {
+      if (cancelled) return;
       if (goalsRes.ok) setServerGoals(goalsRes.data);
       if (tasksRes.ok) setServerTasks(tasksRes.data);
-      if (!goalsRes.ok || !tasksRes.ok) setError(true);
+      setError(!goalsRes.ok || !tasksRes.ok);
+      setServerLoaded(true);
     });
+    return () => {
+      cancelled = true;
+    };
   }, [isGuest, loading]);
 
-  const setGoals = isGuest ? updateGuestGoals : setServerGoals;
-  const setTasks = isGuest ? updateGuestTasks : setServerTasks;
+  // Latest lists for the async handlers.
+  const listsRef = useRef({ goals, tasks });
+  useEffect(() => {
+    listsRef.current = { goals, tasks };
+  }, [goals, tasks]);
+
+  const lock = useCallback((id: string, on: boolean) => {
+    setPending((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }, []);
+
+  const succeed = useCallback(() => {
+    setError(false);
+    notifyTrackerUpdate();
+  }, []);
 
   const addTask = useCallback(
-    async (title: string, isDone = false): Promise<string | null> => {
+    async (title: string, doneOn?: string): Promise<string | null> => {
       const clean = title.trim();
       if (!clean) return null;
-      if (isGuest) {
+      if (guest) {
         const id = crypto.randomUUID();
-        updateGuestTasks((prev) => [...prev, { id, title: clean, isDone, dueDate: null, sortOrder: prev.length }]);
-        notifyTrackerUpdate();
+        updateGuestTasks((prev) => [...prev, { id, title: clean, isDone: Boolean(doneOn), dueDate: doneOn ?? null, sortOrder: prev.length }]);
+        succeed();
         return id;
       }
-      setError(false);
       const res = await createPlanTaskAction({ title: clean });
       if (!res.ok) {
         setError(true);
         return null;
       }
       let created = res.data;
-      if (isDone) {
-        const upd = await updatePlanTaskAction({ ...created, isDone: true });
+      if (doneOn) {
+        const upd = await updatePlanTaskAction({ id: created.id, title: created.title, isDone: true, dueDate: doneOn });
         if (upd.ok) created = upd.data;
       }
       setServerTasks((prev) => [...prev, created]);
-      notifyTrackerUpdate();
+      succeed();
       return created.id;
     },
-    [isGuest, updateGuestTasks],
+    [guest, updateGuestTasks, succeed],
   );
 
   const addGoal = useCallback(
     async (title: string, targetCount: number, targetUnit: string): Promise<string | null> => {
       const clean = title.trim();
       if (!clean) return null;
-      const count = Math.max(1, Math.floor(targetCount) || 1);
-      if (isGuest) {
+      const count = Math.min(1000, Math.max(1, Math.floor(targetCount) || 1));
+      if (guest) {
         const id = crypto.randomUUID();
-        updateGuestGoals((prev) => [
-          ...prev,
-          { id, title: clean, targetCount: count, targetUnit, isCompleted: false, sortOrder: prev.length },
-        ]);
-        notifyTrackerUpdate();
+        updateGuestGoals((prev) => [...prev, { id, title: clean, targetCount: count, targetUnit, isCompleted: false, sortOrder: prev.length }]);
+        succeed();
         return id;
       }
-      setError(false);
       const res = await createPrayerGoalAction({ title: clean, targetCount: count, targetUnit });
       if (!res.ok) {
         setError(true);
         return null;
       }
       setServerGoals((prev) => [...prev, res.data]);
-      notifyTrackerUpdate();
+      succeed();
       return res.data.id;
     },
-    [isGuest, updateGuestGoals],
+    [guest, updateGuestGoals, succeed],
   );
 
   const toggle = useCallback(
-    (kind: "task" | "goal", id: string, done: boolean) => {
+    (kind: Kind, id: string, done: boolean, scopeISO: string) => {
+      if (pending.has(id)) return;
       if (kind === "task") {
-        const before = tasks.find((x) => x.id === id);
+        const before = listsRef.current.tasks.find((x) => x.id === id);
         if (!before) return;
-        const next = { ...before, isDone: done };
-        setTasks((prev) => prev.map((x) => (x.id === id ? next : x)));
-        notifyTrackerUpdate();
-        if (isGuest) return;
-        startTransition(async () => {
-          const res = await updatePlanTaskAction(next);
-          if (!res.ok) {
-            setError(true);
-            setServerTasks((prev) => prev.map((x) => (x.id === id ? before : x)));
-          }
-        });
+        const next: PlanTaskDTO = { ...before, isDone: done, dueDate: scopeISO };
+        if (guest) {
+          updateGuestTasks((prev) => prev.map((x) => (x.id === id ? next : x)));
+          succeed();
+          return;
+        }
+        setServerTasks((prev) => prev.map((x) => (x.id === id ? next : x)));
+        lock(id, true);
+        void updatePlanTaskAction({ id, title: next.title, isDone: done, dueDate: scopeISO })
+          .then((res) => {
+            if (res.ok) {
+              setServerTasks((prev) => prev.map((x) => (x.id === id ? res.data : x)));
+              succeed();
+            } else {
+              setError(true);
+              setServerTasks((prev) => prev.map((x) => (x.id === id ? before : x)));
+            }
+          })
+          .finally(() => lock(id, false));
         return;
       }
-      const before = goals.find((x) => x.id === id);
+      const before = listsRef.current.goals.find((x) => x.id === id);
       if (!before) return;
-      const next = { ...before, isCompleted: done };
-      setGoals((prev) => prev.map((x) => (x.id === id ? next : x)));
-      notifyTrackerUpdate();
-      if (isGuest) return;
-      startTransition(async () => {
-        const res = await updatePrayerGoalAction(next);
-        if (!res.ok) {
-          setError(true);
-          setServerGoals((prev) => prev.map((x) => (x.id === id ? before : x)));
-        }
-      });
+      const next: PrayerGoalDTO = { ...before, isCompleted: done };
+      if (guest) {
+        updateGuestGoals((prev) => prev.map((x) => (x.id === id ? next : x)));
+        succeed();
+        return;
+      }
+      setServerGoals((prev) => prev.map((x) => (x.id === id ? next : x)));
+      lock(id, true);
+      void updatePrayerGoalAction(next)
+        .then((res) => {
+          if (res.ok) succeed();
+          else {
+            setError(true);
+            setServerGoals((prev) => prev.map((x) => (x.id === id ? before : x)));
+          }
+        })
+        .finally(() => lock(id, false));
     },
-    [goals, tasks, isGuest, setGoals, setTasks],
+    [guest, pending, lock, succeed, updateGuestTasks, updateGuestGoals],
   );
 
   const remove = useCallback(
-    (kind: "task" | "goal", id: string) => {
+    async (kind: Kind, id: string): Promise<boolean> => {
+      if (pending.has(id)) return false;
       if (kind === "task") {
-        const prevTasks = tasks;
-        setTasks((prev) => prev.filter((x) => x.id !== id));
-        notifyTrackerUpdate();
-        if (isGuest) return;
-        startTransition(async () => {
-          const res = await deletePlanTaskAction(id);
-          if (!res.ok) {
-            setError(true);
-            setServerTasks(prevTasks);
-          }
-        });
-        return;
-      }
-      const prevGoals = goals;
-      setGoals((prev) => prev.filter((x) => x.id !== id));
-      notifyTrackerUpdate();
-      if (isGuest) return;
-      startTransition(async () => {
-        const res = await deletePrayerGoalAction(id);
+        const index = listsRef.current.tasks.findIndex((x) => x.id === id);
+        const removed = listsRef.current.tasks[index];
+        if (!removed) return false;
+        if (guest) {
+          updateGuestTasks((prev) => prev.filter((x) => x.id !== id));
+          succeed();
+          return true;
+        }
+        setServerTasks((prev) => prev.filter((x) => x.id !== id));
+        lock(id, true);
+        const res = await deletePlanTaskAction(id);
+        lock(id, false);
         if (!res.ok) {
           setError(true);
-          setServerGoals(prevGoals);
+          setServerTasks((prev) => reinsert(prev, removed, index));
+          return false;
         }
-      });
+        succeed();
+        return true;
+      }
+      const index = listsRef.current.goals.findIndex((x) => x.id === id);
+      const removed = listsRef.current.goals[index];
+      if (!removed) return false;
+      if (guest) {
+        updateGuestGoals((prev) => prev.filter((x) => x.id !== id));
+        succeed();
+        return true;
+      }
+      setServerGoals((prev) => prev.filter((x) => x.id !== id));
+      lock(id, true);
+      const res = await deletePrayerGoalAction(id);
+      lock(id, false);
+      if (!res.ok) {
+        setError(true);
+        setServerGoals((prev) => reinsert(prev, removed, index));
+        return false;
+      }
+      succeed();
+      return true;
     },
-    [goals, tasks, isGuest, setGoals, setTasks],
+    [guest, pending, lock, succeed, updateGuestTasks, updateGuestGoals],
   );
 
-  return { goals, tasks, isGuest, loading, isPending, error, addTask, addGoal, toggle, remove };
+  const updateTask = useCallback(
+    async (id: string, title: string): Promise<boolean> => {
+      const clean = title.trim();
+      const before = listsRef.current.tasks.find((x) => x.id === id);
+      if (!clean || !before) return false;
+      if (guest) {
+        updateGuestTasks((prev) => prev.map((x) => (x.id === id ? { ...x, title: clean } : x)));
+        succeed();
+        return true;
+      }
+      lock(id, true);
+      const res = await updatePlanTaskAction({ id, title: clean, isDone: before.isDone });
+      lock(id, false);
+      if (!res.ok) {
+        setError(true);
+        return false;
+      }
+      setServerTasks((prev) => prev.map((x) => (x.id === id ? res.data : x)));
+      succeed();
+      return true;
+    },
+    [guest, lock, succeed, updateGuestTasks],
+  );
+
+  const updateGoal = useCallback(
+    async (id: string, title: string, targetCount: number): Promise<boolean> => {
+      const clean = title.trim();
+      const before = listsRef.current.goals.find((x) => x.id === id);
+      if (!clean || !before) return false;
+      const next: PrayerGoalDTO = { ...before, title: clean, targetCount: Math.min(1000, Math.max(1, Math.floor(targetCount) || 1)) };
+      if (guest) {
+        updateGuestGoals((prev) => prev.map((x) => (x.id === id ? next : x)));
+        succeed();
+        return true;
+      }
+      lock(id, true);
+      const res = await updatePrayerGoalAction(next);
+      lock(id, false);
+      if (!res.ok) {
+        setError(true);
+        return false;
+      }
+      setServerGoals((prev) => prev.map((x) => (x.id === id ? res.data : x)));
+      succeed();
+      return true;
+    },
+    [guest, lock, succeed, updateGuestGoals],
+  );
+
+  return { goals, tasks, isGuest: guest, ready, error, pending, addTask, addGoal, toggle, remove, updateTask, updateGoal };
 }
