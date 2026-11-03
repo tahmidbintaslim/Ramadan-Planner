@@ -28,7 +28,10 @@
         "chapter": "Chapter",
         "to": "to",
         "pageNotFoundTitle": "Page not found",
-        "pageNotFoundDesc": "We couldn't find the page you're looking for."
+        "pageNotFoundDesc": "We couldn't find the page you're looking for.",
+        "greeting": "Assalamu alaikum",
+        "fastDay": "Fast {day}",
+        "skipToContent": "Skip to content"
     },
     "nav": {
         "home": "Home",
@@ -55,7 +58,12 @@
             "Sun": "Sun"
         },
         "expandSidebar": "Expand sidebar",
-        "collapseSidebar": "Collapse sidebar"
+        "collapseSidebar": "Collapse sidebar",
+        "todayShort": "Today",
+        "timetable": "Timetable",
+        "more": "More",
+        "moreDescription": "Other sections, language and sign-in",
+        "mainNav": "Main navigation"
     },
     "auth": {
         "login": "Login",

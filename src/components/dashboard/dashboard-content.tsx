@@ -20,6 +20,7 @@ import {
   localizeAsciiDigits,
 } from "@/lib/locale-number";
 import { getRamadanDayOrdinal } from "@/lib/ramadan-ordinal";
+import { rememberTimings } from "@/lib/auto-night";
 
 export function DashboardContent() {
   const t = useTranslations("dashboard");
@@ -66,6 +67,8 @@ export function DashboardContent() {
         if (timingsRes.ok) {
           const data: TimingData = await timingsRes.json();
           setTimings(data);
+          // Auto Night mode reads the last known timings (location-based ones win over timezone defaults).
+          rememberTimings(data, lat !== undefined ? "geo" : "tz");
         }
         if (ramadanRes.ok) {
           const data: RamadanStatus = await ramadanRes.json();

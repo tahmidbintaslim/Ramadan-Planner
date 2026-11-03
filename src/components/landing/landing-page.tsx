@@ -27,7 +27,7 @@ import { Separator } from "@/components/ui/separator";
 import { PrayerTimesWidget } from "@/components/landing/prayer-times-widget";
 import { QuranPreview } from "@/components/landing/quran-preview";
 import { RamadanTimetable } from "@/components/landing/ramadan-timetable";
-import { AppHeader } from "@/components/layout/app-header";
+import { SiteHeader } from "@/components/layout/site-header";
 import { formatLocalizedNumber } from "@/lib/locale-number";
 
 export function LandingPage() {
@@ -137,7 +137,7 @@ export function LandingPage() {
       >
         Skip to content
       </a>
-      <AppHeader />
+      <SiteHeader />
 
       <main id="main-content">
         <section

@@ -66,9 +66,10 @@ const HIJRI_MONTHS_BN: Record<number, string> = {
 const cache = new Map<string, { data: TimingData; expiresAt: number }>();
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-function cacheKey(lat: number, lng: number, date: string): string {
-    // Round to 2 decimal places for sensible cache hits
-    return `${lat.toFixed(2)},${lng.toFixed(2)},${date}`;
+function cacheKey(lat: number, lng: number, date: string, timezone: string): string {
+    // Round to 2 decimal places for sensible cache hits. The timezone is part of the key: the upstream answers
+    // in that zone's wall-clock times, so the same coordinates asked with another tz must not share an entry.
+    return `${lat.toFixed(2)},${lng.toFixed(2)},${date},${timezone}`;
 }
 
 function getFromCache(key: string): TimingData | null {
@@ -102,7 +103,7 @@ export async function fetchPrayerTimes(
     timezone: string,
     locationLabel: string
 ): Promise<TimingData> {
-    const key = cacheKey(latitude, longitude, date);
+    const key = cacheKey(latitude, longitude, date, timezone);
     const cached = getFromCache(key);
     if (cached) return cached;
 

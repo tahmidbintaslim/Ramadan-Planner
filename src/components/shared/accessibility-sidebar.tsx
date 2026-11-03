@@ -98,7 +98,8 @@ export function AccessibilitySidebar() {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "fixed bottom-24 right-4 z-50 flex items-center justify-center md:bottom-6 md:right-6 border shadow-lg transition-all duration-200",
+          // Below 1024px it sits 16px above the floating bottom nav (16px gap + 72px bar, safe-area aware).
+          "fixed bottom-[calc(6.5rem+env(safe-area-inset-bottom))] right-4 z-50 flex items-center justify-center lg:bottom-6 lg:right-6 border shadow-lg transition-all duration-200",
           "h-12 w-12 rounded-full shadow-lg transition-all duration-200",
           "bg-primary text-primary-foreground hover:scale-110",
           "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
@@ -116,7 +117,7 @@ export function AccessibilitySidebar() {
       {/* Panel */}
       <div
         className={cn(
-          "fixed bottom-40 right-4 z-50 w-[min(92vw,18rem)] md:bottom-20 md:w-72",
+          "fixed bottom-[calc(10.5rem+env(safe-area-inset-bottom))] right-4 z-50 w-[min(92vw,18rem)] md:w-72 lg:bottom-20 lg:right-6",
           "rounded-xl border bg-card shadow-2xl transition-all duration-200 origin-bottom-right",
           isOpen
             ? "scale-100 opacity-100 pointer-events-auto"
