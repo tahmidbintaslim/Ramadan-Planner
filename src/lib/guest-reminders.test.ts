@@ -1,5 +1,12 @@
-import { describe, expect, it } from "vitest";
-import { migrateGuestReminderRules } from "./guest-reminders";
+// @vitest-environment jsdom
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { ReminderRuleDTO } from "@/actions/planner-schemas";
+import {
+  migrateGuestReminderRules,
+  readGuestReminderRules,
+  resetGuestReminderStoreForTests,
+  writeGuestReminderRules,
+} from "./guest-reminders";
 
 function memoryStorage(entries: Record<string, string> = {}) {
   const map = new Map(Object.entries(entries));
@@ -15,10 +22,17 @@ function memoryStorage(entries: Record<string, string> = {}) {
   };
 }
 
-const rule = (type: string) => ({ id: type, type, label: "", offsetMinutes: -15, channels: ["push"], enabled: true });
+const rule = (type: ReminderRuleDTO["type"]): ReminderRuleDTO => ({
+  id: type,
+  type,
+  label: "",
+  offsetMinutes: -15,
+  channels: ["push"],
+  enabled: true,
+});
 
 describe("migrateGuestReminderRules", () => {
-  it("copies the most recent dated list to the stable key and removes the dated keys", () => {
+  it("copies the newest non-empty dated list and keeps the dated keys (they expire on their own)", () => {
     const s = memoryStorage({
       "rp_reminder_rules_2027-02-18": JSON.stringify([rule("fajr")]),
       "rp_reminder_rules_2027-02-20": JSON.stringify([rule("isha"), rule("asr")]),
@@ -27,10 +41,20 @@ describe("migrateGuestReminderRules", () => {
     });
     expect(migrateGuestReminderRules(s)).toBe(true);
     expect(JSON.parse(s.getItem("rp_reminder_rules")!)).toEqual([rule("isha"), rule("asr")]);
-    expect(Array.from(s.map.keys()).sort()).toEqual(["rp_checklist_2027-02-20", "rp_reminder_rules"]);
+    expect(s.map.size).toBe(5);
   });
 
-  it("skips an unreadable newest list and uses the next one", () => {
+  it("skips the empty list the old hook wrote on a new day (02-18 set, 02-19 empty)", () => {
+    const s = memoryStorage({
+      "rp_reminder_rules_2027-02-18": JSON.stringify([rule("fajr"), rule("isha")]),
+      "rp_reminder_rules_2027-02-19": "[]",
+    });
+    expect(migrateGuestReminderRules(s)).toBe(true);
+    expect(JSON.parse(s.getItem("rp_reminder_rules")!)).toEqual([rule("fajr"), rule("isha")]);
+    expect(s.getItem("rp_reminder_rules_2027-02-19")).toBe("[]");
+  });
+
+  it("skips an unreadable list and uses the next one", () => {
     const s = memoryStorage({
       "rp_reminder_rules_2027-02-20": "{broken",
       "rp_reminder_rules_2027-02-19": JSON.stringify([rule("dhuhr")]),
@@ -39,12 +63,9 @@ describe("migrateGuestReminderRules", () => {
     expect(JSON.parse(s.getItem("rp_reminder_rules")!)).toEqual([rule("dhuhr")]);
   });
 
-  it("keeps an empty newest list (the user cleared their reminders)", () => {
-    const s = memoryStorage({
-      "rp_reminder_rules_2027-02-20": "[]",
-      "rp_reminder_rules_2027-02-19": JSON.stringify([rule("dhuhr")]),
-    });
-    migrateGuestReminderRules(s);
+  it("falls back to an empty list only when every dated list is empty", () => {
+    const s = memoryStorage({ "rp_reminder_rules_2027-02-20": "[]", "rp_reminder_rules_2027-02-19": "[]" });
+    expect(migrateGuestReminderRules(s)).toBe(false);
     expect(s.getItem("rp_reminder_rules")).toBe("[]");
   });
 
@@ -62,7 +83,46 @@ describe("migrateGuestReminderRules", () => {
     expect(migrateGuestReminderRules(s)).toBe(false);
     expect(s.getItem("rp_reminder_rules")).toBeNull();
     expect(migrateGuestReminderRules(undefined)).toBe(false);
-    const throwing = { ...memoryStorage(), getItem: () => { throw new Error("denied"); } };
+    const throwing = {
+      ...memoryStorage(),
+      getItem: () => {
+        throw new Error("denied");
+      },
+    };
     expect(migrateGuestReminderRules(throwing)).toBe(false);
+  });
+});
+
+describe("guest reminder store", () => {
+  afterEach(() => {
+    localStorage.clear();
+    resetGuestReminderStoreForTests();
+    vi.restoreAllMocks();
+  });
+
+  it("migrates on first read, returns a stable snapshot and notifies on write", () => {
+    localStorage.setItem("rp_reminder_rules_2027-02-18", JSON.stringify([rule("fajr")]));
+    const first = readGuestReminderRules();
+    expect(first).toEqual([rule("fajr")]);
+    expect(readGuestReminderRules()).toBe(first);
+    const onChange = vi.fn();
+    window.addEventListener("rp:guest-reminder-rules", onChange);
+    writeGuestReminderRules((prev) => [...prev, rule("isha")]);
+    window.removeEventListener("rp:guest-reminder-rules", onChange);
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(readGuestReminderRules()).toEqual([rule("fajr"), rule("isha")]);
+    expect(JSON.parse(localStorage.getItem("rp_reminder_rules")!)).toHaveLength(2);
+  });
+
+  it("keeps rules in memory when storage is unavailable", () => {
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("denied");
+    });
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("denied");
+    });
+    expect(readGuestReminderRules()).toEqual([]);
+    writeGuestReminderRules([rule("asr")]);
+    expect(readGuestReminderRules()).toEqual([rule("asr")]);
   });
 });

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useGuestReminderRules } from "@/lib/guest-reminders";
 import {
@@ -73,38 +73,60 @@ export function usePrayerReminders() {
     };
   }, [isGuest, loading]);
 
+  // Signed in: a prayer with a request in flight ignores further taps (no duplicate rules from a double tap)
+  // and its bell shows the requested state until the server answers.
+  const pendingRef = useRef(new Set<FivePrayer>());
+  const [optimistic, setOptimistic] = useState<Partial<Record<FivePrayer, boolean>>>({});
+
   const rules = isGuest ? guestRules : serverRules;
-  const reminders = useMemo(() => remindersByPrayer(rules), [rules]);
+  const reminders = useMemo(
+    () => ({ ...remindersByPrayer(rules), ...(isGuest ? {} : optimistic) }),
+    [rules, isGuest, optimistic],
+  );
 
   const toggle = useCallback(
     (prayer: FivePrayer, enabled: boolean) => {
-      const change = reminderToggleChange(rules, prayer, enabled);
-      if (change.kind === "none") return;
-
       if (isGuest) {
-        const created = change.kind === "create" ? { id: crypto.randomUUID(), ...change.rule } : undefined;
-        updateGuestRules((prev) => applyChange(prev, change, created));
+        // Computed from the store's latest value, so quick repeated taps never act on a stale list.
+        updateGuestRules((prev) => {
+          const change = reminderToggleChange(prev, prayer, enabled);
+          const created = change.kind === "create" ? { id: crypto.randomUUID(), ...change.rule } : undefined;
+          return applyChange(prev, change, created);
+        });
         notifyTrackerUpdate();
         return;
       }
 
-      // Optimistic for updates; a create waits for the server id.
-      if (change.kind === "update") {
-        const previous = serverRules;
-        setServerRules((prev) => applyChange(prev, change));
-        void Promise.all(change.rules.map((r) => updateReminderRuleAction(r))).then((results) => {
-          if (results.some((r) => !r.ok)) setServerRules(previous);
-          else notifyTrackerUpdate();
+      if (pendingRef.current.has(prayer)) return;
+      const change = reminderToggleChange(serverRules, prayer, enabled);
+      if (change.kind === "none") return;
+      pendingRef.current.add(prayer);
+      setOptimistic((prev) => ({ ...prev, [prayer]: enabled }));
+      const settle = () => {
+        pendingRef.current.delete(prayer);
+        setOptimistic((prev) => {
+          const next = { ...prev };
+          delete next[prayer];
+          return next;
         });
-        return;
-      }
-      void createReminderRuleAction(change.rule).then((res) => {
-        if (!res.ok) return;
-        setServerRules((prev) => applyChange(prev, change, res.data));
-        notifyTrackerUpdate();
-      });
+      };
+
+      const request =
+        change.kind === "update"
+          ? Promise.all(change.rules.map((r) => updateReminderRuleAction(r))).then((results) => {
+              if (results.every((r) => r.ok)) {
+                setServerRules((prev) => applyChange(prev, change));
+                notifyTrackerUpdate();
+              }
+            })
+          : createReminderRuleAction(change.rule).then((res) => {
+              if (!res.ok) return;
+              setServerRules((prev) => applyChange(prev, change, res.data));
+              notifyTrackerUpdate();
+            });
+      void request.catch(() => {}).finally(settle);
     },
-    [isGuest, rules, serverRules, updateGuestRules],
+    [isGuest, serverRules, updateGuestRules],
   );
 
   return { reminders, toggle };

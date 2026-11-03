@@ -1,4 +1,4 @@
-import { useState, type ComponentType } from "react";
+import { useState, useSyncExternalStore, type ComponentType } from "react";
 import { useLocale, useTranslations } from "@/i18n/use-intl";
 import { SectionHeader } from "@/components/design/section-header";
 import { Link } from "@/components/shared/link";
@@ -13,7 +13,7 @@ import {
   type IconProps,
 } from "@/components/icons/islamic-icons";
 import { formatLocalizedNumber } from "@/lib/locale-number";
-import type { PrayerPhase } from "@/lib/prayer-phase";
+import { IFTAR_WINDOW_MS, type PhaseTimings, type PrayerPhase } from "@/lib/prayer-phase";
 import { cn } from "@/lib/utils";
 import { CHECKLIST_ITEMS, type ChecklistKey, type DailyChecklistState } from "./use-daily-checklist";
 
@@ -21,10 +21,23 @@ import { CHECKLIST_ITEMS, type ChecklistKey, type DailyChecklistState } from "./
 
 export type PhaseCardKind = "niyyah" | "iftarDua";
 
-/** Which card follows the Sehri/Iftar pair: the niyyah in the Sehri phase (Ramadan), the iftar dua in the last hour. */
-export function phaseCardKind(phase: PrayerPhase | null | undefined, ramadan: boolean): PhaseCardKind | null {
-  if (phase === "sehri" && ramadan) return "niyyah";
-  if (phase === "iftar") return "iftarDua";
+/** The iftar dua shows from an hour before maghrib (the iftar phase) until this long after it. */
+export const IFTAR_DUA_AFTER_MS = 45 * 60_000;
+
+/**
+ * Which card follows the Sehri/Iftar pair, in Ramadan only: the niyyah in the Sehri phase, the iftar dua from
+ * maghrib − 60 min until maghrib + 45 min.
+ */
+export function phaseCardKind(
+  now: Date,
+  phase: PrayerPhase | null | undefined,
+  timings: Pick<PhaseTimings, "maghrib"> | null | undefined,
+  ramadan: boolean,
+): PhaseCardKind | null {
+  if (!ramadan || !phase || !timings) return null;
+  if (phase === "sehri") return "niyyah";
+  const fromMaghrib = now.getTime() - timings.maghrib.getTime();
+  if (fromMaghrib >= -IFTAR_WINDOW_MS && fromMaghrib < IFTAR_DUA_AFTER_MS) return "iftarDua";
   return null;
 }
 
@@ -89,6 +102,7 @@ export function FeatureTiles({ className }: { className?: string }) {
 // ── Today's plan preview ──────────────────────────────
 
 export const PLAN_PREVIEW_COUNT = 3;
+const subscribeNoop = () => () => {};
 export const PLAN_HREF = "/plan";
 
 export function PlanPreview({ state, className }: { state: DailyChecklistState; className?: string }) {
@@ -96,7 +110,11 @@ export function PlanPreview({ state, className }: { state: DailyChecklistState; 
   const tItem = useTranslations("checklist");
   const locale = useLocale();
   const items: readonly ChecklistKey[] = CHECKLIST_ITEMS.slice(0, PLAN_PREVIEW_COUNT);
-  const done = CHECKLIST_ITEMS.filter((k) => state.checked[k]).length;
+  // Guest checklist data comes from localStorage, which the server cannot see: render the neutral (unchecked)
+  // state until hydration is done, so the server and the hydrating render match.
+  const mounted = useSyncExternalStore(subscribeNoop, () => true, () => false);
+  const checkedMap: Record<string, boolean> = mounted ? state.checked : {};
+  const done = CHECKLIST_ITEMS.filter((k) => checkedMap[k]).length;
 
   return (
     <section aria-labelledby="home-plan" className={cn("flex flex-col gap-3", className)}>
@@ -117,7 +135,7 @@ export function PlanPreview({ state, className }: { state: DailyChecklistState; 
       />
       <ul className="flex flex-col gap-3">
         {items.map((key) => {
-          const checked = Boolean(state.checked[key]);
+          const checked = Boolean(checkedMap[key]);
           return (
             <li key={key}>
               <button

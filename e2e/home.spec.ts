@@ -128,6 +128,8 @@ test.describe("mobile Home", () => {
       const rule = (id: string, type: string) => ({ id, type, label: "", offsetMinutes: -15, channels: ["push"], enabled: true });
       localStorage.setItem("rp_reminder_rules_2027-02-18", JSON.stringify([rule("00000000-0000-4000-8000-000000000001", "fajr")]));
       localStorage.setItem("rp_reminder_rules_2027-02-19", JSON.stringify([rule("00000000-0000-4000-8000-000000000002", "isha")]));
+      // What the old date-scoped hook left on the next day's first visit.
+      localStorage.setItem("rp_reminder_rules_2027-02-20", "[]");
     });
     await mockHome(page, "13:00");
     await visit(page, "/today");
@@ -135,8 +137,14 @@ test.describe("mobile Home", () => {
       "aria-pressed",
       "true",
     );
+    // The newest non-empty dated list wins; the dated keys stay until they expire.
     const keys = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith("rp_reminder_rules")));
-    expect(keys).toEqual(["rp_reminder_rules"]);
+    expect(keys.sort()).toEqual([
+      "rp_reminder_rules",
+      "rp_reminder_rules_2027-02-18",
+      "rp_reminder_rules_2027-02-19",
+      "rp_reminder_rules_2027-02-20",
+    ]);
     // The Reminders page reads (and keeps) the same stable list.
     await visit(page, "/reminders");
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem("rp_reminder_rules") || "[]"))).toEqual([
@@ -156,6 +164,8 @@ test("desktop Home has two columns: hero on the left, prayers on the right; sada
   // After isha in Ramadan: tomorrow's sehri end (04:57 in the mocked answer), not tomorrow's fajr (05:02).
   await expect(hero).toContainText(/সেহরি শেষ|Sehri ends/);
   await expect(hero).toContainText(/৪:৫৭|4:57/);
+  // …and the Sehri/Iftar pair shows tomorrow's times, labelled.
+  await expect(page.getByTestId("pair-day")).toHaveText(/আগামীকাল|Tomorrow/);
   const list = page.locator("li[data-prayer]").first();
   await expect(list).toBeVisible();
   const h = await hero.boundingBox();

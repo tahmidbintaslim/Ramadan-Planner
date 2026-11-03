@@ -52,6 +52,8 @@ export interface HomeOverviewProps {
   status: "loading" | "ready" | "error";
   timings: TimingData | null;
   phaseTimings: PhaseTimings | null;
+  /** Tomorrow's fajr, sehri end and maghrib: after Isha in Ramadan the Sehri/Iftar pair shows them. */
+  tomorrowTimings?: Pick<PhaseTimings, "fajr" | "maghrib" | "sehriEnd"> | null;
   /** Timings came from the offline cache rather than a fresh answer. */
   cached: boolean;
   ramadan: RamadanStatus | null;
@@ -77,6 +79,7 @@ export function HomeOverview({
   status,
   timings,
   phaseTimings,
+  tomorrowTimings,
   cached,
   ramadan,
   now,
@@ -94,7 +97,10 @@ export function HomeOverview({
   const ramadanDay = ramadanDayOf(ramadan);
   const inRamadan = ramadanDay !== null;
   const phase = phaseTimings ? getPrayerPhase(now, phaseTimings).phase : null;
-  const cardKind = phaseCardKind(phase, inRamadan);
+  const cardKind = phaseCardKind(now, phase, phaseTimings, inRamadan);
+  // After Isha in Ramadan the next fast is tomorrow's: the pair shows its sehri and iftar.
+  const pairTomorrow =
+    inRamadan && phaseTimings && tomorrowTimings && now.getTime() >= phaseTimings.isha.getTime() ? tomorrowTimings : null;
   const showSupport =
     phaseTimings !== null &&
     shouldShowSadaqah(now, phaseTimings, { ramadanDay, isEid: isEidOf(ramadan), dismissedAt: sadaqahDismissedAt });
@@ -122,7 +128,12 @@ export function HomeOverview({
               now={frozenNow}
               initialNow={initialNow}
             />
-            <SehriIftarPair className="order-2" timings={phaseTimings} timeZone={timeZone} />
+            <SehriIftarPair
+              className="order-2"
+              timings={pairTomorrow ?? phaseTimings}
+              timeZone={timeZone}
+              dayLabel={pairTomorrow ? t("tomorrow") : undefined}
+            />
             {cardKind ? <PhaseCard className="order-3" kind={cardKind} /> : null}
           </>
         ) : status === "error" ? (

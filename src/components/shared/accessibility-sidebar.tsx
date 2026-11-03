@@ -44,8 +44,12 @@ function applyFontSize(size: number) {
   document.body.style.fontSize = "1rem";
 }
 
-/** The stored font size (percent), or the default when missing, out of range or unreadable. */
+/** Used when localStorage is unavailable: the size then lasts for this page session. */
+let memoryFontSize: number | null = null;
+
+/** The stored font size (percent), or the default when missing or out of range. */
 export function readFontSize(): number {
+  if (memoryFontSize !== null) return memoryFontSize;
   try {
     const size = Number.parseInt(localStorage.getItem(FONT_SIZE_KEY) ?? "", 10);
     return size >= MIN_FONT_SIZE && size <= MAX_FONT_SIZE ? size : DEFAULT_FONT_SIZE;
@@ -70,9 +74,10 @@ export function useFontSize(): [number, (size: number) => void] {
     const clamped = Math.max(MIN_FONT_SIZE, Math.min(MAX_FONT_SIZE, next));
     try {
       localStorage.setItem(FONT_SIZE_KEY, String(clamped));
+      memoryFontSize = null;
     } catch {
-      // Storage unavailable: applies for this page view only.
-      applyFontSize(clamped);
+      // Storage unavailable: readFontSize falls back to this, so every control stays in step.
+      memoryFontSize = clamped;
     }
     window.dispatchEvent(new Event(FONT_SIZE_EVENT));
   }, []);
@@ -118,7 +123,7 @@ export function AccessibilityControls({ className }: { className?: string }) {
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
-            size="icon-sm"
+            size="icon"
             onClick={() => setFontSize(fontSize - STEP)}
             disabled={fontSize <= MIN_FONT_SIZE}
             aria-label={t("decrease")}
@@ -134,7 +139,7 @@ export function AccessibilityControls({ className }: { className?: string }) {
 
           <Button
             variant="outline"
-            size="icon-sm"
+            size="icon"
             onClick={() => setFontSize(fontSize + STEP)}
             disabled={fontSize >= MAX_FONT_SIZE}
             aria-label={t("increase")}
@@ -142,7 +147,7 @@ export function AccessibilityControls({ className }: { className?: string }) {
             <Plus className="h-3.5 w-3.5" />
           </Button>
 
-          <Button variant="ghost" size="icon-sm" onClick={() => setFontSize(DEFAULT_FONT_SIZE)} aria-label={t("reset")}>
+          <Button variant="ghost" size="icon" onClick={() => setFontSize(DEFAULT_FONT_SIZE)} aria-label={t("reset")}>
             <RotateCcw className="h-3.5 w-3.5" />
           </Button>
         </div>

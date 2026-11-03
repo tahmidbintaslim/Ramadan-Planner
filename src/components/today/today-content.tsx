@@ -8,7 +8,7 @@ import { DailyPractices } from "./daily-practices";
 import { HomeOverview, ramadanDayOf } from "./home-overview";
 import { useSadaqahDismissal } from "./sadaqah-dismissal";
 import { useDailyChecklist } from "./use-daily-checklist";
-import { deviceTimeZone, useHomeTimings } from "./use-home-timings";
+import { deviceTimeZone, nextDayISO, useHomeTimings } from "./use-home-timings";
 import { usePrayerReminders } from "./use-prayer-reminders";
 
 function safeTodayISO(now: Date, timeZone: string): string | null {
@@ -28,7 +28,6 @@ function safeTodayISO(now: Date, timeZone: string): string | null {
 export function TodayContent({ initialNow }: { initialNow?: Date }) {
   const t = useTranslations("today");
 
-  // The day boundary follows the device zone until timings arrive, then the timings' zone.
   // Live clock (30 s). Its date in the device zone (the zone the timings are requested for) drives the
   // midnight refetch.
   const { now, todayISO } = usePrayerPhase(null, deviceTimeZone(), { initialNow });
@@ -45,6 +44,13 @@ export function TodayContent({ initialNow }: { initialNow?: Date }) {
     return timingsFromPrayerTimes(pt, dateISO, timeZone, next?.fajr || pt.fajr, next?.sehri || pt.sehri || undefined);
   }, [home.timings, home.tomorrow, dateISO, timeZone]);
 
+  // Tomorrow's sehri, fajr and iftar for the pair after Isha (today's times stand in when tomorrow's are missing).
+  const tomorrowTimings = useMemo(() => {
+    if (!home.timings || !dateISO) return null;
+    const pt = home.tomorrow?.prayerTimes ?? home.timings.prayerTimes;
+    return timingsFromPrayerTimes(pt, nextDayISO(dateISO), timeZone, pt.fajr);
+  }, [home.timings, home.tomorrow, dateISO, timeZone]);
+
   const ramadanDay = ramadanDayOf(home.ramadan);
   const checklist = useDailyChecklist(ramadanDay ?? 1);
   const { reminders, toggle } = usePrayerReminders();
@@ -57,6 +63,7 @@ export function TodayContent({ initialNow }: { initialNow?: Date }) {
         status={home.status}
         timings={home.timings}
         phaseTimings={phaseTimings}
+        tomorrowTimings={tomorrowTimings}
         cached={home.cached}
         ramadan={home.ramadan}
         now={now}

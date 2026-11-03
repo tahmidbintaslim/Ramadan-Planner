@@ -8,11 +8,13 @@ export interface SehriIftarPairProps {
   /** Today's timings; sehri uses `sehriEnd` when it is before fajr (else fajr), iftar uses maghrib. */
   timings: Pick<PhaseTimings, "fajr" | "maghrib" | "sehriEnd">;
   timeZone: string;
+  /** Small label above the times, e.g. "আগামীকাল" when the card shows tomorrow's sehri and iftar. */
+  dayLabel?: string;
   className?: string;
 }
 
 /** White card with today's sehri end (left) and iftar (right), split by a 1px rule. */
-export function SehriIftarPair({ timings, timeZone, className }: SehriIftarPairProps) {
+export function SehriIftarPair({ timings, timeZone, dayLabel, className }: SehriIftarPairProps) {
   const t = useTranslations("prayer");
   const locale = useLocale();
   // Same guard as the phase engine: a sehri end at or after fajr is ignored.
@@ -23,11 +25,17 @@ export function SehriIftarPair({ timings, timeZone, className }: SehriIftarPairP
 
   return (
     <div
+      data-day={dayLabel ? "tomorrow" : "today"}
       className={cn(
         "grid grid-cols-[1fr_1px_1fr] items-center rounded-rp-lg bg-rp-surface p-4 text-rp-ink shadow-rp-soft",
         className,
       )}
     >
+      {dayLabel ? (
+        <p data-testid="pair-day" className="rp-caption col-span-3 mb-2 text-rp-accent">
+          {dayLabel}
+        </p>
+      ) : null}
       <div className="flex min-w-0 items-center gap-3 pr-3">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-rp-full bg-rp-accent-tint text-rp-accent">
           <FajrIcon size={22} />

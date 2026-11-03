@@ -101,35 +101,68 @@ const phaseCard = () => screen.queryByTestId("phase-card");
 const supportCard = () => screen.queryByTestId("support-card");
 
 describe("phaseCardKind", () => {
-  it("is the niyyah in Ramadan's Sehri phase, the iftar dua in the iftar hour, otherwise none", () => {
-    expect(phaseCardKind("sehri", true)).toBe("niyyah");
-    expect(phaseCardKind("sehri", false)).toBeNull();
-    expect(phaseCardKind("iftar", true)).toBe("iftarDua");
-    expect(phaseCardKind("iftar", false)).toBe("iftarDua");
-    expect(phaseCardKind("day", true)).toBeNull();
-    expect(phaseCardKind("night", true)).toBeNull();
-    expect(phaseCardKind(null, true)).toBeNull();
+  const kind = (time: string, ramadan = true) => {
+    const now = at(time);
+    const phase =
+      now < TIMINGS.fajr ? "sehri" : now < new Date(TIMINGS.maghrib.getTime() - 3_600_000) ? "day" : now < TIMINGS.maghrib ? "iftar" : "night";
+    return phaseCardKind(now, phase, TIMINGS, ramadan);
+  };
+
+  it("is the niyyah in Ramadan's Sehri phase", () => {
+    expect(kind("03:30")).toBe("niyyah");
+    expect(kind("03:30", false)).toBeNull();
+  });
+
+  it("is the iftar dua from maghrib − 60 min until maghrib + 45 min, in Ramadan only", () => {
+    // maghrib 18:05
+    expect(kind("17:04")).toBeNull();
+    expect(kind("17:05")).toBe("iftarDua");
+    expect(kind("18:05")).toBe("iftarDua");
+    expect(kind("18:49")).toBe("iftarDua");
+    expect(kind("18:50")).toBeNull();
+    expect(kind("17:30", false)).toBeNull();
+  });
+
+  it("is none in the day, late night, or without a phase", () => {
+    expect(kind("13:00")).toBeNull();
+    expect(kind("21:00")).toBeNull();
+    expect(phaseCardKind(at("03:30"), null, TIMINGS, true)).toBeNull();
   });
 });
 
 describe("HomeOverview phase card", () => {
-  it("shows the niyyah (with its review note) before fajr in Ramadan", async () => {
+  it("shows the niyyah with the reviewed wording before fajr in Ramadan", async () => {
     await renderHome("03:30");
     const card = phaseCard();
     expect(card).toHaveAttribute("data-kind", "niyyah");
     expect(within(card!).getByRole("heading", { name: "রোজার নিয়ত" })).toBeInTheDocument();
-    expect(within(card!).getByText(/স্কলার রিভিউ সাপেক্ষে/)).toHaveClass("text-rp-gold-text");
+    expect(within(card!).getByText("আমি আগামীকাল রমজান মাসের রোজা রাখার নিয়ত করছি")).toBeInTheDocument();
+    expect(
+      within(card!).getByText("নিয়ত অন্তরের সংকল্প; মুখে বলা আবশ্যক নয় · স্কলার রিভিউ সাপেক্ষে"),
+    ).toHaveClass("text-rp-gold-text");
   });
 
-  it("shows the iftar dua with its source in the last hour before maghrib", async () => {
+  it("shows the iftar dua with its caption before maghrib and until 45 minutes after", async () => {
     await renderHome("17:30");
-    const card = phaseCard();
+    let card = phaseCard();
     expect(card).toHaveAttribute("data-kind", "iftarDua");
     expect(within(card!).getByRole("heading", { name: "ইফতারের দোয়া" })).toBeInTheDocument();
-    expect(within(card!).getByText(/সূত্র: আবু দাউদ ২৩৫৭/)).toHaveClass("text-rp-gold-text");
+    expect(within(card!).getByText("ইফতারের সময় পড়ুন · সূত্র: আবু দাউদ ২৩৫৭")).toHaveClass("text-rp-gold-text");
+    cleanup();
+    await renderHome("18:30");
+    card = phaseCard();
+    expect(card).toHaveAttribute("data-kind", "iftarDua");
+    cleanup();
+    await renderHome("18:55");
+    expect(phaseCard()).toBeNull();
   });
 
-  it("shows no phase card in the day or at night", async () => {
+  it("uses the English caption in en", async () => {
+    await renderHome("17:30", {}, "en");
+    expect(within(phaseCard()!).getByText("Recite when breaking the fast · Abu Dawud 2357")).toBeInTheDocument();
+  });
+
+  it("shows no phase card in the day or late at night", async () => {
     await renderHome("13:00");
     expect(phaseCard()).toBeNull();
     cleanup();
@@ -137,10 +170,36 @@ describe("HomeOverview phase card", () => {
     expect(phaseCard()).toBeNull();
   });
 
-  it("shows no niyyah outside Ramadan", async () => {
+  it("shows no niyyah or iftar dua outside Ramadan", async () => {
     await renderHome("03:30", { ramadan: ramadanStatus(null) });
     expect(phaseCard()).toBeNull();
+    cleanup();
+    await renderHome("17:30", { ramadan: ramadanStatus(null) });
+    expect(phaseCard()).toBeNull();
   });
+
+  it("after Isha in Ramadan the pair shows tomorrow's sehri and iftar, labelled", async () => {
+    const tomorrow = {
+      fajr: new Date(TIMINGS.nextFajr.getTime()),
+      sehriEnd: new Date(TIMINGS.nextFajr.getTime() - 5 * 60_000),
+      maghrib: new Date(TIMINGS.maghrib.getTime() + 24 * 3_600_000 + 60_000),
+    };
+    await renderHome("21:00", { tomorrowTimings: tomorrow });
+    expect(screen.getByTestId("pair-day")).toHaveTextContent("আগামীকাল");
+    expect(screen.getByTestId("pair-sehri")).toHaveTextContent("৪:৪৯");
+    expect(screen.getByTestId("pair-iftar")).toHaveTextContent("৬:০৬");
+    cleanup();
+    // Before Isha, or outside Ramadan: today's times, no label.
+    await renderHome("19:00", { tomorrowTimings: tomorrow });
+    expect(screen.queryByTestId("pair-day")).toBeNull();
+    expect(screen.getByTestId("pair-iftar")).toHaveTextContent("৬:০৫");
+    cleanup();
+    await renderHome("21:00", { tomorrowTimings: tomorrow, ramadan: ramadanStatus(null) });
+    expect(screen.queryByTestId("pair-day")).toBeNull();
+  });
+});
+
+describe("HomeOverview core", () => {
 
   it("renders the hero, pair and prayer list with the source line and Hijri date", async () => {
     await renderHome("13:00");

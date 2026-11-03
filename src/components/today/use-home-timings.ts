@@ -17,6 +17,38 @@ export interface HomeTimings {
   ramadan: RamadanStatus | null;
 }
 
+/** Coordinates rounded to 2 decimals (about 1 km): plenty for prayer times, kinder to privacy and the CDN cache. */
+export function coarseCoord(value: number): string {
+  return value.toFixed(2);
+}
+
+/**
+ * The Home's requests for one local day. Every URL carries the date, so the CDN (cached per URL for an hour)
+ * cannot answer a just-after-midnight request with yesterday's entry. /api/timings reads `date`; /api/ramadan
+ * computes "today" itself and ignores `day`, which only keys the cache.
+ */
+export function homeRequestUrls(
+  tz: string,
+  todayISO: string,
+  coords?: { lat: number; lng: number },
+): { today: string; tomorrow: string; ramadan: string } {
+  const base = new URLSearchParams({ tz });
+  if (coords) {
+    base.set("lat", coarseCoord(coords.lat));
+    base.set("lng", coarseCoord(coords.lng));
+  }
+  const withParam = (key: string, value: string) => {
+    const p = new URLSearchParams(base);
+    p.set(key, value);
+    return p.toString();
+  };
+  return {
+    today: `/api/timings?${withParam("date", todayISO)}`,
+    tomorrow: `/api/timings?${withParam("date", nextDayISO(todayISO))}`,
+    ramadan: `/api/ramadan?${withParam("day", todayISO)}`,
+  };
+}
+
 /** "2027-02-20" → "2027-02-21". */
 export function nextDayISO(dateISO: string): string {
   const [y, m, d] = dateISO.split("-").map(Number);
@@ -95,15 +127,12 @@ export function useHomeTimings(todayISO: string): HomeTimings & { retry: () => v
       res?.ok ? ((await res.json().catch(() => null)) as T | null) : null;
     const valid = (d: TimingData | null) => (d?.prayerTimes ? d : null);
 
-    const load = async (params: URLSearchParams) => {
-      // Tomorrow's times (for the after-Isha sehri/fajr countdown) are one more cached request.
-      const tomorrowParams = new URLSearchParams(params);
-      const tomorrowISO = nextDayISO(todayISOInZone(new Date(), tz));
-      tomorrowParams.set("date", tomorrowISO);
+    const load = async (coords?: { lat: number; lng: number }) => {
+      const urls = homeRequestUrls(tz, todayISO, coords);
       const [timingsRes, tomorrowRes, ramadanRes] = await Promise.all([
-        fetch(`/api/timings?${params}`, { signal }).catch(() => null),
-        fetch(`/api/timings?${tomorrowParams}`, { signal }).catch(() => null),
-        fetch(`/api/ramadan?${params}`, { signal }).catch(() => null),
+        fetch(urls.today, { signal }).catch(() => null),
+        fetch(urls.tomorrow, { signal }).catch(() => null),
+        fetch(urls.ramadan, { signal }).catch(() => null),
       ]);
       return {
         timings: valid(await json<TimingData>(timingsRes)),
@@ -113,8 +142,7 @@ export function useHomeTimings(todayISO: string): HomeTimings & { retry: () => v
     };
 
     const run = async () => {
-      const base = new URLSearchParams({ tz });
-      const first = await load(base);
+      const first = await load();
       if (signal.aborted) return;
       if (first.timings) {
         rememberTimings(first.timings, "tz");
@@ -138,14 +166,13 @@ export function useHomeTimings(todayISO: string): HomeTimings & { retry: () => v
 
       const pos = await getPosition();
       if (!pos || signal.aborted) return;
-      const geo = new URLSearchParams({ tz, lat: String(pos.coords.latitude), lng: String(pos.coords.longitude) });
-      const better = await load(geo);
+      const better = await load({ lat: pos.coords.latitude, lng: pos.coords.longitude });
       if (signal.aborted || !better.timings) return;
       rememberTimings(better.timings, "geo");
       setState((prev) => ({
         status: "ready",
         timings: better.timings,
-        tomorrow: better.tomorrow,
+        tomorrow: better.tomorrow ?? prev.tomorrow,
         cached: false,
         ramadan: better.ramadan ?? prev.ramadan,
       }));

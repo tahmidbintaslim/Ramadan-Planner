@@ -716,12 +716,12 @@
     "home": {
         "niyyahTitle": "Intention for the fast",
         "niyyahText": "Nawaitu an asuma ghadan min shahri Ramadan",
-        "niyyahMeaning": "I intend to fast tomorrow.",
-        "niyyahSource": "Translation and source: pending scholar review",
+        "niyyahMeaning": "I intend to fast tomorrow in the month of Ramadan",
+        "niyyahSource": "The intention is in the heart; saying it aloud is not required · pending scholar review",
         "iftarDuaTitle": "Dua for iftar",
         "iftarDuaText": "Dhahaba al-zama’u wabtallat al-‘uruqu wa thabata al-ajru in sha Allah",
         "iftarDuaMeaning": "The thirst is gone, the veins are moistened, and the reward is certain, if Allah wills.",
-        "iftarDuaSource": "Source: Abu Dawud 2357 · translation pending review",
+        "iftarDuaSource": "Recite when breaking the fast · Abu Dawud 2357",
         "companions": "Ramadan companions",
         "tileQuran": "Quran",
         "tileDuas": "Duas",
@@ -743,6 +743,7 @@
         "sourceAladhan": "AlAdhan · Karachi method, Hanafi Asr",
         "sourceIslamicApi": "IslamicAPI",
         "sourceUnverified": "pending verification",
-        "hijri": "{day} {month} {year}"
+        "hijri": "{day} {month} {year}",
+        "tomorrow": "Tomorrow"
     }
 }
