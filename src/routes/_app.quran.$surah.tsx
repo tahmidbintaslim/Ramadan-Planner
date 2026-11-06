@@ -1,7 +1,8 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { getSurahPageData } from "@/actions/quran-page";
 import { QuranReader } from "@/components/quran/quran-reader";
-import { pageHead } from "@/lib/seo";
+import { pageHead, rootData } from "@/lib/seo";
+import { formatLocalizedNumber } from "@/lib/locale-number";
 
 // Port of src/app/(app)/quran/[surah]/page.tsx. `parseInt` as before (so "12abc" still means 12).
 function parseSurah(param: string): number | null {
@@ -24,10 +25,15 @@ export const Route = createFileRoute("/_app/quran/$surah")({
       // No surah row: keep the `_app` noindex and skip the canonical.
       return pageHead({ matches, fullTitle: `Surah ${surahNumber}`, description: `Surah ${surahNumber}` });
     }
+    // One script per title: Bengali names and digits in bn, English in en (search snippets show these).
+    const en = rootData(matches)?.locale === "en";
+    const num = (v: number) => formatLocalizedNumber(v, en ? "en" : "bn");
     const h = pageHead({
       matches,
-      fullTitle: `${surah.nameEnglish} — সূরা ${surah.surahNo}`,
-      description: `${surah.nameBengali} (${surah.nameEnglish}) — ${surah.totalAyah} আয়াত`,
+      fullTitle: en ? `${surah.nameEnglish} — Surah ${surah.surahNo}` : `${surah.nameBengali} — সূরা ${num(surah.surahNo)}`,
+      description: en
+        ? `${surah.nameEnglish} (${surah.nameBengali}) — ${surah.totalAyah} ayahs`
+        : `${surah.nameBengali} (${surah.nameEnglish}) — ${num(surah.totalAyah)} আয়াত`,
       canonicalPath: `/quran/${surahNumber}`,
     });
     // Overrides the `_app` noindex (the old page did the same): surah pages are public and in the sitemap.
@@ -37,6 +43,6 @@ export const Route = createFileRoute("/_app/quran/$surah")({
 });
 
 function SurahRoute() {
-  const { surahNumber } = Route.useLoaderData();
-  return <QuranReader surahNumber={surahNumber} />;
+  const { surahNumber, text } = Route.useLoaderData();
+  return <QuranReader key={surahNumber} surahNumber={surahNumber} initialText={text} />;
 }

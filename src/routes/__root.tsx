@@ -17,7 +17,7 @@ import { AccessibilitySidebar } from "@/components/shared/accessibility-sidebar"
 import { NotFound } from "@/components/shared/not-found";
 import { Toaster } from "@/components/ui/sonner";
 
-const THEME_COLOR_SCRIPT = `try{var t=localStorage.getItem("theme");var d=t==="dark"||(t==="system"&&matchMedia("(prefers-color-scheme: dark)").matches);var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute("content",d?"#0B1A17":"#F4F7F6")}catch(e){}`;
+const THEME_COLOR_SCRIPT = `try{var t=localStorage.getItem("theme");var d=t==="dark"||((!t||t==="system")&&matchMedia("(prefers-color-scheme: dark)").matches);var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute("content",d?"#0B1A17":"#F4F7F6")}catch(e){}`;
 
 export const Route = createRootRoute({
   loader: () => getLocaleAndMessages(),
@@ -48,7 +48,7 @@ export const Route = createRootRoute({
         },
         { rel: "stylesheet", href: appCss },
         { rel: "icon", href: "/favicon.ico", sizes: "any" },
-        { rel: "manifest", href: "/manifest.webmanifest" },
+        { rel: "manifest", href: "/manifest.webmanifest", crossOrigin: "use-credentials" },
         { rel: "apple-touch-icon", href: "/icons/apple-touch-icon.png" },
       ],
     };

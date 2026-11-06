@@ -75,7 +75,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   return (
     <NextThemesProvider
       attribute="class"
-      defaultTheme="light"
+      defaultTheme="system"
       themes={[...THEME_PREFERENCES]}
       value={{ light: "light", dark: "dark", auto: "light" }}
       forcedTheme={autoMode}

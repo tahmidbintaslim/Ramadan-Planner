@@ -27,6 +27,7 @@ describe("getSurahPageDataImpl", () => {
       surahNumber: 1,
       surah: { surahNo: 1, nameEnglish: "Al-Fatihah", nameBengali: "আল-ফাতিহা", totalAyah: 7 },
       siteUrl: "https://site.example",
+      text: expect.objectContaining({ surahNo: 1, audio: {}, ayahs: [expect.objectContaining({ ayahNo: 1, audio: {} })] }),
     });
     expect(m.fetchSurah).toHaveBeenCalledWith(1);
   });

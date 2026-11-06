@@ -1,5 +1,6 @@
 "use client";
 
+import { useLayoutEffect, useRef } from "react";
 import { X } from "lucide-react";
 import { Dialog as SheetPrimitive } from "radix-ui";
 import { useTranslations } from "@/i18n/use-intl";
@@ -22,11 +23,27 @@ export function LocationSheet({
   onOpenChange: (open: boolean) => void;
   onSaved?: (loc: StoredLocation) => void;
 }) {
+  // The opener (a header button that exists once per breakpoint): focus goes back to it on close (WCAG 2.4.3),
+  // since Radix alone can land on <body> when the sheet is opened from a non-Trigger button.
+  const opener = useRef<HTMLElement | null>(null);
+  // Layout effect: runs before the dialog's own effects move focus inside it.
+  useLayoutEffect(() => {
+    if (open && document.activeElement instanceof HTMLElement && document.activeElement !== document.body) {
+      opener.current = document.activeElement;
+    }
+  }, [open]);
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
         showCloseButton={false}
+        onCloseAutoFocus={(e) => {
+          const el = opener.current;
+          if (el?.isConnected && el.offsetParent !== null) {
+            e.preventDefault();
+            el.focus();
+          }
+        }}
         className="max-h-[92dvh] gap-0 overflow-y-auto rounded-t-rp-xl border-0 bg-rp-page text-rp-ink regular:inset-auto regular:top-1/2 regular:left-1/2 regular:max-h-[94dvh] regular:w-[560px] regular:-translate-x-1/2 regular:-translate-y-1/2 regular:rounded-rp-xl"
       >
         {/* Mounted only while open, so each opening starts from the stored choice. */}

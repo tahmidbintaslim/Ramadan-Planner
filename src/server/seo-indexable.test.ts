@@ -72,16 +72,16 @@ describe("timetable page head", () => {
 });
 
 describe("surah page head", () => {
-  it("uses the shared pageHead tags with the surah title (no app-name suffix)", () => {
+  it("uses the shared pageHead tags with the Bengali surah title and digits (no app-name suffix)", () => {
     const { meta } = mergedHead("/quran/2");
     const last = (key: string, val: string) => meta.filter((m) => m[key] === val).at(-1);
-    expect(meta.filter((m) => m.title).at(-1)?.title).toBe("Surah 2 — সূরা 2");
-    expect(last("property", "og:title")?.content).toBe("Surah 2 — সূরা 2");
+    expect(meta.filter((m) => m.title).at(-1)?.title).toBe("সূরা 2 — সূরা ২");
+    expect(last("property", "og:title")?.content).toBe("সূরা 2 — সূরা ২");
     expect(last("name", "twitter:card")?.content).toBe("summary_large_image");
     expect(last("property", "og:site_name")?.content).toBe("Ramadan Planner");
     expect(last("property", "og:type")?.content).toBe("website");
     expect(last("property", "og:url")?.content).toBe(`${SITE}/quran/2`);
     expect(last("property", "og:image")?.content).toBe(`${SITE}/og.png?v=3`);
-    expect(last("name", "description")?.content).toBe("সূরা 2 (Surah 2) — 7 আয়াত");
+    expect(last("name", "description")?.content).toBe("সূরা 2 (Surah 2) — ৭ আয়াত");
   });
 });

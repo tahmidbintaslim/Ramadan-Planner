@@ -288,7 +288,7 @@ describe("HomeOverview sadaqah card", () => {
     cleanup();
     const onDismissSadaqah = vi.fn();
     await renderHome("20:00", { onDismissSadaqah });
-    fireEvent.click(screen.getByRole("button", { name: "সাপোর্ট কার্ডটি এখন লুকান" }));
+    fireEvent.click(screen.getByRole("button", { name: "এখন নয়: সাপোর্ট কার্ডটি লুকান" }));
     expect(onDismissSadaqah).toHaveBeenCalledTimes(1);
     expect(supportCard()).toBeNull();
   });
@@ -311,7 +311,7 @@ describe("sadaqah dismissal storage", () => {
     await renderInRouter(<Harness />);
     expect(screen.getByTestId("dismissed")).toHaveTextContent("none");
     act(() => {
-      fireEvent.click(screen.getByRole("button", { name: "সাপোর্ট কার্ডটি এখন লুকান" }));
+      fireEvent.click(screen.getByRole("button", { name: "এখন নয়: সাপোর্ট কার্ডটি লুকান" }));
     });
     expect(localStorage.getItem(SADAQAH_DISMISSED_KEY)).toBe("2027-03-01T14:00:00.000Z");
     expect(screen.getByTestId("dismissed")).toHaveTextContent("2027-03-01T14:00:00.000Z");
@@ -348,7 +348,7 @@ describe("today's plan preview (a small link; tracking lives on /plan)", () => {
     const section = screen.getByTestId("plan-preview");
     expect(within(section).getByRole("heading")).toHaveTextContent("আজকের আমল · ২/৪");
     expect(within(section).queryAllByRole("checkbox")).toHaveLength(0);
-    expect(within(section).getByRole("link", { name: "আজকের আমল খুলুন" })).toHaveAttribute("href", "/plan");
+    expect(within(section).getByRole("link", { name: "সব দেখুন: আজকের আমল" })).toHaveAttribute("href", "/plan");
     expect(screen.getByTestId("plan-preview-next")).toHaveTextContent("এরপর: সেহরি খান");
   });
 

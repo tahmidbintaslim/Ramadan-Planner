@@ -28,8 +28,9 @@ test.describe("Quran list (mobile)", () => {
     await mockSurahs(page);
     await visit(page, "/quran");
     await expect(page.getByRole("heading", { level: 1, name: "কুরআন" })).toBeVisible();
+    // The server renders the list when its source answers (all 114); otherwise the mocked /api/quran fills it.
     const rows = page.getByTestId("surah-list").getByRole("link");
-    await expect(rows).toHaveCount(3);
+    await expect(rows.nth(2)).toBeVisible();
     await expect(rows.nth(1)).toHaveAttribute("href", "/quran/2");
     await expect(rows.nth(1)).toContainText("মাদানী · ২৮৬ আয়াত");
     await expect(page.getByTestId("last-read-card")).toHaveCount(0);
