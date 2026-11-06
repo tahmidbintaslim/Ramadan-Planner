@@ -102,9 +102,12 @@ test.describe("accessibility panel", () => {
   test.describe("mobile", () => {
     test.use({ viewport: { width: 390, height: 844 } });
 
-    test("no floating button in the app shell; font size and theme live in the More sheet", async ({ page }) => {
+    test("no floating button in the app shell; the header and the More sheet hold font size and theme", async ({ page }) => {
       await visit(page, "/today");
-      await expect(page.getByRole("button", { name: A11Y })).toHaveCount(0);
+      // v4: one Text & Theme control in the header (a-large-small, 44), never a floating button.
+      const headerTrigger = page.getByRole("banner").getByRole("button", { name: A11Y }).first();
+      await expect(headerTrigger).toBeVisible();
+      await expect(headerTrigger).not.toHaveCSS("position", "fixed");
       await page
         .getByRole("navigation", { name: /প্রধান নেভিগেশন|Main navigation/ })
         .first()
@@ -121,21 +124,22 @@ test.describe("accessibility panel", () => {
       await expect.poll(() => page.evaluate(() => document.documentElement.style.fontSize)).toBe("105%");
     });
 
-    test("the landing has no floating button; its menu sheet holds the controls", async ({ page }) => {
+    test("the landing has no floating button; Text & Theme sits in the teal band", async ({ page }) => {
       await visit(page, "/");
-      await expect(page.getByRole("button", { name: A11Y })).toHaveCount(0);
-      await page.getByRole("banner").getByRole("button", { name: /মেনু|Menu/i }).click();
-      const sheet = page.getByRole("dialog");
-      await expect(sheet.getByRole("heading", { name: A11Y })).toBeVisible();
+      const trigger = page.getByRole("button", { name: A11Y });
+      await expect(trigger).toHaveCount(1);
+      await expect(trigger).not.toHaveCSS("position", "fixed");
+      await trigger.click();
+      const sheet = page.getByRole("dialog", { name: A11Y });
       await sheet.getByRole("button", { name: /ফন্ট বড় করুন|Increase font size/ }).click();
       await expect.poll(() => page.evaluate(() => document.documentElement.style.fontSize)).toBe("105%");
     });
 
-    test("onboarding has one labelled text & theme button in the sky, off the language line", async ({ page }) => {
+    test("onboarding has one labelled text & theme button in the nav bar, off the language line", async ({ page }) => {
       await visit(page, "/welcome");
       const entries = page.getByRole("button", { name: A11Y });
       await expect(entries).toHaveCount(1);
-      await expect(entries).toHaveText(A11Y);
+      await expect(entries).toHaveAccessibleName(A11Y);
       await expect(entries).not.toHaveCSS("position", "fixed");
       const languageRow = page.getByRole("button", { name: /Continue in English|বাংলায় দেখুন|English|বাংলা/ }).last().locator("..");
       await expect(languageRow.getByRole("button", { name: A11Y })).toHaveCount(0);
@@ -160,9 +164,9 @@ test.describe("accessibility panel", () => {
     await expect(page.getByRole("dialog", { name: A11Y })).toBeVisible();
   });
 
-  test("desktop side-nav footer opens the accessibility dialog", async ({ page }) => {
+  test("desktop toolbar opens the accessibility dialog", async ({ page }) => {
     await visit(page, "/today");
-    const trigger = page.locator("aside").getByRole("button", { name: A11Y });
+    const trigger = page.getByRole("banner").getByRole("button", { name: A11Y }).last();
     await expect(trigger).toBeVisible();
     await trigger.click();
     const dialog = page.getByRole("dialog", { name: A11Y });
