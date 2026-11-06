@@ -136,8 +136,8 @@ describe("start.ts CSRF middleware", () => {
     }
   });
 
-  it("exempts the secret-authenticated cron route and the Stripe webhook (POST, cross-site, no cookie)", async () => {
-    for (const path of ["/api/push/dispatch", "/api/stripe/webhook", "/api/push/dispatch/"]) {
+  it("exempts the secret-authenticated cron route (POST, cross-site, no cookie)", async () => {
+    for (const path of ["/api/push/dispatch", "/api/push/dispatch/"]) {
       for (const headers of [
         { Origin: "https://stripe.com" },
         { "Sec-Fetch-Site": "cross-site" },
@@ -150,12 +150,19 @@ describe("start.ts CSRF middleware", () => {
     }
   });
 
-  it("the exemption list is exactly the cron route and the Stripe webhook", () => {
-    expect([...CSRF_EXEMPT_PATHS].sort()).toEqual(["/api/push/dispatch", "/api/stripe/webhook"]);
+  it("the exemption list is exactly the cron route", () => {
+    // /api/stripe/webhook is re-added by the donations change, together with its signature verification.
+    expect([...CSRF_EXEMPT_PATHS].sort()).toEqual(["/api/push/dispatch"]);
+  });
+
+  it("the Stripe webhook path is not exempt until its signature-verified handler exists", async () => {
+    await expectRejected(
+      await runCsrf("router", `${ORIGIN}/api/stripe/webhook`, { method: "POST", headers: { Origin: "https://stripe.com" }, body: "{}" }),
+    );
   });
 
   it("an exemption is exact: neighbours and spelling variants of exempt paths are still checked", async () => {
-    for (const path of ["/api/push/dispatch/x", "/api/push/dispatchx", "/API/push/dispatch", "/api/stripe/webhook2", "/api/stripe"]) {
+    for (const path of ["/api/push/dispatch/x", "/api/push/dispatchx", "/API/push/dispatch", "/api/stripe/webhook", "/api/stripe"]) {
       await expectRejected(
         await runCsrf("router", `${ORIGIN}${path}`, { method: "POST", headers: { Origin: "https://evil.example" }, body: "{}" }),
       );

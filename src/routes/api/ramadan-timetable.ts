@@ -1,7 +1,8 @@
-// GET /api/ramadan-timetable. Logic in src/server/api/ramadan-timetable.ts.
+// GET /api/ramadan-timetable. Logic in src/server/api/ramadan-timetable.ts; per-IP limit in
+// src/server/api/rate-limited.ts.
 import { createFileRoute } from "@tanstack/react-router";
-import { handleRamadanTimetable } from "@/server/api/ramadan-timetable";
+import { rateLimitedRamadanTimetable } from "@/server/api/rate-limited";
 
 export const Route = createFileRoute("/api/ramadan-timetable")({
-  server: { handlers: { GET: ({ request }) => handleRamadanTimetable(request) } },
+  server: { handlers: { GET: ({ request }) => rateLimitedRamadanTimetable(request) } },
 });

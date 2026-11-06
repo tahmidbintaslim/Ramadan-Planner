@@ -19,8 +19,8 @@ export const saveSchema = z.object({
   id: z.string().uuid().optional(),
   titleBn: z.string().trim().min(1).max(200),
   titleEn: z.string().trim().max(200),
-  bodyBn: z.string().trim().min(1),
-  bodyEn: z.string().trim(),
+  bodyBn: z.string().trim().min(1).max(4000),
+  bodyEn: z.string().trim().max(4000),
   startAt: z.string().datetime(),
   endAt: z.string().datetime().nullable(),
 });

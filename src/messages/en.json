@@ -386,6 +386,7 @@
         "revokeIcs": "Revoke Link",
         "icsReady": "ICS link generated",
         "icsRevoked": "ICS link revoked",
+        "icsActiveHidden": "An ICS link is already active. For security it is shown only once, when created. Revoke it and generate a new one to get a link again.",
         "pushSubscriptions": "Saved push subscriptions: {count}",
         "enablePush": "Enable Push Notifications",
         "pushUnsupported": "Push notifications are not supported on this device/browser.",

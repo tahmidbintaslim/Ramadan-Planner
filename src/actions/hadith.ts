@@ -16,14 +16,29 @@ export type {
   HadithListData,
 } from "@/server/hadith-impl";
 
+// Route params are attacker-controlled. Anything that is not a short string becomes "" (the Impls answer
+// not_found for it) instead of reaching the database. Edition names are short slugs ("ben-bukhari");
+// chapter params are book numbers or "__book_<ref>__".
+const MAX_EDITION_LENGTH = 100;
+const MAX_CHAPTER_LENGTH = 200;
+function boundedString(value: unknown, max: number): string {
+  return typeof value === "string" && value.length <= max ? value : "";
+}
+
 const getHadithListFn = createServerFn({ method: "GET" }).handler(() => getHadithListImpl());
 
 const getHadithEditionFn = createServerFn({ method: "GET" })
-  .validator((edition: unknown) => edition as string)
+  .validator((edition: unknown) => boundedString(edition, MAX_EDITION_LENGTH))
   .handler(({ data }) => getHadithEditionImpl(data));
 
 const getHadithChapterFn = createServerFn({ method: "GET" })
-  .validator((input: unknown) => input as { edition: string; chapter: string })
+  .validator((input: unknown) => {
+    const { edition, chapter } = (input ?? {}) as { edition?: unknown; chapter?: unknown };
+    return {
+      edition: boundedString(edition, MAX_EDITION_LENGTH),
+      chapter: boundedString(chapter, MAX_CHAPTER_LENGTH),
+    };
+  })
   .handler(({ data }) => getHadithChapterImpl(data.edition, data.chapter));
 
 export function getHadithList(): Promise<HadithListData> {

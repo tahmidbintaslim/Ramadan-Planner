@@ -19,7 +19,10 @@ const UUID = "db99edd8-fa85-5bc2-95ec-a499147bb210"; // pinned in uuid.test.ts
 
 beforeEach(() => {
   vi.clearAllMocks();
-  getUser.mockResolvedValue({ primaryEmailAddress: { emailAddress: "a@example.com" }, emailAddresses: [] });
+  getUser.mockResolvedValue({
+    primaryEmailAddress: { emailAddress: "a@example.com", verification: { status: "verified" } },
+    emailAddresses: [],
+  });
 });
 
 describe("getAppAuthUser", () => {
@@ -33,7 +36,12 @@ describe("getAppAuthUser", () => {
 
   it("maps the Clerk id to the pinned UUID and does not upsert by default", async () => {
     auth.mockResolvedValue({ isAuthenticated: true, userId: CLERK_ID });
-    await expect(getAppAuthUser()).resolves.toEqual({ id: UUID, clerkId: CLERK_ID, email: "a@example.com" });
+    await expect(getAppAuthUser()).resolves.toEqual({
+      id: UUID,
+      clerkId: CLERK_ID,
+      email: "a@example.com",
+      emailVerified: true,
+    });
     await getAppAuthUser({ ensureProfile: false });
     expect(getUser).toHaveBeenCalledWith(CLERK_ID);
     expect(upsert).not.toHaveBeenCalled();
@@ -52,6 +60,7 @@ describe("getAppAuthUser", () => {
       id: UUID,
       clerkId: CLERK_ID,
       email: null,
+      emailVerified: false,
     });
     expect(clerkClient).not.toHaveBeenCalled();
     expect(getUser).not.toHaveBeenCalled();
@@ -71,5 +80,24 @@ describe("getAppAuthUser", () => {
     expect((await getAppAuthUser())?.email).toBe("b@example.com");
     getUser.mockResolvedValueOnce({ primaryEmailAddress: null, emailAddresses: [] });
     expect((await getAppAuthUser())?.email).toBeNull();
+  });
+
+  it("emailVerified is true only for Clerk verification.status === \"verified\"", async () => {
+    auth.mockResolvedValue({ isAuthenticated: true, userId: CLERK_ID });
+    for (const status of ["unverified", "transferable", "failed", "expired", undefined]) {
+      getUser.mockResolvedValueOnce({
+        primaryEmailAddress: { emailAddress: "a@example.com", verification: status ? { status } : null },
+        emailAddresses: [],
+      });
+      const user = await getAppAuthUser();
+      expect(user?.email, String(status)).toBe("a@example.com");
+      expect(user?.emailVerified, String(status)).toBe(false);
+    }
+    // The fallback address carries its own status.
+    getUser.mockResolvedValueOnce({
+      primaryEmailAddress: null,
+      emailAddresses: [{ emailAddress: "b@example.com", verification: { status: "verified" } }],
+    });
+    expect(await getAppAuthUser()).toMatchObject({ email: "b@example.com", emailVerified: true });
   });
 });

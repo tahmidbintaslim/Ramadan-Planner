@@ -19,8 +19,8 @@ vi.mock("@tanstack/react-start/server", () => ({ setResponseStatus: m.setRespons
 
 import { addAdminUserImpl, getAdminAccessImpl, listAdminUsersImpl, removeAdminUserImpl } from "./admin-users-impl";
 
-function session(id: string, email: string | null, adminRows: string[] = []) {
-  m.getAppAuthUser.mockResolvedValue({ id, clerkId: "user_x", email });
+function session(id: string, email: string | null, adminRows: string[] = [], verified = true) {
+  m.getAppAuthUser.mockResolvedValue({ id, clerkId: "user_x", email, emailVerified: verified && email !== null });
   m.prisma.adminUser.findUnique.mockImplementation(async ({ where }: { where: { userId: string } }) =>
     adminRows.includes(where.userId) ? { userId: where.userId } : null,
   );

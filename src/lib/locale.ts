@@ -15,10 +15,16 @@ export async function getUserLocale(): Promise<Locale> {
     return parseLocale(getCookie(COOKIE_NAME));
 }
 
-export async function setUserLocale(locale: Locale): Promise<void> {
-    setCookie(COOKIE_NAME, locale, {
+/** Attributes of the locale cookie: Secure in production (HTTPS only; browsers also accept it on http://localhost). */
+export function localeCookieOptions() {
+    return {
         path: "/",
         maxAge: 60 * 60 * 24 * 365, // 1 year
-        sameSite: "lax",
-    });
+        sameSite: "lax" as const,
+        secure: process.env.NODE_ENV === "production",
+    };
+}
+
+export async function setUserLocale(locale: Locale): Promise<void> {
+    setCookie(COOKIE_NAME, locale, localeCookieOptions());
 }

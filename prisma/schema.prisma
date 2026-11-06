@@ -180,7 +180,10 @@ model CalendarLink {
   id           String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId       String      @unique @map("user_id") @db.Uuid
   googleTokens Json?       @map("google_tokens")
-  icsSecret    String?     @map("ics_secret")
+  /// DEPRECATED legacy plaintext ICS secret; the app never writes it (see supabase/migrations/008_ics_secret_hash.sql).
+  icsSecret     String?     @map("ics_secret")
+  /// Lowercase hex SHA-256 of the ICS feed secret (src/lib/ics-secret.ts).
+  icsSecretHash String?     @unique(map: "calendar_links_ics_secret_hash_key") @map("ics_secret_hash")
   createdAt    DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   user         UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)

@@ -4,7 +4,9 @@
 
 - Generate a private ICS link from Settings.
 - Feed URL format: `/api/calendar/ics/:secret`
-- Revoke clears the secret, so new requests for the old link fail. Responses are CDN-cached (`s-maxage=3600, stale-while-revalidate=21600`), so a revoked feed can still be served for a few hours.
+- Only the SHA-256 of the secret is stored (`calendar_links.ics_secret_hash`, migration `008_ics_secret_hash.sql`). The link is shown once, when generated; Settings then reports it as active. To see a link again, revoke it and generate a new one.
+- Legacy rows that still hold a plaintext `ics_secret` keep working: the feed matches the hash or the plaintext and rewrites the row to the hash on first use.
+- Revoke clears the secret, so new requests for the old link fail at once: responses are `Cache-Control: private, no-store` (never CDN-cached).
 
 ## Google Calendar OAuth Sync (Implemented)
 

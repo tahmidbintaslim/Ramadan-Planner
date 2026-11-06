@@ -19,7 +19,7 @@ async function requireAdmin(
     return { ok: false, error: "unauthorized" };
   }
 
-  const allowed = await isUserAdmin({ userId: user.id, email: user.email });
+  const allowed = await isUserAdmin({ userId: user.id, email: user.email, emailVerified: user.emailVerified });
   if (!allowed) {
     return { ok: false, error: "forbidden" };
   }
@@ -104,5 +104,5 @@ export type AdminAccess = "ok" | "unauthorized" | "forbidden";
 export async function getAdminAccessImpl(): Promise<AdminAccess> {
   const user = await getCurrentUserWithEmail();
   if (!user) return "unauthorized";
-  return (await isUserAdmin({ userId: user.id, email: user.email })) ? "ok" : "forbidden";
+  return (await isUserAdmin({ userId: user.id, email: user.email, emailVerified: user.emailVerified })) ? "ok" : "forbidden";
 }
