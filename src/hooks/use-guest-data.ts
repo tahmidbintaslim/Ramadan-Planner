@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useSyncExternalStore } from "react";
 import { useAuth } from "@/components/providers/auth-provider";
 import { pruneLocalHistory } from "@/lib/local-history";
 import { localDayKey, migrateUtcDayKey } from "@/lib/local-day";
-import { GUEST_AUTH_WAIT_MS, signedInFromCookie } from "@/lib/user-location";
+import { signedInFromCookie } from "@/lib/user-location";
 
 function loadFromStorage<T>(key: string, defaultValue: T, migrate?: (key: string) => void): T {
     if (typeof window === "undefined") return defaultValue;
@@ -43,7 +43,7 @@ interface Slot<T> {
  * - `key` may change (a day-scoped key from useLocalDayKey changes at local midnight): the hook then loads the new
  *   key's value. The data and the key it was loaded from move together, so the old day's data is never written
  *   under the new day's key.
- * - Nothing is written until updateData is called, and never for a signed-in user (writes wait while auth loads).
+ * - Nothing is written until updateData is called, and never for a signed-in user (see the write effect).
  *
  * @param key - Storage key, usually date-scoped (e.g. "salah_2026-03-01" from useLocalDayKey("salah"))
  * @param defaultValue - Default value when no stored data exists
@@ -53,7 +53,6 @@ export function useGuestData<T>(key: string, defaultValue: T, options: GuestData
     const { isGuest, loading } = useAuth();
     const [slot, setSlot] = useState<Slot<T>>(() => ({ key, data: loadFromStorage(key, defaultValue, migrate), dirty: false }));
     const [showPrompt, setShowPrompt] = useState(false);
-    const [authWaitOver, setAuthWaitOver] = useState(false);
 
     // The key changed (e.g. midnight): switch to the new key's stored value during this render.
     let current = slot;
@@ -62,25 +61,20 @@ export function useGuestData<T>(key: string, defaultValue: T, options: GuestData
         setSlot(current);
     }
 
-    // If the auth client never loads (offline, blocked), the visitor counts as a guest after GUEST_AUTH_WAIT_MS.
-    useEffect(() => {
-        if (!loading) return;
-        const id = window.setTimeout(() => setAuthWaitOver(true), GUEST_AUTH_WAIT_MS);
-        return () => window.clearTimeout(id);
-    }, [loading]);
-
-    // Write the user's changes, under the key they were made for. Signed-in users keep nothing on the device: while
-    // auth loads, writes wait (and are dropped once a session turns up, or while a session cookie says there is one).
+    // Write the user's changes, under the key they were made for. Signed-in users keep nothing on the device. While
+    // the auth client loads, Clerk's session cookie (known before clerk-js) decides: a session means wait (the write
+    // is dropped once the user is known to be signed in); none means a guest, written at once (also when clerk-js
+    // never loads, e.g. offline).
     useEffect(() => {
         if (!slot.dirty || !isGuest || typeof window === "undefined") return;
-        if (loading && (!authWaitOver || signedInFromCookie(document.cookie))) return;
+        if (loading && signedInFromCookie(document.cookie)) return;
         try {
             localStorage.setItem(`rp_${slot.key}`, JSON.stringify(slot.data));
             pruneLocalHistory(`rp_${slot.key.replace(/_\d{4}-\d{2}-\d{2}$/, "")}`, 7);
         } catch {
             // Storage full or unavailable
         }
-    }, [slot, isGuest, loading, authWaitOver]);
+    }, [slot, isGuest, loading]);
 
     const updateData = useCallback((updater: T | ((prev: T) => T)) => {
         setSlot((prev) => ({

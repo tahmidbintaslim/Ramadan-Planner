@@ -44,6 +44,7 @@ beforeEach(() => {
   localStorage.clear();
   document.body.innerHTML = "";
   auth.value = { user: null, loading: false, isGuest: true };
+  document.cookie = "__client_uat=0";
 });
 
 afterEach(() => {
@@ -133,14 +134,23 @@ describe("useGuestData", () => {
     expect(localStorage.getItem("rp_probe_2027-02-20")).toBeNull();
     cleanup();
 
-    // Auth still loading: the write waits; a guest's change is kept once the auth wait is over.
+    // Auth still loading with a Clerk session cookie: the write waits (and is dropped once signed in).
     auth.value = { user: null, loading: true, isGuest: true };
+    document.cookie = "__client_uat=1700000000";
     render(<Counter storageKey="probe_2027-02-20" />);
     act(() => screen.getByRole("button").click());
     expect(localStorage.getItem("rp_probe_2027-02-20")).toBeNull();
-    act(() => {
-      vi.advanceTimersByTime(3000);
-    });
+    auth.value = { user: { id: "u1" }, loading: false, isGuest: false };
+    cleanup();
+    render(<Counter storageKey="probe_2027-02-20" />);
+    expect(localStorage.getItem("rp_probe_2027-02-20")).toBeNull();
+    cleanup();
+
+    // Auth still loading, no session cookie (signed out, or clerk-js never loads): a guest, written at once.
+    auth.value = { user: null, loading: true, isGuest: true };
+    document.cookie = "__client_uat=0";
+    render(<Counter storageKey="probe_2027-02-20" />);
+    act(() => screen.getByRole("button").click());
     expect(stored("rp_probe_2027-02-20")).toEqual({ n: 1 });
   });
 });
