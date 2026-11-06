@@ -30,6 +30,7 @@ vi.mock("@/lib/google-calendar", async () => {
   };
 });
 
+import { createHash } from "node:crypto";
 import { decryptJson, encryptJson } from "@/lib/secure-json";
 import {
   disconnectGoogleCalendarImpl,
@@ -71,38 +72,56 @@ afterEach(() => {
 });
 
 describe("ICS link", () => {
-  it("returns the caller's existing secret without writing", async () => {
-    m.prisma.calendarLink.findUnique.mockResolvedValue({ icsSecret: " abc123 " });
+  const sha256 = (v: string) => createHash("sha256").update(v, "utf8").digest("hex");
+
+  it("an existing hashed link is reported active without a URL, and nothing is written", async () => {
+    m.prisma.calendarLink.findUnique.mockResolvedValue({ icsSecret: null, icsSecretHash: sha256("abc123") });
     const res = await getOrCreateIcsLinkImpl(USER);
-    expect(res).toEqual({ ok: true, data: { secret: "abc123", urlPath: "/api/calendar/ics/abc123" } });
+    expect(res).toEqual({ ok: true, data: { secret: null, urlPath: null, active: true } });
     expect(m.prisma.calendarLink.findUnique).toHaveBeenCalledWith({
       where: { userId: USER },
-      select: { icsSecret: true },
+      select: { icsSecret: true, icsSecretHash: true },
     });
     expect(m.prisma.calendarLink.upsert).not.toHaveBeenCalled();
   });
 
-  it("creates a 32-char hex secret for the caller when there is none (or it is blank)", async () => {
-    m.prisma.calendarLink.findUnique.mockResolvedValue({ icsSecret: "   " });
+  it("a legacy plaintext secret is shown once more and rewritten to its hash (plaintext cleared)", async () => {
+    m.prisma.calendarLink.findUnique.mockResolvedValue({ icsSecret: " abc123 ", icsSecretHash: null });
     const res = await getOrCreateIcsLinkImpl(USER);
-    expect(res.ok).toBe(true);
-    if (!res.ok) return;
-    expect(res.data.secret).toMatch(/^[0-9a-f]{32}$/);
-    expect(res.data.urlPath).toBe(`/api/calendar/ics/${res.data.secret}`);
+    expect(res).toEqual({ ok: true, data: { secret: "abc123", urlPath: "/api/calendar/ics/abc123", active: true } });
     expect(m.prisma.calendarLink.upsert).toHaveBeenCalledWith({
       where: { userId: USER },
-      create: { userId: USER, icsSecret: res.data.secret },
-      update: { icsSecret: res.data.secret },
+      create: { userId: USER, icsSecretHash: sha256("abc123"), icsSecret: null },
+      update: { icsSecretHash: sha256("abc123"), icsSecret: null },
     });
   });
 
-  it("revoke clears only the caller's secret", async () => {
+  it("creates a 32-char hex secret when there is none (or it is blank) and stores only its SHA-256", async () => {
+    for (const row of [null, { icsSecret: "   ", icsSecretHash: null }]) {
+      m.prisma.calendarLink.upsert.mockClear();
+      m.prisma.calendarLink.findUnique.mockResolvedValue(row);
+      const res = await getOrCreateIcsLinkImpl(USER);
+      expect(res.ok).toBe(true);
+      if (!res.ok) return;
+      expect(res.data.secret).toMatch(/^[0-9a-f]{32}$/);
+      expect(res.data.urlPath).toBe(`/api/calendar/ics/${res.data.secret}`);
+      const write = m.prisma.calendarLink.upsert.mock.calls[0][0];
+      expect(write).toEqual({
+        where: { userId: USER },
+        create: { userId: USER, icsSecretHash: sha256(res.data.secret!), icsSecret: null },
+        update: { icsSecretHash: sha256(res.data.secret!), icsSecret: null },
+      });
+      expect(JSON.stringify(write)).not.toContain(res.data.secret!);
+    }
+  });
+
+  it("revoke clears both the hash and any legacy plaintext of the caller only", async () => {
     const res = await revokeIcsLinkImpl(USER);
     expect(res).toEqual({ ok: true, data: null });
     expect(m.prisma.calendarLink.upsert).toHaveBeenCalledWith({
       where: { userId: USER },
-      create: { userId: USER, icsSecret: null },
-      update: { icsSecret: null },
+      create: { userId: USER, icsSecret: null, icsSecretHash: null },
+      update: { icsSecret: null, icsSecretHash: null },
     });
   });
 });
@@ -175,7 +194,7 @@ describe("sync Google calendar", () => {
   function arrange(over: { profile?: unknown; link?: unknown } = {}) {
     m.prisma.userProfile.findUnique.mockResolvedValue("profile" in over ? over.profile : profile);
     m.prisma.calendarLink.findUnique.mockResolvedValue(
-      "link" in over ? over.link : { googleTokens: encryptJson(TOKENS), icsSecret: "keepme" },
+      "link" in over ? over.link : { googleTokens: encryptJson(TOKENS), icsSecret: null, icsSecretHash: "f".repeat(64) },
     );
     m.prisma.reminderRule.findMany.mockResolvedValue(rules);
     m.refreshGoogleTokens.mockResolvedValue({ ...TOKENS, accessToken: "ya29.REFRESHED", expiryDate: 1_950_000_000_000 });
@@ -187,7 +206,7 @@ describe("sync Google calendar", () => {
   it("fails with profile_missing / google_not_connected (old strings)", async () => {
     arrange({ profile: null });
     expect(await syncGoogleCalendarImpl(USER)).toEqual({ ok: false, error: "profile_missing" });
-    arrange({ link: { googleTokens: null, icsSecret: null } });
+    arrange({ link: { googleTokens: null, icsSecret: null, icsSecretHash: null } });
     expect(await syncGoogleCalendarImpl(USER)).toEqual({ ok: false, error: "google_not_connected" });
     expect(m.refreshGoogleTokens).not.toHaveBeenCalled();
   });
@@ -201,7 +220,7 @@ describe("sync Google calendar", () => {
     expect(m.prisma.reminderRule.findMany.mock.calls[0][0].where).toEqual({ userId: USER, enabled: true });
     expect(m.buildCalendarEventsFromRules).toHaveBeenCalledWith(
       expect.objectContaining({
-        secret: "keepme",
+        secret: "f".repeat(64), // the ICS secret's hash seeds the event UIDs
         timezone: "Asia/Dhaka",
         days: 45,
         rules: [{ id: "r1", type: "iftar", label: "Iftar", offsetMinutes: -10 }],
@@ -224,7 +243,9 @@ describe("sync Google calendar", () => {
       expect(stored.accessToken).toBe("ya29.REFRESHED");
       expect(stored.calendarId).toBe("cal-1");
     }
-    expect(writes[0].update.icsSecret).toBe("keepme");
+    // The sync never touches the ICS link columns.
+    expect(writes[0].update).not.toHaveProperty("icsSecret");
+    expect(writes[0].update).not.toHaveProperty("icsSecretHash");
   });
 
   it("does not persist tokens a second time when they did not change", async () => {
@@ -234,9 +255,24 @@ describe("sync Google calendar", () => {
     expect(m.prisma.calendarLink.upsert).toHaveBeenCalledTimes(1);
   });
 
-  it("creates an ics secret when the caller has none", async () => {
-    arrange({ link: { googleTokens: encryptJson(TOKENS), icsSecret: null } });
+  it("without an ICS link: a stable per-user UID seed, and no ICS link is created", async () => {
+    arrange({ link: { googleTokens: encryptJson(TOKENS), icsSecret: null, icsSecretHash: null } });
     await syncGoogleCalendarImpl(USER);
-    expect(m.prisma.calendarLink.upsert.mock.calls[0][0].update.icsSecret).toMatch(/^[0-9a-f]{32}$/);
+    await syncGoogleCalendarImpl(USER);
+    const seeds = m.buildCalendarEventsFromRules.mock.calls.slice(-2).map((c) => c[0].secret);
+    expect(seeds[0]).toMatch(/^[0-9a-f]{64}$/);
+    expect(seeds[1]).toBe(seeds[0]);
+    for (const [w] of m.prisma.calendarLink.upsert.mock.calls) {
+      expect(w.create).not.toHaveProperty("icsSecretHash");
+      expect(w.update).not.toHaveProperty("icsSecretHash");
+    }
+  });
+
+  it("a legacy plaintext ICS secret seeds the UIDs by its hash (same as the feed)", async () => {
+    arrange({ link: { googleTokens: encryptJson(TOKENS), icsSecret: "legacy-secret", icsSecretHash: null } });
+    await syncGoogleCalendarImpl(USER);
+    expect(m.buildCalendarEventsFromRules.mock.lastCall![0].secret).toBe(
+      createHash("sha256").update("legacy-secret").digest("hex"),
+    );
   });
 });

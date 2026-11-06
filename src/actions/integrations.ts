@@ -15,11 +15,13 @@ import {
 } from "@/server/integrations-impl";
 import type {
   GoogleCalendarStatusDTO,
+  IcsLinkDTO,
   IntegrationResult,
 } from "./integrations-schemas";
 
 export type {
   GoogleCalendarStatusDTO,
+  IcsLinkDTO,
   IntegrationResult,
 } from "./integrations-schemas";
 
@@ -47,9 +49,7 @@ const syncGoogleCalendarFn = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .handler(({ context }) => syncGoogleCalendarImpl(context.userId));
 
-export async function getOrCreateIcsLinkAction(): Promise<
-  IntegrationResult<{ secret: string; urlPath: string }>
-> {
+export async function getOrCreateIcsLinkAction(): Promise<IntegrationResult<IcsLinkDTO>> {
   return callAuthed(() => getOrCreateIcsLinkFn());
 }
 

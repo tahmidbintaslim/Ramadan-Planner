@@ -60,6 +60,8 @@ export function SettingsContent() {
   const [longitude, setLongitude] = useState("90.4125");
 
   const [icsLink, setIcsLink] = useState<string>("");
+  // A link exists on the server but its URL cannot be shown again (only the secret's hash is stored).
+  const [icsActive, setIcsActive] = useState(false);
   const [pushCount, setPushCount] = useState<number>(0);
   const [googleConnected, setGoogleConnected] = useState(false);
   const [googleSyncedAt, setGoogleSyncedAt] = useState<string | null>(null);
@@ -164,8 +166,14 @@ export function SettingsContent() {
         return;
       }
 
-      setIcsLink(`${window.location.origin}${res.data.urlPath}`);
-      setStatus(t("icsReady"));
+      setIcsActive(res.data.active);
+      if (res.data.urlPath) {
+        setIcsLink(`${window.location.origin}${res.data.urlPath}`);
+        setStatus(t("icsReady"));
+      } else {
+        setIcsLink("");
+        setStatus(t("icsActiveHidden"));
+      }
     });
   };
 
@@ -181,6 +189,7 @@ export function SettingsContent() {
       }
 
       setIcsLink("");
+      setIcsActive(false);
       setStatus(t("icsRevoked"));
     });
   };
@@ -418,7 +427,7 @@ export function SettingsContent() {
             <Button variant="outline" onClick={generateIcsLink} disabled={isPending || isGuest} aria-describedby={showSignInNote ? "calendar-signin-reason" : undefined}>
               {t("generateIcs")}
             </Button>
-            <Button variant="destructive" onClick={revokeIcsLink} disabled={isPending || isGuest || !icsLink} aria-describedby={showSignInNote ? "calendar-signin-reason" : undefined}>
+            <Button variant="destructive" onClick={revokeIcsLink} disabled={isPending || isGuest || (!icsLink && !icsActive)} aria-describedby={showSignInNote ? "calendar-signin-reason" : undefined}>
               {t("revokeIcs")}
             </Button>
           </div>
