@@ -657,6 +657,7 @@
         "loadError": "Could not load this surah. Please try again.",
         "retry": "Retry",
         "listenRecitation": "Listen (Recitation)",
+        "listen": "Listen",
         "reciter": "Reciter",
         "stopAudio": "Stop",
         "listenTTS": "Text-to-Speech",
