@@ -3,7 +3,7 @@
 //   public/icons/icon-192.png, icon-512.png (icon.svg, transparent corners)
 //   public/icons/icon-512-maskable.png, apple-touch-icon.png (icon-maskable.svg, full bleed)
 //   public/favicon.ico (16/32/48 PNG entries from icon.svg)
-//   public/og.png 1200x630 (og.svg, with the self-hosted Anek Bangla and Noto Sans Bengali files from @fontsource-variable)
+//   public/og.png 1200x630 (og.svg, with the self-hosted Anek Bangla files from @fontsource-variable)
 // Needs the `playwright` package and a Chrome:
 //   PWCHROME=/usr/bin/google-chrome node scripts/generate-brand-assets.mjs
 // After changing the icons, bump CACHE_VERSION in public/sw.js (the icons are precached); after changing og.png,
@@ -25,11 +25,10 @@ const font = (pkg, file) =>
 // Bengali and Latin subsets under one family each; unicode-range lets each glyph pick its subset.
 const BN = "U+0951-0952,U+0964-0965,U+0980-09FE,U+1CD0,U+1CD2,U+1CD5-1CD6,U+1CD8,U+1CE1,U+1CEA,U+1CED,U+1CF2,U+1CF5-1CF7,U+200C-200D,U+20B9,U+25CC,U+A8F1";
 const LATIN = "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD";
-// The app's variable faces (one file per subset covers every weight): Anek Bangla for display, Noto Sans Bengali
-// for text. og.png and the icons were last rendered with the v2 faces; re-run to refresh them.
+// The app's variable face (one file per subset covers every weight): Anek Bangla for display and text. og.png and the icons were last rendered with the v2 faces; re-run to refresh them.
 const FONT_CSS = [
   ["RP Display", "anek-bangla"],
-  ["RP Sans", "noto-sans-bengali"],
+  ["RP Sans", "anek-bangla"],
 ]
   .flatMap(([family, pkg]) => [
     `@font-face{font-family:"${family}";font-weight:100 900;src:${font(pkg, `${pkg}-bengali-wght-normal.woff2`)};unicode-range:${BN}}`,

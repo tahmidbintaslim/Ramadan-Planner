@@ -9,8 +9,6 @@ const fontImports = [...css.matchAll(/@import "(@fontsource(?:-variable)?\/[^"]+
 describe("font stack", () => {
   it("imports only the shipped families, weights and subsets", () => {
     expect(fontImports).toEqual([
-      "@fontsource-variable/anek-bangla/wght.css",
-      "@fontsource-variable/noto-sans-bengali/wght.css",
       "@fontsource-variable/figtree/wght.css",
       "@fontsource/noto-naskh-arabic/arabic-400.css",
       "@fontsource/noto-naskh-arabic/arabic-500.css",
@@ -18,16 +16,24 @@ describe("font stack", () => {
     ]);
   });
 
-  it("defines the type tokens per locale: Anek Bangla + Noto Sans Bengali (bn), Figtree (en)", () => {
-    const root = /:root \{([^}]+)\}/.exec(css)?.[1] ?? "";
-    expect(root).toMatch(/--font-rp-display: "Anek Bangla Variable"/);
-    expect(root).toMatch(/--font-rp-sans: "Noto Sans Bengali Variable"/);
-    const en = /:root:lang\(en\) \{([^}]+)\}/.exec(css)?.[1] ?? "";
-    expect(en).toMatch(/--font-rp-display: "Figtree Variable"/);
-    expect(en).toMatch(/--font-rp-sans: "Figtree Variable"/);
+  it("self-hosts Anek Bangla's Bengali subset only (one variable file), with swap", () => {
+    const faces = [...css.matchAll(/@font-face \{([^}]+)\}/g)].map((m) => m[1]).filter((f) => f.includes("Anek Bangla"));
+    expect(faces).toHaveLength(1);
+    expect(faces[0]).toContain("anek-bangla-bengali-wght-normal.woff2");
+    expect(faces[0]).toContain("font-display: swap");
+    expect(faces[0]).toMatch(/unicode-range: U\+0951-0952/);
+    expect(fs.readFileSync(path.join(ROOT, "src/routes/__root.tsx"), "utf8")).toContain("anek-bangla-bengali-wght-normal.woff2?url");
   });
 
-  it("sets text at 15px and below in the text face (Noto Sans Bengali in bn), never below 13px", () => {
+  it("defines the type tokens per locale: Anek Bangla (bn, every size), Figtree (en)", () => {
+    const root = /:root \{([^}]+)\}/.exec(css)?.[1] ?? "";
+    expect(root).toMatch(/--font-rp-display: "Anek Bangla Variable"/);
+    expect(root).toMatch(/--font-rp-sans: var\(--font-rp-display\)/);
+    const en = /:root:lang\(en\) \{([^}]+)\}/.exec(css)?.[1] ?? "";
+    expect(en).toMatch(/--font-rp-display: "Figtree Variable"/);
+  });
+
+  it("sets text at 15px and below through the text token, never below 13px", () => {
     for (const role of ["rp-small", "rp-caption", "rp-overline", "rp-reading-small"]) {
       const rule = new RegExp(`@utility ${role} \\{([^}]+)`).exec(css)?.[1] ?? "";
       expect(rule, role).toContain("var(--font-rp-sans)");
@@ -47,7 +53,6 @@ describe("font stack", () => {
 
   it("registers the theme families, each with a Bangladeshi system fallback", () => {
     for (const [util, family] of [
-      ["sans", "Noto Sans Bengali Variable"],
       ["display", "Anek Bangla Variable"],
       ["arabic", "Noto Naskh Arabic"],
       ["quran", "Amiri Quran"],
@@ -64,7 +69,7 @@ describe("font stack", () => {
   it("has no leftovers of the retired faces anywhere the app or the service worker loads", () => {
     for (const f of ["src/styles/globals.css", "src/routes/__root.tsx", "public/sw.js", "package.json"]) {
       expect(fs.readFileSync(path.join(ROOT, f), "utf8"), f).not.toMatch(
-        /hind-siliguri|Hind Siliguri|geist|tiro|noto-serif|Noto Serif|noto-sans\/|"Noto Sans Variable"/i,
+        /hind-siliguri|Hind Siliguri|geist|tiro|noto-serif|Noto Serif|noto-sans|"Noto Sans/i,
       );
     }
   });

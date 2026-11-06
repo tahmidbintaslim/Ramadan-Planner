@@ -4,10 +4,10 @@
  *
  * Modes: :root is Light, .dark is Night (class set by next-themes).
  * Fonts (self-hosted via @fontsource, font-display: swap; a face downloads only when a page uses it):
- *   - display + UI at 16px and up (titles, rows, body, buttons, times): bn Anek Bangla variable, en Figtree
- *     variable -> `font-display` and the .rp-* roles below
- *   - text at 15px and below (subheadline, footnote, captions) and the body default: bn Noto Sans Bengali
- *     variable, en Figtree -> `font-sans` (body). No Bengali below 13px.
+ *   - every UI size: bn Anek Bangla variable (Bengali subset only; Latin inside it falls to Figtree), en Figtree
+ *     variable -> `font-display`, `font-sans` (body) and the .rp-* roles below. Text at 15px and below keeps the
+ *     `--font-rp-sans` token (same family today; Noto Sans Bengali was dropped for its 107 KB). No Bengali below
+ *     13px.
  *   - reading text (ayah translations, hadith, dua meanings): the display/UI face -> `font-reading` (= `font-serif`)
  *   - Quran ayahs: Amiri Quran 400, arabic subset -> `font-quran`
  *   - other Arabic (duas, niyyah): Noto Naskh Arabic 400/500, arabic subset -> `font-arabic`
@@ -35,8 +35,6 @@
  *   `regular:`); content max 1200; sidebar 264; tab bar 56 + safe area; hit areas >= 44; radii 8/10/12/16/24/32,
  *   outer = inner + padding (card 24 = row 16 + 8).
  */
-@import "@fontsource-variable/anek-bangla/wght.css";
-@import "@fontsource-variable/noto-sans-bengali/wght.css";
 @import "@fontsource-variable/figtree/wght.css";
 @import "@fontsource/noto-naskh-arabic/arabic-400.css";
 @import "@fontsource/noto-naskh-arabic/arabic-500.css";
@@ -49,6 +47,19 @@
  * Metric-matched fallback for the swap period, so text does not jump when the web fonts arrive. Figtree (latin)
  * is about 2% narrower than Arial, ascent 0.95em, descent 0.25em; the overrides are divided by size-adjust.
  */
+/*
+ * Anek Bangla, Bengali subset only (one variable file, every weight): Latin inside Bengali text falls through to
+ * Figtree's smaller latin file, so a bn page loads two faces, not four. Same file __root.tsx preloads.
+ */
+@font-face {
+  font-family: "Anek Bangla Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 800;
+  src: url("../../node_modules/@fontsource-variable/anek-bangla/files/anek-bangla-bengali-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0951-0952, U+0964-0965, U+0980-09FE, U+1CD0, U+1CD2, U+1CD5-1CD6, U+1CD8, U+1CE1, U+1CEA, U+1CED, U+1CF2, U+1CF5-1CF7, U+200C-200D, U+20B9, U+25CC, U+A8F1;
+}
+
 @font-face {
   font-family: "RP Sans Fallback";
   src: local("Arial"), local("Roboto"), local("Helvetica Neue");
@@ -153,8 +164,10 @@
 
 :root {
   /* Per-locale type tokens (html[lang]); bn here, en under :root:lang(en) below. */
-  --font-rp-display: "Anek Bangla Variable", "Anek Bangla", "Noto Sans Bengali Variable", "Figtree Variable", "RP Sans Fallback", "Kalpurush", "SolaimanLipi", system-ui, sans-serif;
-  --font-rp-sans: "Noto Sans Bengali Variable", "Noto Sans Bengali", "Figtree Variable", "RP Sans Fallback", "Kalpurush", "SolaimanLipi", system-ui, sans-serif;
+  --font-rp-display: "Anek Bangla Variable", "Figtree Variable", "RP Sans Fallback", "Kalpurush", "SolaimanLipi", system-ui, sans-serif;
+  /* One Bengali family for every size (Noto Sans Bengali dropped to save 107 KB): small text gets a little more
+     word space below (Anek is compact at 13-15px). */
+  --font-rp-sans: var(--font-rp-display);
   --font-rp-scripture: var(--font-rp-display);
   --font-rp-arabic: "Noto Naskh Arabic", "Geeza Pro", "Traditional Arabic", "Arabic Typesetting", "Kalpurush", "SolaimanLipi", serif;
   --font-rp-quran: "Amiri Quran", "Noto Naskh Arabic", "Geeza Pro", "Traditional Arabic", "Kalpurush", "SolaimanLipi", serif;
@@ -355,18 +368,18 @@
   font-family: var(--font-rp-display); font-size: 34px; line-height: 48px; font-weight: 600; font-variant-numeric: tabular-nums;
   &:lang(en) { line-height: 41px; }
 }
-/* Text roles at 15px and below (Noto Sans Bengali / Figtree). */
+/* Text roles at 15px and below (the same family; a touch more word space for Bengali at small sizes). */
 @utility rp-small {
-  font-family: var(--font-rp-sans); font-size: 15px; line-height: 22px; font-weight: 400;
-  &:lang(en) { line-height: 20px; }
+  font-family: var(--font-rp-sans); font-size: 15px; line-height: 22px; font-weight: 400; word-spacing: 0.06em;
+  &:lang(en) { line-height: 20px; word-spacing: normal; }
 }
 @utility rp-caption {
-  font-family: var(--font-rp-sans); font-size: 13px; line-height: 20px; font-weight: 500;
-  &:lang(en) { line-height: 18px; }
+  font-family: var(--font-rp-sans); font-size: 13px; line-height: 20px; font-weight: 500; word-spacing: 0.1em;
+  &:lang(en) { line-height: 18px; word-spacing: normal; }
 }
 @utility rp-overline {
-  font-family: var(--font-rp-sans); font-size: 13px; line-height: 20px; font-weight: 500;
-  &:lang(en) { line-height: 18px; }
+  font-family: var(--font-rp-sans); font-size: 13px; line-height: 20px; font-weight: 500; word-spacing: 0.1em;
+  &:lang(en) { line-height: 18px; word-spacing: normal; }
 }
 /* Reading text (ayah translations, hadith, dua meanings, niyyah). */
 @utility rp-reading {
@@ -382,7 +395,6 @@
    the same in both locales (Noto Naskh Arabic for duas, Amiri Quran for ayahs). */
 :root:lang(en) {
   --font-rp-display: "Figtree Variable", "Anek Bangla Variable", "RP Sans Fallback", "Kalpurush", "SolaimanLipi", system-ui, sans-serif;
-  --font-rp-sans: "Figtree Variable", "Noto Sans Bengali Variable", "RP Sans Fallback", "Kalpurush", "SolaimanLipi", system-ui, sans-serif;
 }
 
 @layer base {
