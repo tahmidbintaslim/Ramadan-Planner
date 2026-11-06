@@ -180,6 +180,8 @@ describe("admin operations", () => {
       null,
       { ...input, titleBn: "   " },
       { ...input, titleBn: "x".repeat(201) },
+      { ...input, bodyBn: "x".repeat(4001) },
+      { ...input, bodyEn: "x".repeat(4001) },
       { ...input, startAt: "yesterday" },
       { ...input, id: "nope" },
       { ...input, endAt: undefined },

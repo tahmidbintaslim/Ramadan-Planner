@@ -195,13 +195,14 @@ export function AnnouncementsAdminContent() {
           <CardTitle className="text-base">{t("editor")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <Input value={titleBn} onChange={(e) => setTitleBn(e.target.value)} placeholder={t("titleBn")} />
-          <Input value={titleEn} onChange={(e) => setTitleEn(e.target.value)} placeholder={t("titleEn")} />
+          <Input value={titleBn} onChange={(e) => setTitleBn(e.target.value)} placeholder={t("titleBn")} maxLength={200} />
+          <Input value={titleEn} onChange={(e) => setTitleEn(e.target.value)} placeholder={t("titleEn")} maxLength={200} />
 
           <textarea
             value={bodyBn}
             onChange={(e) => setBodyBn(e.target.value)}
             placeholder={t("bodyBn")}
+            maxLength={4000}
             className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             rows={3}
           />
@@ -209,6 +210,7 @@ export function AnnouncementsAdminContent() {
             value={bodyEn}
             onChange={(e) => setBodyEn(e.target.value)}
             placeholder={t("bodyEn")}
+            maxLength={4000}
             className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             rows={3}
           />
