@@ -250,12 +250,16 @@ export function PrayerHero({
       <div className="relative flex flex-1 items-center justify-between gap-3 py-2 lg:justify-center lg:py-4">
         <div className="flex min-w-0 flex-col lg:absolute lg:inset-0 lg:items-center lg:justify-center lg:text-center">
           <span className="rp-row font-semibold text-white lg:text-[14px] lg:leading-[22px] lg:font-normal lg:text-white/90">{label}</span>
-          {/* Phone: the day period sits on the time's line. Inside the desktop ring it gets its own line above the
-              time, so "বিকাল ৪:১৮" never runs into the ring. */}
-          <span className="rp-time-xl hidden whitespace-nowrap tabular-nums max-lg:inline" suppressHydrationWarning>
+          {/* Phone, and English everywhere: the day period sits on the time's line ("4:18 PM" fits the ring). A Bengali
+              period goes before the time and is a whole word, so inside the desktop ring it gets its own line above
+              the time and "বিকাল ৪:১৮" never runs into the ring. */}
+          <span
+            className={cn("rp-time-xl whitespace-nowrap tabular-nums", clock.periodFirst && "hidden max-lg:inline")}
+            suppressHydrationWarning
+          >
             <ClockTime parts={clock} />
           </span>
-          <span className="hidden flex-col items-center lg:flex" suppressHydrationWarning>
+          <span className={cn("hidden flex-col items-center", clock.periodFirst && "lg:flex")} suppressHydrationWarning>
             {clock.period ? <span className="rp-row">{clock.period}</span> : null}
             <span className="rp-time-xl whitespace-nowrap tabular-nums">{clock.time}</span>
           </span>
