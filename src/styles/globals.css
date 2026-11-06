@@ -46,7 +46,7 @@
 @import "@fontsource-variable/noto-serif/wght.css";
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "shadcn/tailwind.css";
+@import "./shadcn-tailwind.css";
 
 /*
  * Metric-matched fallbacks for the swap period, so text does not jump when the web fonts arrive. Values measured

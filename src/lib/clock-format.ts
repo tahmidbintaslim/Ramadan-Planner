@@ -4,7 +4,7 @@
 // /settings and kept on this device (localStorage), for guests and signed-in users alike; nothing goes to a server.
 //   en 12h: "5:55 PM"      en 24h: "17:55"
 //   bn 12h: always with the Bangladeshi day period before the time (BN_DAY_PERIODS): "ভোর ৪:৫৭", "দুপুর ১২:১৪",
-//           "বিকাল ৪:১৮", "সন্ধ্যা ৫:৫৮", "রাত ৭:১২", so a bare "৪:৫৭" can never be read as afternoon
+//           "বিকাল ৪:১৮", "সন্ধ্যা ৫:৫৮", "সন্ধ্যা ৭:১২", "রাত ৮:৩০", so a bare "৪:৫৭" can never be read as afternoon
 //   bn 24h: "১৭:৫৫"
 import { toBengaliDigits } from "@/lib/prayer-phase";
 
@@ -14,14 +14,16 @@ export const DEFAULT_CLOCK_FORMAT: ClockFormat = "12h";
 export const CLOCK_FORMAT_KEY = "rp_clock_format";
 /** Fired on window after a change, so every mounted clock re-renders at once. */
 export const CLOCK_FORMAT_EVENT = "rp:clock-format";
-/** The Bengali day-period word for the night (20:00/19:00 to 03:59). */
+/** The Bengali day-period word for the night (20:00 to 03:59). */
 export const BN_NIGHT_PERIOD = "রাত";
 
 /**
  * Bangladeshi day periods for bn 12-hour times, as [from minute of the day, word], in order. Boundaries (founder to
- * confirm): ভোর 04:00, সকাল 06:00, দুপুর 11:30, বিকাল 15:00, সন্ধ্যা 17:00, রাত 19:00 (until 03:59).
+ * confirm): ভোর 04:00, সকাল 06:00, দুপুর 11:30, বিকাল 15:00, সন্ধ্যা 17:00, রাত 20:00 (until 03:59).
  * সন্ধ্যা starts at 17:00 because Bangladesh's earliest sunset (late Nov) is ~17:10: Maghrib and Iftar must never read
- * as বিকাল. দুপুর starts at 11:30 so Dhuhr (11:40-12:15 across the year) always reads as দুপুর.
+ * as বিকাল. দুপুর starts at 11:30 so Dhuhr (11:40-12:15 across the year) always reads as দুপুর. রাত starts at 20:00
+ * (CLDR bn and Bangladeshi newspapers write Isha at 19:00-19:59 as সন্ধ্যা; summer Maghrib in the north-west reaches
+ * 19:0x after the +2 IFB tune and must not read as রাত).
  */
 export const BN_DAY_PERIODS: ReadonlyArray<readonly [number, string]> = [
   [0, BN_NIGHT_PERIOD],
@@ -30,7 +32,7 @@ export const BN_DAY_PERIODS: ReadonlyArray<readonly [number, string]> = [
   [11 * 60 + 30, "দুপুর"],
   [15 * 60, "বিকাল"],
   [17 * 60, "সন্ধ্যা"],
-  [19 * 60, BN_NIGHT_PERIOD],
+  [20 * 60, BN_NIGHT_PERIOD],
 ];
 
 /** The Bengali day period of a wall-clock time (hour 0-23). */
