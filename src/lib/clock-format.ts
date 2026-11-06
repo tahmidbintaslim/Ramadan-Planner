@@ -19,15 +19,17 @@ export const BN_NIGHT_PERIOD = "রাত";
 
 /**
  * Bangladeshi day periods for bn 12-hour times, as [from minute of the day, word], in order. Boundaries (founder to
- * confirm): ভোর 04:00, সকাল 06:00, দুপুর 12:00, বিকাল 15:00, সন্ধ্যা 17:30, রাত 19:00 (until 03:59).
+ * confirm): ভোর 04:00, সকাল 06:00, দুপুর 11:30, বিকাল 15:00, সন্ধ্যা 17:00, রাত 19:00 (until 03:59).
+ * সন্ধ্যা starts at 17:00 because Bangladesh's earliest sunset (late Nov) is ~17:10: Maghrib and Iftar must never read
+ * as বিকাল. দুপুর starts at 11:30 so Dhuhr (11:40-12:15 across the year) always reads as দুপুর.
  */
 export const BN_DAY_PERIODS: ReadonlyArray<readonly [number, string]> = [
   [0, BN_NIGHT_PERIOD],
   [4 * 60, "ভোর"],
   [6 * 60, "সকাল"],
-  [12 * 60, "দুপুর"],
+  [11 * 60 + 30, "দুপুর"],
   [15 * 60, "বিকাল"],
-  [17 * 60 + 30, "সন্ধ্যা"],
+  [17 * 60, "সন্ধ্যা"],
   [19 * 60, BN_NIGHT_PERIOD],
 ];
 

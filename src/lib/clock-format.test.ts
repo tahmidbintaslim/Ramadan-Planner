@@ -26,9 +26,10 @@ describe("formatDateTime", () => {
 
 describe("bnDayPeriod (Bangladeshi day periods for bn 12-hour times)", () => {
   it.each([
-    [0, 5, "রাত"], [3, 59, "রাত"], [4, 0, "ভোর"], [4, 57, "ভোর"], [5, 59, "ভোর"], [6, 0, "সকাল"], [11, 59, "সকাল"],
-    [12, 0, "দুপুর"], [12, 14, "দুপুর"], [14, 59, "দুপুর"], [15, 0, "বিকাল"], [16, 18, "বিকাল"], [17, 29, "বিকাল"],
-    [17, 30, "সন্ধ্যা"], [17, 58, "সন্ধ্যা"], [18, 59, "সন্ধ্যা"], [19, 0, "রাত"], [19, 12, "রাত"], [23, 59, "রাত"],
+    [0, 5, "রাত"], [3, 59, "রাত"], [4, 0, "ভোর"], [4, 57, "ভোর"], [5, 59, "ভোর"], [6, 0, "সকাল"], [11, 29, "সকাল"],
+    [11, 30, "দুপুর"], [11, 42, "দুপুর"], [12, 14, "দুপুর"], [14, 59, "দুপুর"], [15, 0, "বিকাল"], [16, 18, "বিকাল"], [16, 59, "বিকাল"],
+    // Maghrib/Iftar in late November, Bangladesh's earliest sunset, is ~17:10: it must read সন্ধ্যা.
+    [17, 0, "সন্ধ্যা"], [17, 17, "সন্ধ্যা"], [17, 58, "সন্ধ্যা"], [18, 59, "সন্ধ্যা"], [19, 0, "রাত"], [19, 12, "রাত"], [23, 59, "রাত"],
   ] as const)("%i:%i -> %s", (h, m, word) => {
     expect(bnDayPeriod(h, m)).toBe(word);
   });
@@ -79,7 +80,7 @@ describe("clockParts / joinClockParts", () => {
   it("puts the period after the time in English and before it in Bengali", () => {
     expect(clockParts(17, 5, "en")).toEqual({ time: "5:05", period: "PM", periodFirst: false });
     expect(clockParts(2, 30, "bn")).toEqual({ time: "২:৩০", period: "রাত", periodFirst: true });
-    expect(clockParts(17, 5, "bn")).toEqual({ time: "৫:০৫", period: "বিকাল", periodFirst: true });
+    expect(clockParts(16, 5, "bn")).toEqual({ time: "৪:০৫", period: "বিকাল", periodFirst: true });
     expect(clockParts(17, 5, "bn", "24h")).toEqual({ time: "১৭:০৫", period: null, periodFirst: true });
     expect(joinClockParts(clockParts(2, 30, "bn"))).toBe("রাত ২:৩০");
     expect(joinClockParts(clockParts(2, 30, "en", "24h"))).toBe("02:30");
