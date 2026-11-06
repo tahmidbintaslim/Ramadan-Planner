@@ -1,4 +1,7 @@
+import { useState } from "react";
+import { useRouter } from "@tanstack/react-router";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "@/components/shared/link";
 import { HadithAudioControls } from "@/components/hadith/hadith-audio-controls";
@@ -16,18 +19,21 @@ export function HadithEditionsPage({ data }: { data: HadithListData }) {
   const locale = useLocale();
   const { editions, loadError } = data;
 
+  if (loadError || editions.length === 0) {
+    return (
+      <div className="mx-auto w-full max-w-2xl space-y-4">
+        <h1 className="rp-h1 text-rp-ink">{t("title")}</h1>
+        <HadithStatusCard kind={loadError ? "error" : "empty"} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
+      <h1 className="rp-h1 text-rp-ink">{t("title")}</h1>
       <Card>
-        <CardHeader>
-          <CardTitle>{t("title")}</CardTitle>
-        </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {loadError && <p className="text-sm text-amber-600">{t("loadError")}</p>}
-            {editions.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t("empty")}</p>
-            ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {editions.map((ed) => (
                   <Card key={ed.editionName} className="hover:shadow-lg transition-shadow">
@@ -65,7 +71,6 @@ export function HadithEditionsPage({ data }: { data: HadithListData }) {
                   </Card>
                 ))}
               </div>
-            )}
           </div>
         </CardContent>
       </Card>
@@ -73,23 +78,47 @@ export function HadithEditionsPage({ data }: { data: HadithListData }) {
   );
 }
 
+/** v2 error / empty state: what happened, a retry (reloads the route data) and a way out. */
+function HadithStatusCard({ kind, backHref = "/today" }: { kind: "error" | "empty"; backHref?: "/today" | "/hadith" }) {
+  const t = useTranslations("hadith");
+  const router = useRouter();
+  const [retrying, setRetrying] = useState(false);
+  const retry = async () => {
+    setRetrying(true);
+    try {
+      await router.invalidate();
+    } finally {
+      setRetrying(false);
+    }
+  };
+  return (
+    <section
+      role={kind === "error" ? "alert" : undefined}
+      data-testid={kind === "error" ? "hadith-load-error" : "hadith-empty"}
+      className="flex flex-col items-start gap-3 rounded-rp-lg bg-rp-surface p-5 text-rp-ink shadow-rp-soft"
+    >
+      <h2 className="rp-h2">{t(kind === "error" ? "loadErrorTitle" : "emptyTitle")}</h2>
+      <p className="rp-body text-rp-muted">{t(kind === "error" ? "loadErrorBody" : "emptyBody")}</p>
+      <div className="flex flex-wrap gap-2">
+        {kind === "error" ? (
+          <Button type="button" onClick={() => void retry()} disabled={retrying}>
+            {t("tryAgain")}
+          </Button>
+        ) : null}
+        <Link href={backHref} className={buttonVariants({ variant: kind === "error" ? "quiet" : "soft" })}>
+          {t(backHref === "/hadith" ? "backToList" : "backToHome")}
+        </Link>
+      </div>
+    </section>
+  );
+}
+
 function ErrorCard({ title }: { title?: string }) {
   const t = useTranslations("hadith");
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>{title ?? t("title")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-amber-600">{t("loadError")}</p>
-          <div className="mt-3">
-            <Link href="/hadith" className="text-sm text-primary underline">
-              {t("backToList")}
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="mx-auto w-full max-w-2xl space-y-4">
+      <h1 className="rp-h1 text-rp-ink">{title ?? t("title")}</h1>
+      <HadithStatusCard kind="error" backHref="/hadith" />
     </div>
   );
 }

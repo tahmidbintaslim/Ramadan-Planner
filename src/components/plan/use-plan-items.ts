@@ -43,8 +43,8 @@ export interface PlanItemsState {
   /** Adds a task; `doneOn` adds it already ticked for that day. Resolves to its id (null on failure). */
   addTask: (title: string, doneOn?: string) => Promise<string | null>;
   addGoal: (title: string, targetCount: number, targetUnit: string) => Promise<string | null>;
-  /** Ticks or unticks an item for the day `scopeISO`. */
-  toggle: (kind: Kind, id: string, done: boolean, scopeISO: string) => void;
+  /** Ticks or unticks an item for the day `scopeISO`; `onResult` hears whether it was saved (false = rolled back). */
+  toggle: (kind: Kind, id: string, done: boolean, scopeISO: string, onResult?: (ok: boolean) => void) => void;
   /** Resolves true once deleted (immediately for guests). */
   remove: (kind: Kind, id: string) => Promise<boolean>;
   updateTask: (id: string, title: string) => Promise<boolean>;
@@ -170,7 +170,7 @@ export function usePlanItems(): PlanItemsState {
   );
 
   const toggle = useCallback(
-    (kind: Kind, id: string, done: boolean, scopeISO: string) => {
+    (kind: Kind, id: string, done: boolean, scopeISO: string, onResult?: (ok: boolean) => void) => {
       if (pending.has(id)) return;
       if (kind === "task") {
         const before = listsRef.current.tasks.find((x) => x.id === id);
@@ -179,6 +179,7 @@ export function usePlanItems(): PlanItemsState {
         if (guest) {
           updateGuestTasks((prev) => prev.map((x) => (x.id === id ? next : x)));
           succeed();
+          onResult?.(true);
           return;
         }
         setServerTasks((prev) => prev.map((x) => (x.id === id ? next : x)));
@@ -192,6 +193,7 @@ export function usePlanItems(): PlanItemsState {
               setError(true);
               setServerTasks((prev) => prev.map((x) => (x.id === id ? before : x)));
             }
+            onResult?.(res.ok);
           })
           .finally(() => lock(id, false));
         return;
@@ -202,6 +204,7 @@ export function usePlanItems(): PlanItemsState {
       if (guest) {
         updateGuestGoals((prev) => prev.map((x) => (x.id === id ? next : x)));
         succeed();
+        onResult?.(true);
         return;
       }
       setServerGoals((prev) => prev.map((x) => (x.id === id ? next : x)));
@@ -213,6 +216,7 @@ export function usePlanItems(): PlanItemsState {
             setError(true);
             setServerGoals((prev) => prev.map((x) => (x.id === id ? before : x)));
           }
+          onResult?.(res.ok);
         })
         .finally(() => lock(id, false));
     },

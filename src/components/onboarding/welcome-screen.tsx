@@ -303,7 +303,7 @@ export function WelcomeScreen() {
             <p className="rp-caption text-center text-rp-muted">{t("privacyNote")}</p>
           </div>
 
-          <div className="flex items-center justify-center gap-2">
+          <div className="flex items-center justify-center gap-1">
             <AccessibilityDialog
               trigger={
                 <Button variant="quiet" size="icon" aria-label={tA11y("title")}>
@@ -312,7 +312,8 @@ export function WelcomeScreen() {
               }
             />
             <Button
-              variant="link"
+              variant="quiet"
+              className="px-4"
               lang={locale.startsWith("bn") ? "en" : "bn"}
               disabled={isSwitching}
               onClick={() =>

@@ -2,14 +2,11 @@
 
 import { useLocale, useTranslations } from "@/i18n/use-intl";
 import { useEffect, useState, useCallback } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Moon,
-  Clock,
-  CalendarDays,
-  Star,
-} from "lucide-react";
+import { CalendarIcon, CrescentIcon, LanternIcon, MosqueIcon } from "@/components/icons/islamic-icons";
+import { formatClock, type Locale } from "@/components/timetable/timetable-logic";
+import { hijriMonthLabel } from "@/lib/hijri-months";
 import type { TimingData } from "@/types/database";
 import type { RamadanStatus } from "@/lib/ramadan-date";
 import { RamadanTimetable } from "@/components/landing/ramadan-timetable";
@@ -125,79 +122,56 @@ export function DashboardContent() {
   const isPreRamadan = ramadan?.phase === "pre-ramadan";
   const ramadanDay = ramadan?.currentDay ?? null;
 
+  const clock = (hhmm: string | undefined) => (hhmm ? formatClock(hhmm, locale as Locale) : "--:--");
+
   return (
-    <div className="space-y-6">
-      {/* Welcome Header — adapts to Ramadan phase */}
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
+      {/* Welcome header, by Ramadan phase */}
       <div className="space-y-1">
         {loading ? (
           <>
-            <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-4 w-64" />
-          </>
-        ) : isRamadan ? (
-          <>
-            <h1 className="text-2xl font-bold tracking-tight">
-              {t("welcome")}
-            </h1>
-            <p className="text-muted-foreground">
-              {t("ramadanDay", {
-                day: getRamadanDayOrdinal(
-                  ramadanDay ?? 1,
-                  locale as "bn" | "en",
-                  "short",
-                ),
-              })}
-              {ramadan?.ramadanTotalDays && ramadanDay && (
-                <span className="text-xs ml-2">
-                  (
-                  {t("daysOf30", {
-                    day: formatLocalizedNumber(ramadanDay, locale),
-                    total: formatLocalizedNumber(
-                      ramadan.ramadanTotalDays,
-                      locale,
-                    ),
-                  })}
-                  )
-                </span>
-              )}
-            </p>
-          </>
-        ) : isPreRamadan ? (
-          <>
-            <h1 className="text-2xl font-bold tracking-tight">
-              {t("welcomePreRamadan")}
-            </h1>
-            <p className="text-muted-foreground">
-              {ramadan?.daysUntil === 0
-                ? t("ramadanCountdownToday")
-                : ramadan?.daysUntil === 1
-                  ? t("ramadanCountdownTomorrow")
-                  : t("ramadanCountdown", {
-                      days: formatLocalizedNumber(
-                        ramadan?.daysUntil ?? 0,
-                        locale,
-                      ),
-                    })}
-            </p>
+            <Skeleton className="h-10 w-48" />
+            <Skeleton className="h-5 w-64" />
           </>
         ) : (
           <>
-            <h1 className="text-2xl font-bold tracking-tight">
-              {t("welcomePreRamadan")}
-            </h1>
-            <p className="text-muted-foreground">{t("postRamadanDesc")}</p>
+            <h1 className="rp-h1 text-rp-ink">{isRamadan ? t("welcome") : t("welcomePreRamadan")}</h1>
+            <p className="rp-body text-rp-muted">
+              {isRamadan ? (
+                <>
+                  {t("ramadanDay", { day: getRamadanDayOrdinal(ramadanDay ?? 1, locale as "bn" | "en", "short") })}
+                  {ramadan?.ramadanTotalDays && ramadanDay ? (
+                    <span className="rp-small ms-2">
+                      (
+                      {t("daysOf30", {
+                        day: formatLocalizedNumber(ramadanDay, locale),
+                        total: formatLocalizedNumber(ramadan.ramadanTotalDays, locale),
+                      })}
+                      )
+                    </span>
+                  ) : null}
+                </>
+              ) : isPreRamadan ? (
+                ramadan?.daysUntil === 0 ? (
+                  t("ramadanCountdownToday")
+                ) : ramadan?.daysUntil === 1 ? (
+                  t("ramadanCountdownTomorrow")
+                ) : (
+                  t("ramadanCountdown", { days: formatLocalizedNumber(ramadan?.daysUntil ?? 0, locale) })
+                )
+              ) : (
+                t("postRamadanDesc")
+              )}
+            </p>
           </>
         )}
 
-        {/* Hijri date display */}
+        {/* Hijri date */}
         {ramadan && (
-          <p className="text-xs text-muted-foreground">
+          <p className="rp-small text-rp-muted">
             {t("currentHijriDate", {
               day: localizeAsciiDigits(String(ramadan.hijriDay), locale),
-              month:
-                ramadan.hijriMonthName
-                  ?.normalize("NFKD")
-                  .replace(/[\u0300-\u036f]/g, "") ?? ramadan.hijriMonthName,
+              month: hijriMonthLabel(ramadan.hijriMonth, ramadan.hijriMonthName, locale),
               year: localizeAsciiDigits(String(ramadan.hijriYear), locale),
             })}
             {timings && ` • ${timings.location}`}
@@ -209,148 +183,88 @@ export function DashboardContent() {
 
       {/* Pre-Ramadan countdown card */}
       {isPreRamadan && ramadan && (
-        <Card className="bg-linear-to-r from-primary/10 to-primary/5 border-primary/20">
-          <CardContent className="py-6">
-            <div className="flex items-center gap-4">
-              <div className="shrink-0">
-                <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-                  <CalendarDays className="h-8 w-8 text-primary" />
-                </div>
-              </div>
-              <div className="flex-1 space-y-1">
-                <h3 className="font-semibold text-lg">
-                  {t("preRamadanTitle")}
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  {t("preRamadanDesc")}
-                </p>
-                {ramadan.ramadanStartGregorian && (
-                  <p className="text-xs text-muted-foreground">
-                    {t("ramadanStartDate", {
-                      date: localizeAsciiDigits(
-                        ramadan.ramadanStartGregorian,
-                        locale,
-                      ),
-                    })}
-                    <span className="ml-2 italic">{t("moonSightingNote")}</span>
-                  </p>
-                )}
-              </div>
-              {ramadan.daysUntil !== null && ramadan.daysUntil > 0 && (
-                <div className="shrink-0 text-center">
-                  <p className="text-4xl font-bold text-primary">
-                    {formatLocalizedNumber(ramadan.daysUntil, locale)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {t("daysLabel")}
-                  </p>
-                </div>
-              )}
+        <Card className="flex-row items-center gap-4 bg-linear-to-br from-rp-accent-tint to-rp-surface px-5">
+          <span aria-hidden="true" className="flex size-14 shrink-0 items-center justify-center rounded-rp-full bg-rp-surface text-rp-accent">
+            <CalendarIcon size={28} />
+          </span>
+          <div className="min-w-0 flex-1 space-y-1">
+            <h2 className="rp-h2 text-rp-ink">{t("preRamadanTitle")}</h2>
+            <p className="rp-small text-rp-muted">{t("preRamadanDesc")}</p>
+            {ramadan.ramadanStartGregorian && (
+              <p className="rp-caption text-rp-muted">
+                {t("ramadanStartDate", { date: localizeAsciiDigits(ramadan.ramadanStartGregorian, locale) })}
+                <span className="ms-2">{t("moonSightingNote")}</span>
+              </p>
+            )}
+          </div>
+          {ramadan.daysUntil !== null && ramadan.daysUntil > 0 && (
+            <div className="shrink-0 text-center">
+              <p className="rp-time-l text-rp-accent">{formatLocalizedNumber(ramadan.daysUntil, locale)}</p>
+              <p className="rp-caption text-rp-muted">{t("daysLabel")}</p>
             </div>
-          </CardContent>
+          )}
         </Card>
       )}
 
       {/* Post-Ramadan card */}
       {ramadan?.phase === "post-ramadan" && (
-        <Card className="bg-linear-to-r from-amber-50 to-amber-100/50 border-amber-200/50">
-          <CardContent className="py-6">
-            <div className="flex items-center gap-4">
-              <Star className="h-10 w-10 text-amber-500" />
-              <div>
-                <h3 className="font-semibold text-lg">
-                  {t("postRamadanTitle")}
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  {t("postRamadanDesc")}
-                </p>
-              </div>
-            </div>
-          </CardContent>
+        <Card className="flex-row items-center gap-4 bg-rp-gold-tint px-5">
+          <span aria-hidden="true" className="flex size-12 shrink-0 items-center justify-center rounded-rp-full bg-rp-surface text-rp-gold-text">
+            <LanternIcon size={24} />
+          </span>
+          <div>
+            <h2 className="rp-h2 text-rp-ink">{t("postRamadanTitle")}</h2>
+            <p className="rp-small text-rp-muted">{t("postRamadanDesc")}</p>
+          </div>
         </Card>
       )}
 
-      {/* Prayer Times Card */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Clock className="h-4 w-4 text-primary" />
-            {t("prayerTimes")}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">{t("sehriTime")}</p>
+      {/* Prayer times */}
+      <Card className="gap-3 px-5">
+        <h2 className="rp-h2 flex items-center gap-2 text-rp-ink">
+          <MosqueIcon size={24} className="text-rp-accent" />
+          {t("prayerTimes")}
+        </h2>
+        <div className="grid grid-cols-2 gap-3">
+          {(["sehri", "iftar"] as const).map((key) => (
+            <div key={key} className="rounded-rp-md bg-rp-accent-tint p-4">
+              <p className="rp-caption text-rp-muted">{t(key === "sehri" ? "sehriTime" : "iftarTime")}</p>
               {loading ? (
-                <Skeleton className="h-6 w-20" />
+                <Skeleton className="mt-1 h-8 w-20" />
               ) : (
-                <p className="text-lg font-semibold">
-                  {timings
-                    ? localizeAsciiDigits(timings.prayerTimes.sehri, locale)
-                    : "--:--"}
-                </p>
+                <p className="rp-h2 tabular-nums text-rp-ink">{clock(timings?.prayerTimes[key])}</p>
               )}
             </div>
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">{t("iftarTime")}</p>
+          ))}
+        </div>
+        <ul className="divide-y divide-rp-rule">
+          {(["fajr", "dhuhr", "asr", "maghrib", "isha"] as const).map((prayer) => (
+            <li key={prayer} className="flex min-h-12 items-center justify-between gap-3">
+              <span className="rp-row text-rp-ink">{tSalah(prayer)}</span>
               {loading ? (
-                <Skeleton className="h-6 w-20" />
+                <Skeleton className="h-5 w-16" />
               ) : (
-                <p className="text-lg font-semibold">
-                  {timings
-                    ? localizeAsciiDigits(timings.prayerTimes.iftar, locale)
-                    : "--:--"}
-                </p>
+                <span className="rp-row tabular-nums text-rp-ink">{clock(timings?.prayerTimes[prayer])}</span>
               )}
-            </div>
-            {(["fajr", "dhuhr", "asr", "maghrib", "isha"] as const).map(
-              (prayer) => (
-                <div key={prayer} className="space-y-1">
-                  <p className="text-xs text-muted-foreground">
-                    {tSalah(prayer)}
-                  </p>
-                  {loading ? (
-                    <Skeleton className="h-5 w-16" />
-                  ) : (
-                    <p className="text-sm font-medium">
-                      {timings
-                        ? localizeAsciiDigits(
-                            timings.prayerTimes[prayer],
-                            locale,
-                          )
-                        : "--:--"}
-                    </p>
-                  )}
-                </div>
-              ),
-            )}
-          </div>
-        </CardContent>
+            </li>
+          ))}
+        </ul>
       </Card>
 
-      {/* Iftar Countdown — only show during Ramadan or always (users may fast outside Ramadan too) */}
-      <Card className="bg-primary text-primary-foreground">
-        <CardContent className="py-6">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <p className="text-sm opacity-90">{t("iftarCountdown")}</p>
-              <p className="text-3xl font-bold tracking-tight">
-                {localizeAsciiDigits(countdown, locale)}
-              </p>
-            </div>
-            <Moon className="h-10 w-10 opacity-80" />
-          </div>
-        </CardContent>
+      {/* Iftar countdown */}
+      <Card className="flex-row items-center justify-between bg-rp-live px-5 text-rp-on-live">
+        <div className="space-y-1 text-rp-on-live">
+          <p className="rp-small">{t("iftarCountdown")}</p>
+          <p className="rp-time-l tabular-nums">{localizeAsciiDigits(countdown, locale)}</p>
+        </div>
+        <CrescentIcon size={40} aria-hidden="true" className="text-rp-on-live" />
       </Card>
 
-      {/* Ramadan Sehri & Iftar Timetable */}
+      {/* Ramadan sehri and iftar timetable */}
       <RamadanTimetable compact />
 
-      {/* Daily ibadah tracker — only meaningful during Ramadan */}
-      {isRamadan && (
-        <DailyIbadahTracker day={ramadanDay ?? 1} />
-      )}
+      {/* Daily ibadah tracker, only during Ramadan */}
+      {isRamadan && <DailyIbadahTracker day={ramadanDay ?? 1} />}
     </div>
   );
 }

@@ -286,3 +286,96 @@ export function goalDoneForDay(isCompleted: boolean, doneOn: string | undefined,
 export function tickScopeISO(nightItem: boolean, todayISO: string, nightEveningISO: string | null): string {
   return nightItem && nightEveningISO ? nightEveningISO : todayISO;
 }
+
+// ── Plan rows (shared by the /plan screen and the Home preview) ──
+
+export interface PlanRowNote {
+  window?: PlanWindow;
+  key?: string;
+  doneOn?: string;
+}
+
+export interface PlanRowSource {
+  id: string;
+  kind: "task" | "goal";
+  /** The stored title. */
+  rawTitle: string;
+  key?: string;
+  done: boolean;
+  /** The day a tick of this row counts for. */
+  scopeISO: string;
+  window: PlanWindow;
+  targetCount?: number;
+  targetUnit?: string;
+}
+
+/**
+ * The plan's tasks then goals as rows with their suggestion key, window and done-for-the-day state. Guest lists
+ * are stored per day; signed-in task ticks count for the day they were made (doneForDay), goal ticks for the day
+ * kept in the item note (goalDoneForDay). `defaultWindows` maps suggestion keys to their window.
+ */
+export function buildPlanRows(input: {
+  tasks: ReadonlyArray<{ id: string; title: string; isDone: boolean; dueDate: string | null }>;
+  goals: ReadonlyArray<{ id: string; title: string; isCompleted: boolean; targetCount: number; targetUnit: string }>;
+  isGuest: boolean;
+  notes: Readonly<Record<string, PlanRowNote | undefined>>;
+  titlesByKey: Readonly<Record<string, readonly string[]>>;
+  defaultWindows: Readonly<Record<string, PlanWindow | undefined>>;
+  todayISO: string;
+  eveningISO: string | null;
+}): PlanRowSource[] {
+  const { tasks, goals, isGuest, notes, titlesByKey, defaultWindows, todayISO, eveningISO } = input;
+  return [
+    ...tasks.map((task): PlanRowSource => {
+      const note = notes[task.id];
+      const key = matchDefaultKey(task.title, note?.key, titlesByKey);
+      const scopeISO = tickScopeISO(isNightKey(key), todayISO, eveningISO);
+      return {
+        id: task.id,
+        kind: "task",
+        rawTitle: task.title,
+        key,
+        scopeISO,
+        done: isGuest ? task.isDone : doneForDay(task, scopeISO),
+        window: note?.window ?? (key ? defaultWindows[key] : undefined) ?? windowFromTitle(task.title),
+      };
+    }),
+    ...goals.map((goal): PlanRowSource => {
+      const note = notes[goal.id];
+      return {
+        id: goal.id,
+        kind: "goal",
+        rawTitle: goal.title,
+        scopeISO: todayISO,
+        done: isGuest ? goal.isCompleted : goalDoneForDay(goal.isCompleted, note?.doneOn, todayISO),
+        window: note?.window ?? windowFromTitle(goal.title),
+        targetCount: goal.targetCount,
+        targetUnit: goal.targetUnit,
+      };
+    }),
+  ];
+}
+
+/** Rows in the order /plan shows them: by window, keeping the order inside each window. */
+export function planDisplayOrder<T extends { window: PlanWindow }>(rows: readonly T[]): T[] {
+  const groups = groupByWindow(rows);
+  return PLAN_WINDOWS.flatMap((w) => groups[w]);
+}
+
+/**
+ * The evening date (YYYY-MM-DD) of the night whose practices are ticked now, the same day /plan uses from its
+ * timetable row (roza `night - 1`): `todayISO` from maghrib, yesterday before fajr; null outside the last ten
+ * nights. Lets the Home preview count night ticks for the same day as /plan.
+ */
+export function nightEveningISO(
+  ramadanDay: number | null,
+  now: Date,
+  fajrToday: Date | null,
+  maghribToday: Date | null,
+  todayISO: string,
+): string | null {
+  if (ramadanDay === null || !nightsViewAvailable(ramadanDay, now, fajrToday, maghribToday)) return null;
+  const shift = currentNight(ramadanDay, now, fajrToday) - 1 - ramadanDay;
+  const [y, m, d] = todayISO.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d + shift)).toISOString().slice(0, 10);
+}

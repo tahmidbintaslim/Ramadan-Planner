@@ -48,6 +48,9 @@ describe("buttonVariants", () => {
     expect(buttonVariants({ size: "icon" })).toContain("size-12")
     expect(buttonVariants({ size: "lg" })).toContain("h-[52px]")
     expect(buttonVariants()).toContain("focus-visible:ring-")
+    // 44px pixel floors under the 80% font setting (rem-based 48px would be 38.4px).
+    expect(buttonVariants()).toContain("min-h-[44px]")
+    expect(buttonVariants({ size: "icon" })).toContain("min-w-[44px]")
     expect(buttonVariants()).toContain("disabled:opacity-50")
   })
   it("renders a button with variant data attribute", () => {
@@ -89,7 +92,11 @@ describe("Chip", () => {
     expect(cls).toContain("h-10")
     expect(cls).toContain("relative")
     expect(cls).toContain("before:absolute")
-    expect(cls).toContain("before:-inset-1")
+    expect(cls).toContain("before:-inset-[4px]")
+  })
+  it("keeps a 44px pixel target when the font control scales rem down (36px floor + 4px each side)", () => {
+    render(createElement(Chip, null, "Asr"))
+    expect(screen.getByRole("button", { name: "Asr" }).className).toContain("min-h-[36px]")
   })
   it("is a type=button with aria-pressed reflecting selected", () => {
     function Harness() {

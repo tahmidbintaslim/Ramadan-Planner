@@ -73,7 +73,7 @@ test.describe("mobile Home", () => {
       await top('[data-testid="phase-card"]'),
       await top("li[data-prayer]"),
       await top('main a[href="/quran"]'),
-      await top('[data-testid^="plan-item-"]'),
+      await top('[data-testid="plan-preview"]'),
     ];
     expect([...order].sort((a, b) => a - b)).toEqual(order);
     // The sadaqah card never shows in the day before the last ten nights.

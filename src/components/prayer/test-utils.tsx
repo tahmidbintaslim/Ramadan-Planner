@@ -2,7 +2,11 @@ import type { ReactNode } from "react";
 import { IntlProvider } from "use-intl";
 import bn from "@/messages/bn.json";
 import en from "@/messages/en.json";
+import { withBrand } from "@/i18n/brand";
 import { timingsFromPrayerTimes, zonedTime, type PhaseTimings } from "@/lib/prayer-phase";
+
+const BN = withBrand(bn);
+const EN = withBrand(en);
 
 export const TZ = "Asia/Dhaka";
 export const DATE = "2027-03-01";
@@ -30,7 +34,7 @@ export function at(hhmm: string): Date {
 
 export function WithIntl({ locale = "bn", children }: { locale?: "bn" | "en"; children: ReactNode }) {
   return (
-    <IntlProvider locale={locale} messages={locale === "bn" ? bn : en} timeZone={TZ}>
+    <IntlProvider locale={locale} messages={locale === "bn" ? BN : EN} timeZone={TZ}>
       {children}
     </IntlProvider>
   );

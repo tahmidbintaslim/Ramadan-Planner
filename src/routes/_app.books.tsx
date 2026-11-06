@@ -8,7 +8,6 @@ export const Route = createFileRoute("/_app/books")({
     <ComingSoonPage
       titleKey="books"
       descKey="featureBooksDesc"
-      note="Coming soon: curated books, categories, and reading progress."
     />
   ),
 });

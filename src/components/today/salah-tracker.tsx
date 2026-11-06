@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useTranslations } from "@/i18n/use-intl";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useGuestData, getTodayKey } from "@/hooks/use-guest-data";
 import { SignupPrompt } from "@/components/shared/signup-prompt";
@@ -69,8 +69,8 @@ export function SalahTracker({ day }: { day: number }) {
   return (
     <>
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">{tToday("salahTracker")}</CardTitle>
+        <CardHeader>
+          <h3 className="rp-h2 text-rp-ink">{tToday("salahTracker")}</h3>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-4 gap-3 sm:grid-cols-7">
@@ -79,13 +79,15 @@ export function SalahTracker({ day }: { day: number }) {
               return (
                 <button
                   key={prayer}
+                  type="button"
+                  aria-pressed={Boolean(isDone)}
                   onClick={() => togglePrayer(prayer)}
                   disabled={isPending}
                   className={cn(
-                    "flex flex-col items-center gap-1.5 rounded-xl p-3 transition-all border",
+                    "flex min-h-[88px] flex-col items-center justify-center gap-1.5 rounded-rp-md border p-2 transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring",
                     isDone
                       ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-card hover:bg-accent border-border",
+                      : "border-rp-rule bg-rp-surface text-rp-ink hover:bg-rp-accent-tint",
                   )}
                 >
                   <div
@@ -93,7 +95,7 @@ export function SalahTracker({ day }: { day: number }) {
                       "h-8 w-8 rounded-full border-2 flex items-center justify-center transition-colors",
                       isDone
                         ? "border-primary-foreground bg-primary-foreground/20"
-                        : "border-muted-foreground/30",
+                        : "border-rp-input",
                     )}
                   >
                     {isDone && (
@@ -112,7 +114,7 @@ export function SalahTracker({ day }: { day: number }) {
                       </svg>
                     )}
                   </div>
-                  <span className="text-xs font-medium">{t(prayer)}</span>
+                  <span className="text-[13px] leading-[18px] font-medium">{t(prayer)}</span>
                 </button>
               );
             })}

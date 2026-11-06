@@ -3,8 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useLocale, useTranslations } from "@/i18n/use-intl";
 import { BookOpen, Bell, CheckCircle2, Target } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import {
   getDailyLogAction,
@@ -271,43 +270,47 @@ export function DailyIbadahTracker({ day }: { day: number }) {
 
   return (
     <>
-      <Card className="surface-soft border-primary/20">
-        <CardHeader className="space-y-3 pb-2">
+      <Card data-testid="daily-tracker">
+        <CardHeader className="gap-3">
           <div className="flex items-center justify-between gap-2">
-            <CardTitle className="text-base">{tDashboard("dailyTrackerTitle")}</CardTitle>
-            <Badge variant="outline">
-              {formatLocalizedNumber(completedBuckets, locale)}/
-              {formatLocalizedNumber(6, locale)}
-            </Badge>
+            <h3 className="rp-h2 text-rp-ink">{tDashboard("dailyTrackerTitle")}</h3>
+            <span className="rp-small rounded-rp-full bg-rp-accent-tint px-3 py-1 font-semibold tabular-nums text-rp-accent">
+              {formatLocalizedNumber(completedBuckets, locale)}/{formatLocalizedNumber(6, locale)}
+            </span>
           </div>
           <div className="space-y-1.5">
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <div className="rp-caption flex items-center justify-between text-rp-muted">
               <span>{tDashboard("todayProgress")}</span>
               <span>{formatLocalizedNumber(Math.round(progressValue), locale)}%</span>
             </div>
-            <Progress value={progressValue} className="h-2" />
+            <Progress value={progressValue} className="h-2" aria-label={tDashboard("todayProgress")} />
           </div>
         </CardHeader>
-        <CardContent className="space-y-2.5">
+        <CardContent className="space-y-2">
           {rows.map((row) => (
             <div
               key={row.key}
               className={cn(
-                "flex items-center justify-between gap-3 rounded-lg border border-border/70 px-3 py-2.5",
-                row.done ? "bg-accent/30" : "bg-background/50",
+                "flex min-h-16 items-center justify-between gap-3 rounded-rp-md px-4 py-3",
+                row.done ? "bg-rp-accent-tint" : "bg-rp-page",
               )}
             >
               <div className="flex min-w-0 items-center gap-2.5">
-                <row.icon className={cn("h-4 w-4", row.done ? "text-primary" : "text-muted-foreground")} />
+                <row.icon aria-hidden="true" className={cn("size-5 shrink-0", row.done ? "text-rp-accent" : "text-rp-muted")} />
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{row.label}</p>
-                  <p className="text-xs text-muted-foreground">{row.detail}</p>
+                  <p className="rp-row truncate text-rp-ink">{row.label}</p>
+                  <p className="rp-caption text-rp-muted">{row.detail}</p>
                 </div>
               </div>
 
-              <Badge variant={row.done ? "secondary" : "outline"}>
+              <span
+                className={cn(
+                  "rp-caption shrink-0 rounded-rp-full px-3 py-1",
+                  row.done ? "bg-rp-live text-rp-on-live" : "border border-rp-rule bg-rp-surface text-rp-ink",
+                )}
+              >
                 {row.done ? tToday("statusDone") : tToday("statusPending")}
-              </Badge>
+              </span>
             </div>
           ))}
         </CardContent>

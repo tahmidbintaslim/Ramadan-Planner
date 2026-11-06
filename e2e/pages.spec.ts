@@ -41,7 +41,11 @@ test("/hadith without a database shows a controlled 503 message", async ({ page 
   const res = await visit(page, "/hadith");
   expect(res?.status()).toBe(503);
   expect(await page.content()).not.toMatch(LEAK);
-  await expect(page.locator("main p").first()).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(page.getByTestId("hadith-load-error")).toBeVisible();
+  await expect(page.getByRole("button", { name: /আবার চেষ্টা করুন|Try again/ })).toBeVisible();
+  // Honest wording: no "fallback content" promise and no "no hadith found" after a failed load.
+  await expect(page.locator("main")).not.toContainText(/বিকল্প কনটেন্ট|কোনো হাদিস পাওয়া যায়নি/);
 });
 
 test("client-side navigation to /hadith uses the server-function path and stays controlled", async ({ page, consoleEntries }) => {
@@ -51,14 +55,14 @@ test("client-side navigation to /hadith uses the server-function path and stays 
   await page.getByText(/হাদিস পাঠ|Hadith/).first().waitFor({ state: "visible", timeout: 15_000 });
   const text = await page.locator("main").first().innerText();
   expect(text).not.toMatch(LEAK);
-  expect(text).toMatch(/পাওয়া যায়নি|ব্যর্থ|Failed|No hadith|error/i);
+  expect(text).toMatch(/লোড করা যায়নি|couldn't load/i);
   expect(consoleEntries.filter((e) => HYDRATION.test(e.text))).toEqual([]);
 });
 
 test("guest Today data persists across a reload (localStorage)", async ({ page }) => {
   // The salah tracker's prayers are toggle buttons (filled = done); the checklist below uses checkboxes. The exact
-  // name skips the Home prayer list's bell ("ফজর রিমাইন্ডার"); the first checkbox is the Home plan preview, which
-  // shares the checklist's state.
+  // name skips the Home prayer list's bell ("ফজর রিমাইন্ডার"); the plan preview is empty for a new guest, so the
+  // first checkbox is the dhikr checklist's.
   await visit(page, "/today");
   const fajr = page.getByRole("button", { name: /^(ফজর|Fajr)$/ }).first();
   await fajr.waitFor({ state: "visible", timeout: 15_000 });

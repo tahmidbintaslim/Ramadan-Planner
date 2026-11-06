@@ -1,12 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useTranslations } from "@/i18n/use-intl";
-import { Input } from "@/components/ui/input";
+import { useLocale, useTranslations } from "@/i18n/use-intl";
+import { Input, fieldClass } from "@/components/ui/input";
+import { Chip } from "@/components/ui/chip";
+import { formatLocalizedNumber, parseLocalizedNumber } from "@/lib/locale-number";
+import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { pruneLocalHistory } from "@/lib/local-history";
 
 const TASBIH_PRESETS = [33, 99, 100];
@@ -87,6 +90,7 @@ export function TasbihContent() {
   const tNav = useTranslations("nav");
   const tLanding = useTranslations("landing");
   const tTasbih = useTranslations("tasbih");
+  const locale = useLocale();
   const todayKey = useMemo(
     () => `${STORAGE_KEY_PREFIX}${new Date().toISOString().slice(0, 10)}`,
     [],
@@ -94,7 +98,7 @@ export function TasbihContent() {
   const initialState = useMemo(() => readTasbihState(todayKey), [todayKey]);
   const [count, setCount] = useState(initialState.count);
   const [target, setTarget] = useState(initialState.target);
-  const [targetInput, setTargetInput] = useState(String(initialState.target));
+  const [targetInput, setTargetInput] = useState(() => formatLocalizedNumber(initialState.target, locale));
   const [autoEnabled, setAutoEnabled] = useState(initialState.autoEnabled);
   const [totalIncrements, setTotalIncrements] = useState(initialState.totalIncrements);
   const [completedCycles, setCompletedCycles] = useState(initialState.completedCycles);
@@ -153,9 +157,11 @@ export function TasbihContent() {
   }, [autoEnabled, incrementCount]);
 
   const applyTargetInput = () => {
-    const parsed = Number.parseInt(targetInput, 10);
-    if (!Number.isFinite(parsed) || parsed <= 0) return;
-    setTarget(parsed);
+    // Either digit set ("৩৩" or "33").
+    const parsed = parseLocalizedNumber(targetInput);
+    // A target below one (e.g. 0.5) would floor to 0 and auto count would never stop.
+    if (parsed === null || parsed < 1) return;
+    setTarget(Math.floor(parsed));
   };
 
   const resetAll = () => {
@@ -165,133 +171,119 @@ export function TasbihContent() {
     setCompletedCycles(0);
   };
 
+  const num = (n: number) => formatLocalizedNumber(n, locale);
+  const reached = count >= target && target > 0;
+
   return (
-    <div className="space-y-4">
-      <Card className="surface-soft border-primary/20">
-        <CardHeader>
-          <CardTitle>{tNav("tasbih")}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <p className="text-sm text-muted-foreground">
-            {tLanding("featureTasbihDesc")}
-          </p>
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
+      <div className="space-y-1">
+        <h1 className="rp-h1 text-rp-ink">{tNav("tasbih")}</h1>
+        <p className="rp-small text-rp-muted">{tLanding("featureTasbihDesc")}</p>
+      </div>
 
-          <div className="rounded-xl border border-border/70 bg-background/60 p-4 sm:p-6 text-center space-y-3">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">
-              {tTasbih("currentCount")}
-            </p>
-            <p className="text-5xl font-bold tabular-nums">{count}</p>
-            <p className="text-sm text-muted-foreground">
-              {tTasbih("targetLabel", { target })}
-            </p>
-            <Progress value={percent} className="h-2" />
-            <p className="text-xs text-muted-foreground">
-              {tTasbih("percentComplete", { percent })}
-            </p>
-            {count >= target && target > 0 ? (
-              <p className="text-sm font-medium text-primary">
-                {tTasbih("targetReached")}
-              </p>
-            ) : null}
-          </div>
+      <Card className="items-center gap-4 px-5 text-center" data-testid="tasbih-counter">
+        <p className="rp-overline text-rp-muted">{tTasbih("currentCount")}</p>
+        <p className="rp-time-xl tabular-nums text-rp-ink" aria-live="polite">
+          {num(count)}
+        </p>
+        <p className="rp-small text-rp-muted">{tTasbih("targetLabel", { target: num(target) })}</p>
+        <Progress value={percent} className="h-2 w-full" aria-label={tTasbih("currentCount")} />
+        <p className="rp-caption text-rp-muted">{tTasbih("percentComplete", { percent: num(percent) })}</p>
+        {reached ? <p className="rp-row text-rp-accent">{tTasbih("targetReached")}</p> : null}
+        <div className="grid w-full grid-cols-[2fr_1fr] gap-2">
+          <Button type="button" size="lg" onClick={() => incrementCount()}>
+            +{num(1)}
+          </Button>
+          <Button
+            type="button"
+            size="lg"
+            variant="outline"
+            onClick={() => setCount((c) => Math.max(0, c - 1))}
+          >
+            -{num(1)}
+          </Button>
+        </div>
+        <Button type="button" variant="quiet" onClick={resetAll}>
+          {tTasbih("reset")}
+        </Button>
+      </Card>
 
-          <div className="space-y-2">
-            <Label htmlFor="tasbih-target">{tTasbih("setCustomTarget")}</Label>
-            <div className="flex flex-wrap items-center gap-2">
-              <Input
-                id="tasbih-target"
-                type="number"
-                min="1"
-                inputMode="numeric"
-                value={targetInput}
-                onChange={(e) => setTargetInput(e.target.value)}
-                className="w-40"
-              />
-              <Button type="button" variant="outline" onClick={applyTargetInput}>
-                {tTasbih("applyTarget")}
-              </Button>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {TASBIH_PRESETS.map((preset) => (
-              <Button
-                key={preset}
-                type="button"
-                variant={target === preset ? "default" : "outline"}
-                onClick={() => {
-                  setTarget(preset);
-                  setTargetInput(String(preset));
-                }}
-              >
-                {preset}
-              </Button>
-            ))}
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" onClick={() => incrementCount()}>
-              +1
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setCount((c) => Math.max(0, c - 1))}
+      <Card className="px-5">
+        <h2 className="rp-h2 text-rp-ink">{tTasbih("targetTitle")}</h2>
+        <div role="group" aria-label={tTasbih("targetTitle")} className="flex flex-wrap gap-2">
+          {TASBIH_PRESETS.map((preset) => (
+            <Chip
+              key={preset}
+              selected={target === preset}
+              className="h-12 min-w-16"
+              onClick={() => {
+                setTarget(preset);
+                setTargetInput(num(preset));
+              }}
             >
-              -1
+              {num(preset)}
+            </Chip>
+          ))}
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="tasbih-target" className="rp-small text-rp-ink">
+            {tTasbih("setCustomTarget")}
+          </Label>
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              id="tasbih-target"
+              inputMode="numeric"
+              autoComplete="off"
+              value={targetInput}
+              onChange={(e) => setTargetInput(e.target.value)}
+              className={cn(fieldClass, "w-40")}
+            />
+            <Button type="button" variant="soft" onClick={applyTargetInput}>
+              {tTasbih("applyTarget")}
             </Button>
-            <Button type="button" variant="ghost" onClick={resetAll}>
-              {tTasbih("reset")}
-            </Button>
           </div>
+        </div>
+      </Card>
 
-          <div className="rounded-xl border border-border/70 bg-background/50 p-4 space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm font-medium">{tTasbih("autoCount")}</p>
-              <p className="text-xs text-muted-foreground">
-                {tTasbih("autoCountHint")}
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                variant={autoEnabled ? "secondary" : "default"}
-                onClick={() => setAutoEnabled((v) => !v)}
-                disabled={count >= target && target > 0}
-              >
-                {autoEnabled ? tTasbih("pauseAuto") : tTasbih("startAuto")}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setCount(0);
-                  setAutoEnabled(true);
-                }}
-              >
-                {tTasbih("restartAuto")}
-              </Button>
-            </div>
-          </div>
+      <Card className="px-5">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="rp-h2 text-rp-ink">{tTasbih("autoCount")}</h2>
+          <p className="rp-caption text-rp-muted">{tTasbih("autoCountHint")}</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant={autoEnabled ? "soft" : "default"}
+            onClick={() => setAutoEnabled((v) => !v)}
+            disabled={reached}
+          >
+            {autoEnabled ? tTasbih("pauseAuto") : tTasbih("startAuto")}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setCount(0);
+              setAutoEnabled(true);
+            }}
+          >
+            {tTasbih("restartAuto")}
+          </Button>
+        </div>
+      </Card>
 
-          <div className="rounded-xl border border-border/70 bg-background/50 p-4">
-            <p className="text-sm font-medium">{tTasbih("todayTracking")}</p>
-            <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
-              <div className="rounded-md border border-border/70 bg-background/70 p-3">
-                <p className="text-xs text-muted-foreground">
-                  {tTasbih("totalIncrements")}
-                </p>
-                <p className="mt-1 text-xl font-semibold tabular-nums">{totalIncrements}</p>
-              </div>
-              <div className="rounded-md border border-border/70 bg-background/70 p-3">
-                <p className="text-xs text-muted-foreground">
-                  {tTasbih("cyclesCompleted")}
-                </p>
-                <p className="mt-1 text-xl font-semibold tabular-nums">{completedCycles}</p>
-              </div>
-            </div>
+      <Card className="px-5">
+        <h2 className="rp-h2 text-rp-ink">{tTasbih("todayTracking")}</h2>
+        <dl className="grid grid-cols-2 gap-3">
+          <div className="rounded-rp-md bg-rp-accent-tint p-4">
+            <dt className="rp-caption text-rp-muted">{tTasbih("totalIncrements")}</dt>
+            <dd className="rp-time-l tabular-nums text-rp-ink">{num(totalIncrements)}</dd>
           </div>
-        </CardContent>
+          <div className="rounded-rp-md bg-rp-accent-tint p-4">
+            <dt className="rp-caption text-rp-muted">{tTasbih("cyclesCompleted")}</dt>
+            <dd className="rp-time-l tabular-nums text-rp-ink">{num(completedCycles)}</dd>
+          </div>
+        </dl>
       </Card>
     </div>
   );

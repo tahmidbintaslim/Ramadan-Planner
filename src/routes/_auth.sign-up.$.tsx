@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { SignUp } from "@clerk/tanstack-react-start";
+import { ClerkGate } from "@/components/auth/clerk-unavailable";
 
 export const Route = createFileRoute("/_auth/sign-up/$")({
   head: () => ({
@@ -9,6 +10,8 @@ export const Route = createFileRoute("/_auth/sign-up/$")({
     ],
   }),
   component: () => (
-    <SignUp path="/sign-up" routing="path" signInUrl="/sign-in" forceRedirectUrl="/dashboard" />
+    <ClerkGate mode="signUp">
+      <SignUp path="/sign-up" routing="path" signInUrl="/sign-in" forceRedirectUrl="/dashboard" />
+    </ClerkGate>
   ),
 });

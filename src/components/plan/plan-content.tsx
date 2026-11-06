@@ -14,33 +14,26 @@ import { ChecklistCards, ChecklistOverline, type ChecklistRowItem } from "./chec
 import { NightHero, OddNightsCard, QadrDuaCard } from "./night-view";
 import { SupportCard } from "@/components/today/home-sections";
 import { useSadaqahDismissal } from "@/components/today/sadaqah-dismissal";
-import { useItemNotes } from "./plan-item-meta";
 import {
   DAY_DEFAULTS,
   NIGHT_DEFAULTS,
   PLAN_WINDOWS,
   currentNight,
   defaultPlanView,
-  doneForDay,
-  goalDoneForDay,
   nightsViewAvailable,
   tickScopeISO,
   groupByWindow,
   isNightKey,
   itemMessageKey,
-  matchDefaultKey,
   nightTimes,
   oddNightRows,
   rowInstant,
-  windowFromTitle,
-  bnOrdinal,
-  nextPara,
   type DefaultItem,
   type PlanItem,
 } from "./plan-logic";
 import { ProgressCard } from "./progress-card";
-import { usePlanItems } from "./use-plan-items";
-import { usePlanTimetable, useQuranProgress } from "./use-plan-context";
+import { useTodayPlan } from "./use-today-plan";
+import { usePlanTimetable } from "./use-plan-context";
 
 const DEFAULTS_BY_KEY: Record<string, DefaultItem> = Object.fromEntries(
   [...DAY_DEFAULTS, ...NIGHT_DEFAULTS].map((d) => [d.key, d]),
@@ -73,13 +66,6 @@ export function PlanContent() {
   const locale = useLocale() as Locale;
   const mounted = useSyncExternalStore(subscribeNoop, () => true, () => false);
 
-  const plan = usePlanItems();
-  const liveIds = useMemo(
-    () => (plan.ready ? new Set([...plan.tasks.map((x) => x.id), ...plan.goals.map((x) => x.id)]) : null),
-    [plan.ready, plan.tasks, plan.goals],
-  );
-  const { notes, remember, forget } = useItemNotes(liveIds);
-  const quran = useQuranProgress();
   const ramadanDay = useRamadanDay();
   const now = useNowTick();
   const { timetable, failed: timetableFailed } = usePlanTimetable(ramadanDay !== null);
@@ -106,11 +92,10 @@ export function PlanContent() {
   const knownToday = known && known.date === todayISOInZone(now, known.timezone) ? known : null;
   const eveningRow = showNights ? days.find((d) => d.day === night - 1) : undefined;
   const eveningISO = eveningRow ? ddmmyyyyToISO(eveningRow.gregorianDate) : null;
+  const today = useTodayPlan(todayISO, eveningISO);
+  const { plan, remember, forget, quran, titleOf } = today;
 
   // ── Items: the plan's tasks and goals with their window, suggestion key, meta line and done-for-the-day ──
-  const titleOf = (key: string) => t(`items.${itemMessageKey(key)}` as "items.sehri");
-  const titlesByKey: Record<string, string[]> = Object.fromEntries(Object.keys(DEFAULTS_BY_KEY).map((k) => [k, [titleOf(k)]]));
-
   const metaFor = (key: string | undefined): string | undefined => {
     if (!key) return undefined;
     const msg = itemMessageKey(key);
@@ -125,42 +110,24 @@ export function PlanContent() {
     return undefined;
   };
 
-  const para = nextPara(quran.para);
   type Item = PlanItem & { rawTitle: string; scopeISO: string; targetCount?: number };
-  const items: Item[] = [
-    ...plan.tasks.map((task): Item => {
-      const note = notes[task.id];
-      const key = matchDefaultKey(task.title, note?.key, titlesByKey);
-      const scopeISO = tickScopeISO(isNightKey(key), todayISO, eveningISO);
-      return {
-        id: task.id,
-        kind: "task",
-        rawTitle: task.title,
-        // The Quran suggestion names the para to read next (from the Quran tracker).
-        title: key === "quran" ? t("items.quranPara", { n: locale === "bn" ? bnOrdinal(para) : String(para) }) : task.title,
-        // Guest lists are stored per day; signed-in ticks count for the day they were made.
-        done: plan.isGuest ? task.isDone : doneForDay(task, scopeISO),
-        key,
-        scopeISO,
-        window: note?.window ?? (key ? DEFAULTS_BY_KEY[key]?.window : undefined) ?? windowFromTitle(task.title),
-        meta: metaFor(key),
-      };
+  const items: Item[] = today.rows.map(
+    (row): Item => ({
+      id: row.id,
+      kind: row.kind,
+      rawTitle: row.rawTitle,
+      title: row.title,
+      done: row.done,
+      key: row.key,
+      scopeISO: row.scopeISO,
+      window: row.window,
+      targetCount: row.targetCount,
+      meta:
+        row.kind === "goal"
+          ? t("itemMeta.goalTarget", { count: digits(row.targetCount ?? 1, locale), unit: row.targetUnit ?? "" })
+          : metaFor(row.key),
     }),
-    ...plan.goals.map((goal): Item => {
-      const note = notes[goal.id];
-      return {
-        id: goal.id,
-        kind: "goal",
-        rawTitle: goal.title,
-        title: goal.title,
-        done: plan.isGuest ? goal.isCompleted : goalDoneForDay(goal.isCompleted, note?.doneOn, todayISO),
-        scopeISO: todayISO,
-        targetCount: goal.targetCount,
-        window: note?.window ?? windowFromTitle(goal.title),
-        meta: t("itemMeta.goalTarget", { count: digits(goal.targetCount, locale), unit: goal.targetUnit }),
-      };
-    }),
-  ];
+  );
   const byId = new Map(items.map((i) => [i.id, i]));
   const groups = groupByWindow(items);
   const done = items.filter((i) => i.done).length;
@@ -171,8 +138,7 @@ export function PlanContent() {
     if (locked) return;
     const item = byId.get(row.id);
     if (item) {
-      plan.toggle(item.kind, item.id, next, item.scopeISO);
-      if (item.kind === "goal" && !plan.isGuest) remember(item.id, { doneOn: item.scopeISO });
+      today.toggleRow(item, next);
       return;
     }
     // A suggested night practice that is not in the list yet: ticking it adds it, already done.

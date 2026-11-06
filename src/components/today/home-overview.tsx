@@ -13,8 +13,7 @@ import {
   toBengaliDigits,
   type PhaseTimings,
 } from "@/lib/prayer-phase";
-import { FeatureTiles, PhaseCard, PlanPreview, SupportCard, phaseCardKind } from "./home-sections";
-import type { DailyChecklistState } from "./use-daily-checklist";
+import { FeatureTiles, PhaseCard, PlanPreview, SupportCard, phaseCardKind, type PlanPreviewState } from "./home-sections";
 
 /** Ramadan day (1-30) from the Ramadan status, or null outside Ramadan. */
 export function ramadanDayOf(status: RamadanStatus | null | undefined): number | null {
@@ -67,7 +66,7 @@ export interface HomeOverviewProps {
   frozenNow?: Date;
   reminders: Partial<Record<FivePrayer, boolean>>;
   onToggleReminder?: (prayer: FivePrayer, enabled: boolean) => void;
-  checklist: DailyChecklistState;
+  plan: PlanPreviewState;
   sadaqahDismissedAt: Date | null;
   onDismissSadaqah: () => void;
   onRetry?: () => void;
@@ -93,7 +92,7 @@ export function HomeOverview({
   frozenNow,
   reminders,
   onToggleReminder,
-  checklist,
+  plan,
   sadaqahDismissedAt,
   onDismissSadaqah,
   onRetry,
@@ -179,7 +178,7 @@ export function HomeOverview({
             initialNow={initialNow}
           />
         ) : null}
-        <PlanPreview className="order-6" state={checklist} />
+        <PlanPreview className="order-6" state={plan} />
         {showSupport ? (
           <SupportCard
             className="order-7"

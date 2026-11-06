@@ -19,3 +19,7 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">) {
 }
 
 export { Input }
+
+/** Design v2 field look (48px, radius 16, >=3:1 border on surface); pass to Input, select or textarea. */
+export const fieldClass =
+  "h-12 rounded-rp-md border border-rp-input bg-rp-surface px-4 text-[16px] leading-6 text-rp-ink placeholder:text-rp-muted md:text-[16px] dark:bg-rp-surface"
