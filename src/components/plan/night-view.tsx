@@ -2,6 +2,8 @@ import { useLocale, useTranslations } from "@/i18n/use-intl";
 import { GirihPattern } from "@/components/design/girih-pattern";
 import { MihrabArch } from "@/components/design/mihrab-arch";
 import { CrescentIcon, PinIcon } from "@/components/icons/islamic-icons";
+import { DuaCard } from "@/components/duas/dua-card";
+import { duaById } from "@/lib/duas";
 import { HERO_SCRIM_RGB, HERO_RING_SCRIM_ALPHA, HERO_SOURCE_PILL_ALPHA } from "@/components/prayer/prayer-hero";
 import { ClockTime } from "@/components/prayer/clock-time";
 import { formatPrayerClock, prayerClockParts } from "@/components/prayer/use-prayer-phase";
@@ -191,21 +193,8 @@ function NightTime({ caption, value }: { caption: string; value: string }) {
 }
 
 /** The Laylat al-Qadr dua (Tirmidhi 3513): Arabic, transliteration and meaning, with its source. */
-export const QADR_DUA_ARABIC = "اللَّهُمَّ إِنَّكَ عَفُوٌّ تُحِبُّ الْعَفْوَ فَاعْفُ عَنِّي";
+export const QADR_DUA_ARABIC = duaById("qadr").arabic;
 
 export function QadrDuaCard() {
-  const t = useTranslations("plan");
-  return (
-    <section aria-labelledby="qadr-dua-title" data-testid="qadr-dua" className="flex flex-col gap-2 rounded-rp-lg bg-rp-surface p-5 text-rp-ink shadow-rp-soft">
-      <h2 id="qadr-dua-title" className="rp-row font-semibold">
-        {t("items.qadrDua")}
-      </h2>
-      <p lang="ar" dir="rtl" className="font-arabic text-[24px] leading-[48px]">
-        {QADR_DUA_ARABIC}
-      </p>
-      <p className="rp-reading-small text-rp-ink">{t("qadrDuaTranslit")}</p>
-      <p className="rp-reading-small text-rp-ink">{t("qadrDuaMeaning")}</p>
-      <p className="rp-caption text-rp-muted">{t("qadrDuaSource")}</p>
-    </section>
-  );
+  return <DuaCard id="qadr" testId="qadr-dua" />;
 }

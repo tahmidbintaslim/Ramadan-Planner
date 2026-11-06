@@ -4,6 +4,7 @@ import {
   CLOCK_FORMAT_KEY,
   DEFAULT_CLOCK_FORMAT,
   clockParts,
+  formatDateTime,
   formatHHMM,
   joinClockParts,
   parseClockFormat,
@@ -12,6 +13,15 @@ import {
   writeClockFormat,
 } from "./clock-format";
 import { formatPrayerClock } from "@/components/prayer/use-prayer-phase";
+
+describe("formatDateTime", () => {
+  const at = new Date("2027-02-12T11:55:00Z"); // 17:55 in Dhaka
+  it("uses the clock format for the time, never seconds", () => {
+    expect(formatDateTime(at, "en", "12h", "Asia/Dhaka")).toBe("12 Feb 2027 · 5:55 PM");
+    expect(formatDateTime(at, "en", "24h", "Asia/Dhaka")).toBe("12 Feb 2027 · 17:55");
+    expect(formatDateTime(at, "bn", "12h", "Asia/Dhaka")).toMatch(/· ৫:৫৫$/);
+  });
+});
 
 describe("formatHHMM", () => {
   it.each([

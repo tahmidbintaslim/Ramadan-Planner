@@ -54,7 +54,7 @@ test.describe("day plan (mobile)", () => {
     await mockRamadan(page, 12, dhakaToday(12));
     await visit(page, "/plan");
 
-    await expect(page.getByRole("heading", { level: 1, name: "আজকের পরিকল্পনা" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "আমল" })).toBeVisible();
     await expect(page.getByTestId("plan-caption")).toContainText("রোজা ১২");
     // Day 12: no last-ten-nights switch.
     await expect(page.getByRole("button", { name: "শেষ দশ রাত" })).toHaveCount(0);
@@ -65,18 +65,18 @@ test.describe("day plan (mobile)", () => {
 
     await page.getByRole("button", { name: "প্রস্তাবিত আমল যোগ করুন" }).click();
     for (const overline of ["সেহরি থেকে যোহর", "যোহর থেকে ইফতার", "ইফতারের পর"]) {
-      await expect(page.getByRole("heading", { level: 2, name: overline })).toBeVisible();
+      await expect(page.getByRole("heading", { level: 3, name: overline })).toBeVisible();
     }
-    await expect(page.getByTestId("plan-item")).toHaveCount(7);
-    await expect(page.locator('[data-window="sehriToDhuhr"] [data-testid="plan-item"]')).toHaveCount(3);
+    await expect(page.getByTestId("plan-item")).toHaveCount(5);
+    await expect(page.locator('[data-window="sehriToDhuhr"] [data-testid="plan-item"]')).toHaveCount(2);
     await expect(page.locator('[data-window="sehriToDhuhr"]')).toContainText("সেহরি ও নিয়ত");
     await expect(page.locator('[data-window="sehriToDhuhr"]')).toContainText("৪:৪৮");
-    await expect(progress.getByRole("img")).toHaveText("০/৭");
+    await expect(progress.getByRole("img")).toHaveText("০/৫");
     await expect(page.getByTestId("plan-progress-copy")).toHaveText("বিসমিল্লাহ, শুরু করা যাক");
 
     await page.getByRole("checkbox", { name: /সেহরি ও নিয়ত/ }).click();
     await expect(page.getByRole("checkbox", { name: /সেহরি ও নিয়ত/ })).toHaveAttribute("aria-checked", "true");
-    await expect(progress.getByRole("img")).toHaveText("১/৭");
+    await expect(progress.getByRole("img")).toHaveText("১/৫");
     await expect(page.getByTestId("plan-progress-copy")).toHaveText("আলহামদুলিল্লাহ, ভালো চলছে");
 
     // The add sheet puts a new deed in the chosen window.
@@ -89,7 +89,7 @@ test.describe("day plan (mobile)", () => {
     await sheet.getByRole("button", { name: "যোগ করুন", exact: true }).click();
     await expect(sheet).toBeHidden();
     await expect(page.locator('[data-window="afterIftar"]')).toContainText("পরিবারের সাথে দোয়া");
-    await expect(progress.getByRole("img")).toHaveText("১/৮");
+    await expect(progress.getByRole("img")).toHaveText("১/৬");
 
     // A goal template from the sheet keeps its target.
     await page.getByRole("button", { name: "+ নতুন আমল যোগ করুন" }).click();
@@ -97,7 +97,9 @@ test.describe("day plan (mobile)", () => {
     await expect(sheet.getByLabel("লক্ষ্যমাত্রা (ঐচ্ছিক)")).toHaveValue("100");
     await sheet.getByRole("button", { name: "যোগ করুন", exact: true }).click();
     await expect(sheet).toBeHidden();
-    await expect(page.getByRole("checkbox", { name: /দৈনিক যিকর/ })).toContainText("লক্ষ্য ১০০ বার");
+    // Goals (a target count) live in "আমার লক্ষ্য", not in the day checklist.
+    await expect(page.getByTestId("plan-goals").getByRole("checkbox", { name: /দৈনিক যিকর/ })).toContainText("লক্ষ্য ১০০ বার");
+    await expect(page.getByTestId("plan-today-amal")).not.toContainText("দৈনিক যিকর");
 
     // Edit: rename and move a deed, then delete another.
     await page.getByRole("button", { name: "পরিবারের সাথে দোয়া সম্পাদনা করুন" }).click();
@@ -111,11 +113,11 @@ test.describe("day plan (mobile)", () => {
     await sheet.getByRole("button", { name: "আমলটি মুছুন" }).click();
     await expect(sheet).toBeHidden();
     await expect(page.getByRole("checkbox", { name: /^তারাবি/ })).toHaveCount(0);
-    await expect(progress.getByRole("img")).toHaveText("১/৮");
+    await expect(progress.getByRole("img")).toHaveText("১/৬");
 
     // Guest data stays on the device.
     await page.reload({ waitUntil: "load" });
-    await expect(page.getByTestId("plan-item")).toHaveCount(8);
+    await expect(page.getByTestId("plan-item")).toHaveCount(6);
     await expect(page.locator('[data-window="dhuhrToIftar"]')).toContainText("পরিবারের সাথে ইফতারের দোয়া");
 
     expect(appErrors()).toEqual([]);
@@ -170,8 +172,8 @@ test.describe("last ten nights (mobile, night)", () => {
     await expect(page.getByRole("checkbox", { name: /^তাহাজ্জুদ/ })).toHaveAttribute("aria-checked", "true");
 
     // The chip switches to the day plan any time in the last ten days; the night deed is under "after iftar".
-    await page.getByRole("button", { name: "আজকের পরিকল্পনা" }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "আজকের পরিকল্পনা" })).toBeVisible();
+    await page.getByRole("button", { name: "আমল" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "আমল" })).toBeVisible();
     await expect(page.getByTestId("plan-progress").getByRole("img")).toHaveText("১/১");
     await expect(page.locator('[data-window="afterIftar"]')).toContainText("তাহাজ্জুদ");
     expect(appErrors()).toEqual([]);
@@ -192,7 +194,7 @@ test.describe("last ten nights (mobile, night)", () => {
   test("roza 30 after fajr shows the day plan only", async ({ page }) => {
     await mockRamadan(page, 30, dhakaToday(12));
     await visit(page, "/plan");
-    await expect(page.getByRole("heading", { level: 1, name: "আজকের পরিকল্পনা" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "আমল" })).toBeVisible();
     await expect(page.getByTestId("plan-progress")).toBeVisible();
     await expect(page.getByRole("button", { name: "শেষ দশ রাত" })).toHaveCount(0);
     await expect(page.getByRole("status", { name: "শেষ দশ রাতের সময় লোড হচ্ছে" })).toHaveCount(0);
@@ -201,7 +203,7 @@ test.describe("last ten nights (mobile, night)", () => {
   test("roza 19 has no last-ten-nights switch", async ({ page }) => {
     await mockRamadan(page, 19, dhakaToday(21));
     await visit(page, "/plan");
-    await expect(page.getByRole("heading", { level: 1, name: "আজকের পরিকল্পনা" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "আমল" })).toBeVisible();
     await expect(page.getByTestId("plan-progress")).toBeVisible();
     await expect(page.getByRole("button", { name: "শেষ দশ রাত" })).toHaveCount(0);
   });
@@ -219,12 +221,12 @@ test.describe("Home plan preview matches /plan", () => {
 
     await visit(page, "/plan");
     await page.getByRole("button", { name: "প্রস্তাবিত আমল যোগ করুন" }).click();
-    await expect(page.getByTestId("plan-item")).toHaveCount(7);
+    await expect(page.getByTestId("plan-item")).toHaveCount(5);
     await page.getByRole("checkbox", { name: /সেহরি ও নিয়ত/ }).click();
-    await expect(page.getByTestId("plan-progress").getByRole("img")).toHaveText("১/৭");
+    await expect(page.getByTestId("plan-progress").getByRole("img")).toHaveText("১/৫");
 
     await visit(page, "/today");
-    await expect(preview.getByRole("heading", { level: 2 })).toHaveText("আজকের পরিকল্পনা · ১/৭");
+    await expect(preview.getByRole("heading", { level: 2 })).toHaveText("আজকের পরিকল্পনা · ১/৫");
     const boxes = preview.getByRole("checkbox");
     await expect(boxes).toHaveCount(3);
     await expect(boxes.first()).toContainText("সেহরি ও নিয়ত");

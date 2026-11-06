@@ -159,7 +159,9 @@ describe("HomeOverview phase card", () => {
     let card = phaseCard();
     expect(card).toHaveAttribute("data-kind", "iftarDua");
     expect(within(card!).getByRole("heading", { name: "ইফতারের দোয়া" })).toBeInTheDocument();
-    expect(within(card!).getByText("ইফতারের সময় পড়ুন · সূত্র: আবু দাউদ ২৩৫৭")).toHaveClass("text-rp-gold-text");
+    expect(within(card!).getByText("সূত্র: আবু দাউদ ২৩৫৭")).toHaveClass("text-rp-gold-text");
+    // Arabic first, in the Arabic face, then the transliteration and meaning (the /duas order).
+    expect(within(card!).getByText(/ذَهَبَ الظَّمَأُ/)).toHaveClass("font-arabic");
     cleanup();
     await renderHome("18:30");
     card = phaseCard();
@@ -171,7 +173,7 @@ describe("HomeOverview phase card", () => {
 
   it("uses the English caption in en", async () => {
     await renderHome("17:30", {}, "en");
-    expect(within(phaseCard()!).getByText("Recite when breaking the fast · Abu Dawud 2357")).toBeInTheDocument();
+    expect(within(phaseCard()!).getByText("Source: Abu Dawud 2357")).toBeInTheDocument();
   });
 
   it("shows no phase card in the day or late at night", async () => {
@@ -326,7 +328,7 @@ describe("feature tiles", () => {
     const section = screen.getByRole("region", { name: "রমজানের সঙ্গী" });
     const links = within(section).getAllByRole("link");
     expect(links.map((a) => a.getAttribute("href"))).toEqual(["/quran", "/duas", "/tasbih", "/zakat"]);
-    expect(links.map((a) => a.textContent)).toEqual(["কুরআন", "দোয়া", "তাসবিহ", "যাকাত"]);
+    expect(links.map((a) => a.textContent)).toEqual(["কুরআন", "দোয়া ও যিকির", "তাসবিহ", "যাকাত হিসাব"]);
     expect(FEATURE_TILES).toHaveLength(4);
   });
 });

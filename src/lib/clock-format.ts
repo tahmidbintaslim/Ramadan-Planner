@@ -105,3 +105,15 @@ export function wallClock(at: Date, timeZone: string): { hour: number; minute: n
   const minute = Number(parts.find((p) => p.type === "minute")?.value ?? 0);
   return { hour, minute };
 }
+
+/**
+ * A date and time for display ("12 Feb 2027 · 5:55 PM", bn "১২ ফেব, ২০২৭ · ৫:৫৫"), the time in the user's clock
+ * format (no seconds) and the device's time zone unless one is given. For timestamps (last sync, announcements).
+ */
+export function formatDateTime(at: Date, locale: string, format: ClockFormat = DEFAULT_CLOCK_FORMAT, timeZone?: string): string {
+  const zone = timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const tag = isBn(locale) ? "bn-BD-u-nu-beng" : "en-GB";
+  const date = new Intl.DateTimeFormat(tag, { day: "numeric", month: "short", year: "numeric", timeZone: zone }).format(at);
+  const { hour, minute } = wallClock(at, zone);
+  return `${date} · ${joinClockParts(clockParts(hour, minute, locale, format))}`;
+}

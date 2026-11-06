@@ -5,27 +5,16 @@ import { useTranslations } from "@/i18n/use-intl";
 import { Link } from "@/components/shared/link";
 import { usePathname } from "@/hooks/use-pathname";
 import { useRouter } from "@tanstack/react-router";
-import { CrescentIcon } from "@/components/icons/islamic-icons";
-import { AccessibilityControls, AccessibilityDialog } from "@/components/shared/accessibility-sidebar";
 import {
-  Accessibility,
-  Globe,
-  LogIn,
-  UserPlus,
-  Menu,
-  LayoutDashboard,
-  CalendarDays,
-  Target,
-  Bell,
-  Settings,
-  BookOpen,
-  Library,
-  HandHeart,
-  Brain,
-  Calculator,
-  Hand,
-  Scroll,
-} from "lucide-react";
+  CrescentIcon,
+  GlobeIcon,
+  LoginIcon,
+  MenuIcon,
+  TextSizeIcon,
+  UserAddIcon,
+} from "@/components/icons/islamic-icons";
+import { AccessibilityControls, TextThemeButton } from "@/components/shared/accessibility-sidebar";
+import { PRIMARY_NAV, SECONDARY_NAV } from "@/components/layout/nav-items";
 import { Show, UserButton } from "@clerk/tanstack-react-start";
 import { switchLocaleAction } from "@/actions/locale";
 import { cn } from "@/lib/utils";
@@ -38,20 +27,8 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
-const navItems = [
-  { href: "/dashboard", icon: LayoutDashboard, labelKey: "dashboard" as const },
-  { href: "/today", icon: CalendarDays, labelKey: "today" as const },
-  { href: "/quran", icon: BookOpen, labelKey: "quran" as const },
-  { href: "/books", icon: Library, labelKey: "books" as const },
-  { href: "/duas", icon: HandHeart, labelKey: "duas" as const },
-  { href: "/hadith", icon: Scroll, labelKey: "hadith" as const },
-  { href: "/quiz", icon: Brain, labelKey: "quiz" as const },
-  { href: "/tasbih", icon: Hand, labelKey: "tasbih" as const },
-  { href: "/zakat", icon: Calculator, labelKey: "zakat" as const },
-  { href: "/plan", icon: Target, labelKey: "plan" as const },
-  { href: "/reminders", icon: Bell, labelKey: "reminders" as const },
-  { href: "/settings", icon: Settings, labelKey: "settings" as const },
-];
+// The app's destinations (the same list as the app shell's navs; the admin page is left out here).
+const navItems = [...PRIMARY_NAV, ...SECONDARY_NAV.filter((i) => !i.signedInOnly)];
 
 /** Brand header for pages outside the app shell (the landing page), in the v2 style. */
 export function SiteHeader() {
@@ -96,25 +73,19 @@ export function SiteHeader() {
             disabled={isPending}
             aria-label={t("switchLanguage")}
           >
-            <Globe className="h-4 w-4" />
+            <GlobeIcon size={20} />
           </Button>
 
-          {/* md+: the accessibility controls in a dialog (phones reach them from the menu sheet). */}
+          {/* md+: "লেখা ও থিম" (অ/Aa) opens the text and theme controls (phones reach them from the menu sheet). */}
           <div className="hidden md:block">
-            <AccessibilityDialog
-              trigger={
-                <Button variant="ghost" size="icon" aria-label={tA11y("title")}>
-                  <Accessibility className="h-5 w-5" />
-                </Button>
-              }
-            />
+            <TextThemeButton />
           </div>
 
           <div className="md:hidden">
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" aria-label={t("mobileMenu")}>
-                  <Menu className="h-5 w-5" />
+                  <MenuIcon size={22} />
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-[80vw] sm:w-100">
@@ -142,14 +113,15 @@ export function SiteHeader() {
                           isActive && "bg-muted text-primary",
                         )}
                       >
-                        <item.icon className="h-4 w-4" />
+                        <item.icon size={20} />
                         {tNav(item.labelKey)}
                       </Link>
                     );
                   })}
                 </nav>
                 <section aria-labelledby="site-sheet-a11y" className="space-y-3 border-t border-rp-rule px-3 py-4">
-                  <h2 id="site-sheet-a11y" className="rp-small font-semibold text-rp-ink">
+                  <h2 id="site-sheet-a11y" className="rp-small flex items-center gap-2 font-semibold text-rp-ink">
+                    <TextSizeIcon size={20} aria-hidden />
                     {tA11y("title")}
                   </h2>
                   <AccessibilityControls />
@@ -158,19 +130,19 @@ export function SiteHeader() {
                   <Show when="signed-out">
                     <Button variant="ghost" asChild className="w-full justify-start">
                       <Link href="/">
-                        <LayoutDashboard className="h-4 w-4 mr-3" />
+                        <CrescentIcon size={18} className="mr-3" />
                         {t("exploreTheApp")}
                       </Link>
                     </Button>
                     <Button variant="ghost" asChild className="w-full justify-start">
                       <Link href="/sign-in">
-                        <LogIn className="h-4 w-4 mr-3" />
+                        <LoginIcon size={18} className="mr-3" />
                         {tAuth("login")}
                       </Link>
                     </Button>
                     <Button asChild className="w-full justify-start">
                       <Link href="/sign-up">
-                        <UserPlus className="h-4 w-4 mr-3" />
+                        <UserAddIcon size={18} className="mr-3" />
                         {tAuth("signup")}
                       </Link>
                     </Button>
@@ -189,13 +161,13 @@ export function SiteHeader() {
             <Show when="signed-out">
               <Button variant="ghost" size="sm" asChild className="h-12">
                 <Link href="/sign-in">
-                  <LogIn className="h-4 w-4 mr-1.5" />
+                  <LoginIcon size={18} className="mr-1.5" />
                   {tAuth("login")}
                 </Link>
               </Button>
               <Button size="sm" asChild className="h-12">
                 <Link href="/sign-up">
-                  <UserPlus className="h-4 w-4 mr-1.5" />
+                  <UserAddIcon size={18} className="mr-1.5" />
                   {tAuth("signup")}
                 </Link>
               </Button>

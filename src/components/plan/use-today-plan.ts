@@ -4,6 +4,7 @@ import { useItemNotes } from "./plan-item-meta";
 import { defaultTitlesByKey } from "./default-titles";
 import {
   DAY_DEFAULTS,
+  LEGACY_DEFAULTS,
   NIGHT_DEFAULTS,
   bnOrdinal,
   buildPlanRows,
@@ -16,7 +17,7 @@ import { usePlanItems } from "./use-plan-items";
 import { useQuranProgress } from "./use-plan-context";
 
 const DEFAULT_WINDOWS: Record<string, PlanWindow> = Object.fromEntries(
-  [...DAY_DEFAULTS, ...NIGHT_DEFAULTS].map((d) => [d.key, d.window]),
+  [...DAY_DEFAULTS, ...LEGACY_DEFAULTS, ...NIGHT_DEFAULTS].map((d) => [d.key, d.window]),
 );
 
 export type TodayPlanRow = PlanRowSource & { title: string };

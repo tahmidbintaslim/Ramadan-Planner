@@ -15,7 +15,8 @@ test("sitemap.xml lists the public pages and 114 surahs", async ({ request }) =>
   expect(res.headers()["content-type"]).toMatch(/^application\/xml/);
   const locs = [...(await res.text()).matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]).pathname);
   expect(locs).toHaveLength(5 + 114);
-  expect(locs.slice(0, 5)).toEqual(["/", "/quran", "/hadith", "/timetable", "/support"]);
+  // /hadith is switched off (src/config/features.ts) until it works; /duas is public.
+  expect(locs.slice(0, 5)).toEqual(["/", "/quran", "/timetable", "/support", "/duas"]);
 });
 
 test("favicon is served from public/", async ({ request }) => {

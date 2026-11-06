@@ -91,8 +91,9 @@ describe("windows and grouping", () => {
 
   it("the suggested day plan fills all three windows; the night practices are night keys", () => {
     const g = groupByWindow(DAY_DEFAULTS);
-    expect(g.sehriToDhuhr).toHaveLength(3);
-    expect(g.dhuhrToIftar).toHaveLength(2);
+    // Fajr and the day's Quran are recorded by the salah and Quran khatm trackers, not suggested again.
+    expect(g.sehriToDhuhr.map((d) => d.key)).toEqual(["sehri", "morningDhikr"]);
+    expect(g.dhuhrToIftar.map((d) => d.key)).toEqual(["charity"]);
     expect(g.afterIftar).toHaveLength(2);
     expect(NIGHT_DEFAULTS.map((d) => d.key)).toEqual(["night:ishaTaraweeh", "night:nightQuran", "night:tahajjud", "night:qadrDua"]);
   });

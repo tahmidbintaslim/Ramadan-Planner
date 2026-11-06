@@ -28,7 +28,7 @@ export function AnnouncementsStrip() {
           setItems(json.data.slice(0, 2));
         }
       } catch {
-        // Ignore announcement errors on dashboard
+        // Announcement errors are not shown (the strip simply stays hidden)
       }
     };
 
@@ -44,9 +44,7 @@ export function AnnouncementsStrip() {
   return (
     <Card className="border-primary/30 bg-primary/5">
       <CardContent className="py-4 space-y-3">
-        <p className="text-xs font-semibold text-primary uppercase tracking-wide">
-          {t("title")}
-        </p>
+        <h2 className="rp-row font-semibold text-rp-accent">{t("title")}</h2>
         {items.map((item) => (
           <div key={item.id} className="space-y-1">
             <p className="text-sm font-medium">

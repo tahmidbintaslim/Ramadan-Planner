@@ -1,12 +1,11 @@
 "use client";
 
-import { Accessibility } from "lucide-react";
 import { Link } from "@/components/shared/link";
 import { AccessibilityDialog } from "@/components/shared/accessibility-sidebar";
 import { usePathname } from "@/hooks/use-pathname";
 import { useTranslations } from "@/i18n/use-intl";
 import { useAuth } from "@/components/providers/auth-provider";
-import { CrescentIcon } from "@/components/icons/islamic-icons";
+import { CrescentIcon, TextSizeIcon } from "@/components/icons/islamic-icons";
 import { cn } from "@/lib/utils";
 import { PRIMARY_NAV, SECONDARY_NAV, isNavActive, type NavItem } from "./nav-items";
 
@@ -30,8 +29,8 @@ function NavLink({ item, pathname, label }: { item: NavItem; pathname: string; l
           active ? "bg-rp-accent-tint text-rp-accent" : "text-rp-muted hover:bg-rp-accent-tint/60 hover:text-rp-ink",
         )}
       >
-        <Icon size={22} strokeWidth={1.6} aria-hidden className="shrink-0" />
-        <span className="truncate">{label}</span>
+        <Icon size={22} aria-hidden className="shrink-0" />
+        <span className="min-w-0 leading-[20px]">{label}</span>
       </Link>
     </li>
   );
@@ -60,7 +59,7 @@ export function DesktopSidebar() {
       <nav aria-label={t("mainNav")} className="flex-1 overflow-y-auto px-3 pb-4">
         <ul className="flex flex-col gap-1">
           {PRIMARY_NAV.map((item) => (
-            <NavLink key={item.href} item={item} pathname={pathname} label={t(item.labelKey)} />
+            <NavLink key={item.href} item={item} pathname={pathname} label={t(item.shortKey ?? item.labelKey)} />
           ))}
         </ul>
         <ul className="mt-3 flex flex-col gap-1 border-t border-rp-rule pt-3">
@@ -77,7 +76,7 @@ export function DesktopSidebar() {
               type="button"
               className="flex min-h-12 items-center gap-3 rounded-[14px] px-3.5 rp-button text-rp-muted transition-colors hover:bg-rp-accent-tint/60 hover:text-rp-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <Accessibility className="size-[22px] shrink-0" strokeWidth={1.6} aria-hidden />
+              <TextSizeIcon size={22} className="shrink-0" aria-hidden />
               <span className="truncate">{tA11y("title")}</span>
             </button>
           }

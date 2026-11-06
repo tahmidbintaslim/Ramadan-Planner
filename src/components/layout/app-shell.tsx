@@ -23,7 +23,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <DesktopSidebar />
       <div className={SIDEBAR_WIDTH_CLASS}>
         <AppHeader />
-        <main id="main-content" tabIndex={-1} className={`px-4 pt-4 outline-none md:px-6 lg:px-8 ${BOTTOM_NAV_CLEARANCE}`}>
+        <main id="main-content" tabIndex={-1} className={`px-4 pt-2 outline-none md:px-6 md:pt-4 lg:px-8 ${BOTTOM_NAV_CLEARANCE}`}>
           {children}
         </main>
       </div>

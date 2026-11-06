@@ -85,12 +85,12 @@ export function PrayerList({
   const states = prayerRowStates(now, timings);
 
   return (
-    <section className={cn("flex flex-col gap-3", className)}>
+    <section className={cn("flex flex-col gap-1.5", className)}>
       <SectionHeader
         title={t("todayPrayers")}
         action={<Link href={REMINDERS_HREF}>{t("reminders")}</Link>}
       />
-      <ul className="flex flex-col gap-1 rounded-rp-lg bg-rp-surface p-2 shadow-rp-soft">
+      <ul className="flex flex-col rounded-rp-lg bg-rp-surface p-1 shadow-rp-soft">
         {FIVE_PRAYERS.map((key) => {
           const Icon = ICONS[key];
           const state = states[key];
@@ -98,7 +98,7 @@ export function PrayerList({
           const enabled = Boolean(reminders?.[key]);
           const bellClass = cn(
             buttonVariants({ variant: "quiet", size: "icon" }),
-            "-mr-3 shrink-0",
+            "-mr-3 size-11 shrink-0",
             state === "past" && "text-rp-muted",
           );
           return (
@@ -108,7 +108,7 @@ export function PrayerList({
               data-state={state}
               aria-current={state === "next" ? "time" : undefined}
               className={cn(
-                "flex h-14 items-center gap-3 rounded-rp-md px-4",
+                "flex h-11 items-center gap-3 rounded-rp-md px-4",
                 state === "next" && "bg-rp-accent-tint text-rp-accent",
                 state === "past" && "text-rp-muted",
                 state === "upcoming" && "text-rp-ink",

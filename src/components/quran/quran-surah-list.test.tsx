@@ -49,7 +49,7 @@ async function renderList(locale: "bn" | "en" = "bn") {
 describe("Quran list", () => {
   it("shows the title and caption, and one linked row per surah with a Bengali-digit badge", async () => {
     await renderList();
-    expect(screen.getByRole("heading", { level: 1, name: "আল কুরআন" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "কুরআন" })).toBeInTheDocument();
     const rows = within(screen.getByTestId("surah-list")).getAllByRole("link");
     expect(rows).toHaveLength(10);
     expect(rows[1]).toHaveAttribute("href", "/quran/2");
@@ -84,7 +84,7 @@ describe("Quran list", () => {
 
   it("renders in English", async () => {
     await renderList("en");
-    expect(screen.getByRole("heading", { level: 1, name: "Al-Quran" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Quran" })).toBeInTheDocument();
     expect(screen.getAllByTestId("surah-list")[0]).toHaveTextContent("Meccan · 7 Ayahs");
   });
 });
@@ -105,7 +105,7 @@ describe("Last read card", () => {
     writeLastRead({ surah: 2, ayah: 255 });
     await renderList();
     const card = await screen.findByTestId("last-read-card");
-    expect(card).toHaveTextContent("সর্বশেষ পড়া");
+    expect(card).toHaveTextContent("যেখানে থেমেছিলেন");
     expect(within(card).getByRole("heading", { name: "আল-বাকারা" })).toBeInTheDocument();
     expect(card).toHaveTextContent("আয়াত ২৫৫");
     const link = within(card).getByRole("link", { name: /পড়া চালিয়ে যান/ });

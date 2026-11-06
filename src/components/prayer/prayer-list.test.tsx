@@ -59,7 +59,7 @@ describe("prayerRowStates", () => {
 describe("PrayerList", () => {
   it("renders the header, five rows with Bengali times, and the reminders link", async () => {
     await renderList();
-    expect(screen.getByRole("heading", { name: "আজকের নামাজ" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "নামাজের সময়" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "রিমাইন্ডার" })).toHaveAttribute("href", "/reminders");
     expect(screen.getAllByRole("listitem")).toHaveLength(5);
     expect(row("fajr")).toHaveTextContent("ফজর");
@@ -106,7 +106,7 @@ describe("PrayerList", () => {
 
   it("renders English names and Latin digits in en", async () => {
     await renderList({}, "en");
-    expect(screen.getByRole("heading", { name: "Today's prayers" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Prayer Times" })).toBeInTheDocument();
     expect(row("asr")).toHaveTextContent("Asr");
     expect(row("asr")).toHaveTextContent("4:25");
     expect(within(row("asr")).getByText("Next")).toBeInTheDocument();

@@ -46,7 +46,8 @@ const GRADIENT: Record<PrayerPhase, string> = {
   night: "var(--rp-hero-night)",
 };
 
-const RING_SIZE = 196;
+// 184 (was 196): with the tighter rows, all five prayers clear the bottom nav at 390x844.
+const RING_SIZE = 184;
 const RING_STROKE = 6;
 const RING_R = (RING_SIZE - RING_STROKE) / 2;
 const RING_C = 2 * Math.PI * RING_R;
@@ -200,7 +201,7 @@ export function PrayerHero({
       aria-label={t("heroLabel")}
       data-phase={r.phase}
       className={cn(
-        "relative isolate flex min-h-[300px] flex-col overflow-hidden rounded-rp-xl p-5 text-white",
+        "relative isolate flex min-h-[268px] flex-col overflow-hidden rounded-rp-xl p-4 text-white",
         className,
       )}
       style={{ backgroundImage: GRADIENT[r.phase] }}
@@ -225,7 +226,7 @@ export function PrayerHero({
             href={locationHref}
             data-testid="hero-location"
             aria-label={t("locationChange", { district })}
-            className="rp-caption inline-flex min-h-[48px] min-w-0 items-center gap-1.5 rounded-rp-full bg-white/14 px-4 py-2 outline-none transition-colors hover:bg-white/22 focus-visible:ring-[3px] focus-visible:ring-white/70"
+            className="rp-caption inline-flex min-h-[44px] min-w-0 items-center gap-1.5 rounded-rp-full bg-white/14 px-4 py-2 outline-none transition-colors hover:bg-white/22 focus-visible:ring-[3px] focus-visible:ring-white/70"
           >
             <PinIcon size={16} />
             <span aria-hidden="true" className="truncate">
@@ -244,7 +245,7 @@ export function PrayerHero({
         {hijriLabel ? <span className="rp-caption shrink-0 text-white/85">{hijriLabel}</span> : null}
       </div>
 
-      <div className="flex flex-1 items-center justify-center py-4">
+      <div className="flex flex-1 items-center justify-center py-1">
         <div className="relative" style={{ width: RING_SIZE, height: RING_SIZE }}>
           <svg
             aria-hidden="true"

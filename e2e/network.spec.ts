@@ -36,12 +36,8 @@ test("/quran surah list loads", async ({ page, baseURL }) => {
   expect(apiOk(apis, "/api/quran")).toBeTruthy();
 });
 
-for (const path of ["/today", "/dashboard"]) {
-  test(`${path} loads the Ramadan status`, async ({ page, baseURL }) => {
-    const apis = trackApi(page, baseURL!);
-    await visit(page, path);
-    for (const prefix of path === "/dashboard" ? ["/api/ramadan?", "/api/timings"] : ["/api/ramadan?"]) {
-      expect(apiOk(apis, prefix), prefix).toBeTruthy();
-    }
-  });
-}
+test("/today loads the Ramadan status", async ({ page, baseURL }) => {
+  const apis = trackApi(page, baseURL!);
+  await visit(page, "/today");
+  expect(apiOk(apis, "/api/ramadan?"), "/api/ramadan?").toBeTruthy();
+});

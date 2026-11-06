@@ -233,7 +233,7 @@ export function QuranTracker({ day }: { day: number }) {
       <Card>
         <CardHeader className="gap-3">
           <div className="flex items-center justify-between gap-2">
-            <h3 className="rp-h2 text-rp-ink">{tToday("quranTracker")}</h3>
+            <h2 className="rp-h2 text-rp-ink">{tToday("quranTracker")}</h2>
             {!isGuest && (
               <Badge variant="outline" aria-live="polite">
                 {saveState === "saving"

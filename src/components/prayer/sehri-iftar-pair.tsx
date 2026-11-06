@@ -29,7 +29,7 @@ export function SehriIftarPair({ timings, timeZone, dayLabel, className }: Sehri
     <div
       data-day={dayLabel ? "tomorrow" : "today"}
       className={cn(
-        "grid grid-cols-[1fr_1px_1fr] items-center rounded-rp-lg bg-rp-surface p-4 text-rp-ink shadow-rp-soft",
+        "grid grid-cols-[1fr_1px_1fr] items-center rounded-rp-lg bg-rp-surface px-4 py-3 text-rp-ink shadow-rp-soft",
         className,
       )}
     >

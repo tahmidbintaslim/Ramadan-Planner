@@ -12,13 +12,13 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AuthRouteImport } from './routes/_auth'
+import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ForgotRouteImport } from './routes/forgot'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as WelcomeRouteImport } from './routes/welcome'
 import { Route as AppBooksRouteImport } from './routes/_app.books'
-import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppDuasRouteImport } from './routes/_app.duas'
 import { Route as AppPlanRouteImport } from './routes/_app.plan'
 import { Route as AppQuizRouteImport } from './routes/_app.quiz'
@@ -64,6 +64,11 @@ const AuthRoute = AuthRouteImport.update({
   id: '/_auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ForgotRoute = ForgotRouteImport.update({
   id: '/forgot',
   path: '/forgot',
@@ -92,11 +97,6 @@ const WelcomeRoute = WelcomeRouteImport.update({
 const AppBooksRoute = AppBooksRouteImport.update({
   id: '/books',
   path: '/books',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppDashboardRoute = AppDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
   getParentRoute: () => AppRoute,
 } as any)
 const AppDuasRoute = AppDuasRouteImport.update({
@@ -259,13 +259,13 @@ const ApiCalendarIcsSecretRoute = ApiCalendarIcsSecretRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/dashboard': typeof DashboardRoute
   '/forgot': typeof ForgotRoute
   '/login': typeof LoginRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/welcome': typeof WelcomeRoute
   '/books': typeof AppBooksRoute
-  '/dashboard': typeof AppDashboardRoute
   '/duas': typeof AppDuasRoute
   '/plan': typeof AppPlanRoute
   '/quiz': typeof AppQuizRoute
@@ -300,13 +300,13 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/dashboard': typeof DashboardRoute
   '/forgot': typeof ForgotRoute
   '/login': typeof LoginRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/welcome': typeof WelcomeRoute
   '/books': typeof AppBooksRoute
-  '/dashboard': typeof AppDashboardRoute
   '/duas': typeof AppDuasRoute
   '/plan': typeof AppPlanRoute
   '/quiz': typeof AppQuizRoute
@@ -344,13 +344,13 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/_auth': typeof AuthRouteWithChildren
+  '/dashboard': typeof DashboardRoute
   '/forgot': typeof ForgotRoute
   '/login': typeof LoginRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/welcome': typeof WelcomeRoute
   '/_app/books': typeof AppBooksRoute
-  '/_app/dashboard': typeof AppDashboardRoute
   '/_app/duas': typeof AppDuasRoute
   '/_app/plan': typeof AppPlanRoute
   '/_app/quiz': typeof AppQuizRoute
@@ -387,13 +387,13 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/dashboard'
     | '/forgot'
     | '/login'
     | '/robots.txt'
     | '/sitemap.xml'
     | '/welcome'
     | '/books'
-    | '/dashboard'
     | '/duas'
     | '/plan'
     | '/quiz'
@@ -428,13 +428,13 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/dashboard'
     | '/forgot'
     | '/login'
     | '/robots.txt'
     | '/sitemap.xml'
     | '/welcome'
     | '/books'
-    | '/dashboard'
     | '/duas'
     | '/plan'
     | '/quiz'
@@ -471,13 +471,13 @@ export interface FileRouteTypes {
     | '/'
     | '/_app'
     | '/_auth'
+    | '/dashboard'
     | '/forgot'
     | '/login'
     | '/robots.txt'
     | '/sitemap.xml'
     | '/welcome'
     | '/_app/books'
-    | '/_app/dashboard'
     | '/_app/duas'
     | '/_app/plan'
     | '/_app/quiz'
@@ -515,6 +515,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
+  DashboardRoute: typeof DashboardRoute
   ForgotRoute: typeof ForgotRoute
   LoginRoute: typeof LoginRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
@@ -557,6 +558,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/forgot': {
       id: '/forgot'
       path: '/forgot'
@@ -597,13 +605,6 @@ declare module '@tanstack/react-router' {
       path: '/books'
       fullPath: '/books'
       preLoaderRoute: typeof AppBooksRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/dashboard': {
-      id: '/_app/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof AppDashboardRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/duas': {
@@ -828,7 +829,6 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteChildren {
   AppBooksRoute: typeof AppBooksRoute
-  AppDashboardRoute: typeof AppDashboardRoute
   AppDuasRoute: typeof AppDuasRoute
   AppPlanRoute: typeof AppPlanRoute
   AppQuizRoute: typeof AppQuizRoute
@@ -849,7 +849,6 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppBooksRoute: AppBooksRoute,
-  AppDashboardRoute: AppDashboardRoute,
   AppDuasRoute: AppDuasRoute,
   AppPlanRoute: AppPlanRoute,
   AppQuizRoute: AppQuizRoute,
@@ -888,6 +887,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
+  DashboardRoute: DashboardRoute,
   ForgotRoute: ForgotRoute,
   LoginRoute: LoginRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,

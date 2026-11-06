@@ -15,6 +15,8 @@ import {
 import { formatLocalizedNumber } from "@/lib/locale-number";
 import { IFTAR_WINDOW_MS, type PhaseTimings, type PrayerPhase } from "@/lib/prayer-phase";
 import { cn } from "@/lib/utils";
+import { isHiddenPath } from "@/config/features";
+import { DuaCard } from "@/components/duas/dua-card";
 import { planDisplayOrder, type PlanWindow } from "@/components/plan/plan-logic";
 
 // ── Phase card: Sehri niyyah / Iftar dua ──────────────
@@ -42,38 +44,27 @@ export function phaseCardKind(
 }
 
 export function PhaseCard({ kind, className }: { kind: PhaseCardKind; className?: string }) {
-  const t = useTranslations("home");
-  const titleId = `phase-card-${kind}`;
   return (
-    <section
-      aria-labelledby={titleId}
-      data-testid="phase-card"
-      data-kind={kind}
-      className={cn("flex flex-col gap-2 rounded-rp-lg bg-rp-surface p-5 text-rp-ink shadow-rp-soft", className)}
-    >
-      <h2 id={titleId} className="rp-row flex items-center gap-2 font-semibold">
-        <DuaIcon size={24} className="text-rp-accent" />
-        {t(kind === "niyyah" ? "niyyahTitle" : "iftarDuaTitle")}
-      </h2>
-      <p className="font-reading text-[20px] leading-[34px] font-medium">{t(kind === "niyyah" ? "niyyahText" : "iftarDuaText")}</p>
-      <p className="rp-reading-small text-rp-muted">{t(kind === "niyyah" ? "niyyahMeaning" : "iftarDuaMeaning")}</p>
-      <p className="rp-caption text-rp-gold-text">{t(kind === "niyyah" ? "niyyahSource" : "iftarDuaSource")}</p>
-    </section>
+    <div data-testid="phase-card" data-kind={kind} className={className}>
+      <DuaCard id={kind === "niyyah" ? "niyyah" : "iftar"} icon={<DuaIcon size={24} className="text-rp-accent" />} />
+    </div>
   );
 }
 
 // ── Feature tiles ─────────────────────────────────────
 
-export const FEATURE_TILES: ReadonlyArray<{
+// Only features that are on (src/config/features.ts) get a tile.
+type FeatureTile = {
   key: "tileQuran" | "tileDuas" | "tileTasbih" | "tileZakat";
   href: string;
   Icon: ComponentType<IconProps>;
-}> = [
+};
+export const FEATURE_TILES: ReadonlyArray<FeatureTile> = ([
   { key: "tileQuran", href: "/quran", Icon: QuranIcon },
   { key: "tileDuas", href: "/duas", Icon: DuaIcon },
   { key: "tileTasbih", href: "/tasbih", Icon: TasbihIcon },
   { key: "tileZakat", href: "/zakat", Icon: ZakatIcon },
-];
+] as FeatureTile[]).filter((tile) => !isHiddenPath(tile.href));
 
 export function FeatureTiles({ className }: { className?: string }) {
   const t = useTranslations("home");
@@ -190,7 +181,7 @@ export function PlanPreview({ state, className }: { state: PlanPreviewState; cla
                     row.done ? "border-rp-done bg-rp-done text-rp-surface" : "border-rp-input",
                   )}
                 >
-                  {row.done ? <CheckIcon size={16} strokeWidth={2.4} /> : null}
+                  {row.done ? <CheckIcon size={16} /> : null}
                 </span>
                 <span className={cn("rp-row", row.done && "text-rp-muted")}>{row.title}</span>
               </button>

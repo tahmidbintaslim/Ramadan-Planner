@@ -121,7 +121,7 @@ export function SupportPage({ config = SUPPORT_CONFIG }: { config?: SupportConfi
         data-testid="support-intro"
         className="flex-row items-center gap-4 bg-linear-to-br from-rp-gold-tint to-rp-page px-5"
       >
-        <LanternIcon size={64} strokeWidth={1.3} className="shrink-0 text-rp-gold" />
+        <LanternIcon size={64} className="shrink-0 text-rp-gold" />
         <div className="min-w-0 space-y-1">
           <h2 className="rp-h2 text-rp-ink">{t("introTitle")}</h2>
           <p className="rp-small text-rp-ink">{t("introText")}</p>
@@ -129,7 +129,7 @@ export function SupportPage({ config = SUPPORT_CONFIG }: { config?: SupportConfi
       </Card>
 
       <Card className="gap-0 overflow-hidden py-0" data-testid="cost-ledger">
-        <p className="rp-overline px-4 pb-1 pt-4 text-rp-muted">{t("ledgerTitle")}</p>
+        <h2 className="rp-h2 px-4 pb-1 pt-4 text-rp-ink">{t("ledgerTitle")}</h2>
         <ul className="divide-y divide-rp-rule">
           {COST_KEYS.map((key) => (
             <li key={key} className="flex min-h-14 items-center justify-between gap-3 px-4">
@@ -265,6 +265,19 @@ export function SupportPage({ config = SUPPORT_CONFIG }: { config?: SupportConfi
             </button>
           </li>
         </ul>
+        <p className="rp-caption border-t border-rp-rule px-4 py-3 text-rp-muted" data-testid="credits">
+          {t("creditsIcons")}{" "}
+          <a
+            href="https://hugeicons.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex min-h-6 items-center font-semibold text-rp-accent underline-offset-4 hover:underline"
+          >
+            Hugeicons
+            <span className="sr-only"> ({t("opensNewTab")})</span>
+          </a>{" "}
+          {t("creditsLicence")}
+        </p>
       </Card>
 
       <PaymentSheet open={sheetOpen} onOpenChange={setSheetOpen} wallets={wallets} amount={amount ?? DEFAULT_AMOUNT} frequency={frequency} />

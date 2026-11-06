@@ -17,6 +17,7 @@ import { SupportCard } from "@/components/today/home-sections";
 import { useSadaqahDismissal } from "@/components/today/sadaqah-dismissal";
 import {
   DAY_DEFAULTS,
+  LEGACY_DEFAULTS,
   NIGHT_DEFAULTS,
   PLAN_WINDOWS,
   currentNight,
@@ -33,11 +34,14 @@ import {
   type PlanItem,
 } from "./plan-logic";
 import { ProgressCard } from "./progress-card";
+import { SalahTracker } from "./trackers/salah-tracker";
+import { QuranTracker } from "./trackers/quran-tracker";
+import { JournalSection } from "./trackers/journal-section";
 import { useTodayPlan } from "./use-today-plan";
 import { usePlanTimetable } from "./use-plan-context";
 
 const DEFAULTS_BY_KEY: Record<string, DefaultItem> = Object.fromEntries(
-  [...DAY_DEFAULTS, ...NIGHT_DEFAULTS].map((d) => [d.key, d]),
+  [...DAY_DEFAULTS, ...LEGACY_DEFAULTS, ...NIGHT_DEFAULTS].map((d) => [d.key, d]),
 );
 // Plain durations and the source line; "sehri", "fajr", "ishaTaraweeh" and "tahajjud" show times instead.
 const STATIC_META = new Set(["morningDhikr", "quran", "sleepDhikr", "nightQuran", "qadrDua"]);
@@ -64,6 +68,7 @@ function deviceZone(): string {
 
 export function PlanContent() {
   const t = useTranslations("plan");
+  const tChecklist = useTranslations("checklist");
   const locale = useLocale() as Locale;
   const [clockFormat] = useClockFormat();
   const mounted = useSyncExternalStore(subscribeNoop, () => true, () => false);
@@ -131,7 +136,10 @@ export function PlanContent() {
     }),
   );
   const byId = new Map(items.map((i) => [i.id, i]));
-  const groups = groupByWindow(items);
+  // Day view: tasks by time of day in "আজকের আমল", goals (a target count) in "আমার লক্ষ্য"; nothing shows twice.
+  const tasks = items.filter((i) => i.kind === "task");
+  const goals = items.filter((i) => i.kind === "goal");
+  const taskGroups = groupByWindow(tasks);
   const done = items.filter((i) => i.done).length;
   const presentKeys = new Set(items.map((i) => i.key).filter(Boolean));
   const locked = !plan.ready;
@@ -217,7 +225,12 @@ export function PlanContent() {
   const suggestions: AmalSuggestion[] = [
     ...DAY_DEFAULTS.filter((d) => !presentKeys.has(d.key)).map((d) => ({ title: titleOf(d.key) })),
     // The earlier goal templates (target in "times").
-    { title: t("templateGoalQuran"), targetCount: 2 },
+    // The former separate dhikr checklist (merged here so nothing is ticked in two lists); morning dhikr and
+    // charity are already day suggestions.
+    { title: tChecklist("eveningDhikr") },
+    { title: tChecklist("istighfar") },
+    { title: tChecklist("durud") },
+    { title: tChecklist("goodDeeds") },
     { title: t("templateGoalHadith"), targetCount: 1 },
     { title: t("templateGoalDhikr"), targetCount: 100 },
     { title: t("templateGoalDua"), targetCount: 5 },
@@ -293,6 +306,9 @@ export function PlanContent() {
               <Skeleton className="h-[300px] rounded-rp-xl" />
             </div>
           )}
+          <p className="rp-reading-small rounded-rp-lg bg-rp-surface px-5 py-4 text-rp-ink shadow-rp-soft" data-testid="nights-intro">
+            {t("nightsIntro")}
+          </p>
           {days.length > 0 ? <OddNightsCard rows={oddNightRows(days, night)} /> : null}
           <section aria-labelledby="tonight-amal" className="flex flex-col gap-3">
             <ChecklistOverline id="tonight-amal">{t("tonightAmal")}</ChecklistOverline>
@@ -310,37 +326,65 @@ export function PlanContent() {
       ) : (
         <>
           <ProgressCard done={done} total={items.length} quranPara={quran.para} streak={quran.streak} />
-          {items.length === 0 && plan.ready ? (
-            <section aria-labelledby="plan-empty" className="flex flex-col gap-3 rounded-rp-lg bg-rp-surface p-5 shadow-rp-soft">
-              <h2 id="plan-empty" className="rp-row font-semibold text-rp-ink">
-                {t("emptyTitle")}
-              </h2>
-              <p className="rp-small text-rp-muted">{t("emptyBody")}</p>
-              <Button type="button" onClick={() => void addDefaults(DAY_DEFAULTS)} disabled={defaultsBusy}>
-                {t("addSuggested")}
-              </Button>
-            </section>
-          ) : null}
-          {items.length > 0
-            ? PLAN_WINDOWS.map((w) => (
-                <section key={w} aria-labelledby={`plan-${w}`} data-window={w} className="flex flex-col gap-3">
-                  <ChecklistOverline id={`plan-${w}`}>{t(`windows.${w}`)}</ChecklistOverline>
-                  {groups[w].length > 0 ? (
-                    <ChecklistCards
-                      items={groups[w]}
-                      onToggle={toggle}
-                      onEdit={openEdit}
-                      disabled={locked}
-                      pending={plan.pending}
-                      labelledBy={`plan-${w}`}
-                    />
-                  ) : (
-                    <p className="rp-small rounded-rp-lg border border-dashed border-rp-rule px-4 py-3 text-rp-muted">{t("groupEmpty")}</p>
-                  )}
-                </section>
-              ))
-            : null}
-          <AddAmalButton disabled={locked} onClick={() => setSheet({ open: true, editing: null })} />
+
+          {/* 1. আজকের আমল: today's checklist by time of day (tasks; goals with a target are in "আমার লক্ষ্য"). */}
+          <section aria-labelledby="plan-today-amal" data-testid="plan-today-amal" className="flex flex-col gap-4">
+            <h2 id="plan-today-amal" className="rp-h2 text-rp-ink">
+              {t("todayAmal")}
+            </h2>
+            {items.length === 0 && plan.ready ? (
+              <div className="flex flex-col gap-3 rounded-rp-lg bg-rp-surface p-5 shadow-rp-soft">
+                <h3 className="rp-row font-semibold text-rp-ink">{t("emptyTitle")}</h3>
+                <p className="rp-small text-rp-muted">{t("emptyBody")}</p>
+                <Button type="button" onClick={() => void addDefaults(DAY_DEFAULTS)} disabled={defaultsBusy}>
+                  {t("addSuggested")}
+                </Button>
+              </div>
+            ) : null}
+            {tasks.length > 0
+              ? PLAN_WINDOWS.map((w) => (
+                  <section key={w} aria-labelledby={`plan-${w}`} data-window={w} className="flex flex-col gap-3">
+                    <ChecklistOverline id={`plan-${w}`} as="h3">
+                      {t(`windows.${w}`)}
+                    </ChecklistOverline>
+                    {taskGroups[w].length > 0 ? (
+                      <ChecklistCards
+                        items={taskGroups[w]}
+                        onToggle={toggle}
+                        onEdit={openEdit}
+                        disabled={locked}
+                        pending={plan.pending}
+                        labelledBy={`plan-${w}`}
+                      />
+                    ) : (
+                      <p className="rp-small rounded-rp-lg border border-dashed border-rp-rule px-4 py-3 text-rp-muted">{t("groupEmpty")}</p>
+                    )}
+                  </section>
+                ))
+              : null}
+            <AddAmalButton disabled={locked} onClick={() => setSheet({ open: true, editing: null })} />
+          </section>
+
+          {/* 2-3. The trackers (their own data flows: guest local storage or the daily log), keyed by the Ramadan
+              day (day 1 outside Ramadan). Fajr and the Quran have no checklist suggestion of their own, so neither is
+              recorded twice. */}
+          <SalahTracker day={ramadanDay ?? 1} />
+          <QuranTracker day={ramadanDay ?? 1} />
+
+          {/* 4. আমার লক্ষ্য: the user's own goals with a target count (e.g. ১০০ বার যিকির). */}
+          <section aria-labelledby="plan-goals" data-testid="plan-goals" className="flex flex-col gap-3">
+            <h2 id="plan-goals" className="rp-h2 text-rp-ink">
+              {t("goalsTitle")}
+            </h2>
+            {goals.length > 0 ? (
+              <ChecklistCards items={goals} onToggle={toggle} onEdit={openEdit} disabled={locked} pending={plan.pending} labelledBy="plan-goals" />
+            ) : (
+              <p className="rp-small rounded-rp-lg border border-dashed border-rp-rule px-4 py-3 text-rp-muted">{t("goalsEmpty")}</p>
+            )}
+          </section>
+
+          {/* 5. রমজান ডায়েরি: optional, collapsed by default. */}
+          <JournalSection day={ramadanDay ?? 1} />
         </>
       )}
       <AmalSheet

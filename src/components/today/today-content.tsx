@@ -7,10 +7,8 @@ import { districtById, districtName } from "@/lib/districts";
 import { readStoredLocation } from "@/lib/user-location";
 import { usePrayerPhase } from "@/components/prayer/use-prayer-phase";
 import { timingsFromPrayerTimes, todayISOInZone } from "@/lib/prayer-phase";
-import { DailyPractices } from "./daily-practices";
 import { HomeOverview, ramadanDayOf } from "./home-overview";
 import { useSadaqahDismissal } from "./sadaqah-dismissal";
-import { useDailyChecklist } from "./use-daily-checklist";
 import { useTodayPlan } from "@/components/plan/use-today-plan";
 import { nightEveningISO } from "@/components/plan/plan-logic";
 import { deviceTimeZone, nextDayISO, useHomeTimings } from "./use-home-timings";
@@ -27,8 +25,9 @@ function safeTodayISO(now: Date, timeZone: string): string | null {
 }
 
 /**
- * The Home (Today) screen: the time-aware overview (hero, Sehri/Iftar pair, phase card, prayers, companion tiles,
- * today's plan, sadaqah card), then the day's practices and trackers that used to make up this page.
+ * The Home (Today) screen, a focused daily-use screen: greeting (app header), hero, Sehri/Iftar pair, the one sourced
+ * devotional card (niyyah at sehri, iftar dua near iftar, otherwise the day's ayah), prayers, companion tiles,
+ * today's plan preview and the rule-gated sadaqah card. The trackers, checklist and journal live on /plan.
  *
  * `initialNow` is the server's render time (route loader), so the server and hydrating renders agree.
  */
@@ -67,8 +66,7 @@ export function TodayContent({ initialNow }: { initialNow?: Date }) {
   }, [home.timings, home.tomorrow, dateISO, timeZone]);
 
   const ramadanDay = ramadanDayOf(home.ramadan);
-  // The daily dhikr checklist (its own card below) and today's plan (the same rows and counts as /plan).
-  const checklist = useDailyChecklist(ramadanDay ?? 1);
+  // Today's plan (the same rows and counts as /plan).
   // Night practices count for the night's evening, as on /plan (yesterday's date between midnight and fajr).
   const eveningISO = dateISO
     ? nightEveningISO(ramadanDay, now, phaseTimings?.fajr ?? null, phaseTimings?.maghrib ?? null, dateISO)
@@ -110,7 +108,6 @@ export function TodayContent({ initialNow }: { initialNow?: Date }) {
         onDismissSadaqah={() => sadaqah.dismiss()}
         onRetry={home.retry}
       />
-      <DailyPractices ramadanDay={ramadanDay} checklist={checklist} />
     </div>
   );
 }

@@ -1,14 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Accessibility, Globe } from "lucide-react";
 import { AccessibilityControls } from "@/components/shared/accessibility-sidebar";
 import { Link } from "@/components/shared/link";
 import { usePathname } from "@/hooks/use-pathname";
 import { useTranslations } from "@/i18n/use-intl";
 import { useAuth } from "@/components/providers/auth-provider";
 import { Show } from "@clerk/tanstack-react-start";
-import { CrescentIcon, MoreIcon } from "@/components/icons/islamic-icons";
+import { CrescentIcon, GlobeIcon, MoreIcon, TextSizeIcon } from "@/components/icons/islamic-icons";
 import {
   Sheet,
   SheetContent,
@@ -41,7 +40,7 @@ function TabContent({ item, active, label }: { item: Pick<NavItem, "icon">; acti
           active ? "bg-rp-accent-tint" : "group-hover:bg-rp-accent-tint/60",
         )}
       >
-        <Icon size={22} strokeWidth={1.6} aria-hidden />
+        <Icon size={22} aria-hidden />
       </span>
       <span className="rp-caption leading-none whitespace-nowrap">{label}</span>
     </>
@@ -75,8 +74,8 @@ function MoreSheetBody({ onNavigate }: { onNavigate: () => void }) {
                     active ? "bg-rp-accent-tint text-rp-accent" : "text-rp-ink hover:bg-rp-accent-tint/60",
                   )}
                 >
-                  <Icon size={22} strokeWidth={1.6} aria-hidden />
-                  <span className="rp-small font-medium">{t(item.labelKey)}</span>
+                  <Icon size={22} aria-hidden />
+                  <span className="rp-small font-medium leading-[18px]">{t(item.labelKey)}</span>
                 </Link>
               </li>
             );
@@ -96,14 +95,14 @@ function MoreSheetBody({ onNavigate }: { onNavigate: () => void }) {
           disabled={isPending}
           className={sheetRowClass}
         >
-          <Globe className="size-[22px]" strokeWidth={1.6} aria-hidden />
+          <GlobeIcon size={22} aria-hidden />
           <span className="rp-row">{tCommon("switchLanguage")}</span>
         </button>
         <GuestAuthButtons stacked />
       </div>
       <section aria-labelledby="more-a11y" className="flex flex-col gap-3 border-t border-rp-rule pt-4">
         <h3 id="more-a11y" className="rp-row flex items-center gap-3 px-3 text-rp-ink">
-          <Accessibility className="size-[22px]" strokeWidth={1.6} aria-hidden />
+          <TextSizeIcon size={22} aria-hidden />
           {tA11y("title")}
         </h3>
         <AccessibilityControls className="px-3" />
@@ -133,7 +132,7 @@ export function MobileNav() {
                 aria-current={active ? "page" : undefined}
                 className={cn(itemClass, active ? "text-rp-accent" : "text-rp-muted hover:text-rp-ink")}
               >
-                <TabContent item={item} active={active} label={t(item.labelKey)} />
+                <TabContent item={item} active={active} label={t(item.shortKey ?? item.labelKey)} />
               </Link>
             </li>
           );

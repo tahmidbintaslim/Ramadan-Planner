@@ -2,7 +2,7 @@
 
 import { useTransition } from "react";
 import { useRouter } from "@tanstack/react-router";
-import { Globe, LogIn, UserPlus } from "lucide-react";
+import { GlobeIcon, LoginIcon, UserAddIcon } from "@/components/icons/islamic-icons";
 import { Show } from "@clerk/tanstack-react-start";
 import { useTranslations } from "@/i18n/use-intl";
 import { switchLocaleAction } from "@/actions/locale";
@@ -38,7 +38,7 @@ export function LanguageButton({ className }: { className?: string }) {
       aria-label={t("switchLanguage")}
       className={cn(roundButtonClass, className)}
     >
-      <Globe className="size-5" strokeWidth={1.6} aria-hidden />
+      <GlobeIcon size={20} aria-hidden />
     </button>
   );
 }
@@ -51,13 +51,13 @@ export function GuestAuthButtons({ className, stacked }: { className?: string; s
       <div className={cn("flex gap-2", stacked && "flex-col", className)}>
         <Button variant="outline" size={stacked ? "default" : "sm"} asChild className={cn(stacked && "w-full")}>
           <Link href="/sign-in">
-            <LogIn className="size-4" aria-hidden />
+            <LoginIcon size={16} aria-hidden />
             {tAuth("login")}
           </Link>
         </Button>
         <Button size={stacked ? "default" : "sm"} asChild className={cn(stacked && "w-full")}>
           <Link href="/sign-up">
-            <UserPlus className="size-4" aria-hidden />
+            <UserAddIcon size={16} aria-hidden />
             {tAuth("signup")}
           </Link>
         </Button>

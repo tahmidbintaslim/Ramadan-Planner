@@ -82,6 +82,39 @@ test.describe("mobile Home", () => {
     expect(consoleEntries.filter((e) => HYDRATION.test(e.text))).toEqual([]);
   });
 
+  test("all five prayers are above the bottom nav on first load at 390x844", async ({ page }) => {
+    await mockHome(page, "13:00");
+    await visit(page, "/today");
+    await expect(page.locator("li[data-prayer]")).toHaveCount(5);
+    await page.waitForTimeout(500); // fonts swapped in
+    const ishaBottom = await page.locator('li[data-prayer="isha"]').evaluate((el) => el.getBoundingClientRect().bottom);
+    const navTop = await page
+      .getByRole("navigation", { name: /প্রধান নেভিগেশন|Main navigation/ })
+      .first()
+      .evaluate((el) => el.getBoundingClientRect().top);
+    expect(await page.evaluate(() => window.scrollY)).toBe(0);
+    expect(ishaBottom).toBeLessThan(navTop);
+  });
+
+  test("the Home is focused: one sourced devotional card, no trackers, checklist or journal", async ({ page }) => {
+    await mockHome(page, "13:00");
+    await visit(page, "/today");
+    await expect(page.locator("li[data-prayer]")).toHaveCount(5);
+    // Outside the sehri/iftar moments the one devotional card is the day's ayah, with its reference.
+    await expect(page.getByTestId("phase-card")).toHaveCount(0);
+    const ayah = page.getByTestId("daily-ayah");
+    await expect(ayah).toHaveCount(1);
+    await expect(ayah.locator('[lang="ar"]')).toHaveClass(/font-arabic/);
+    await expect(ayah).toContainText(/সূরা|Surah/);
+    const main = page.locator("main");
+    for (const gone of ["নামাজ ট্র্যাকার", "কুরআন খতম", "দৈনিক আমলের তালিকা", "রমজান ডায়েরি", "আজকের আমল ও ট্র্যাকার", "দিনের হাদিস"]) {
+      await expect(main).not.toContainText(gone);
+    }
+    // The prayers appear once (the list), the plan once (the preview).
+    await expect(page.getByRole("heading", { name: /নামাজের সময়|Prayer Times/ })).toHaveCount(1);
+    await expect(page.getByTestId("plan-preview")).toHaveCount(1);
+  });
+
   test("the bottom nav does not cover the end of the Home page", async ({ page }) => {
     await mockHome(page, "13:00");
     await visit(page, "/today");

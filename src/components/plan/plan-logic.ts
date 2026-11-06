@@ -53,15 +53,23 @@ export interface DefaultItem {
   window: PlanWindow;
 }
 
-/** The suggested day plan (Figma "Day plan · Roza 12"). Titles are `plan.items.<key>`. */
+/**
+ * The suggested day plan (Figma "Day plan · Roza 12"). Titles are `plan.items.<key>`. Fajr and the day's Quran are not
+ * suggested here: the salah tracker and the Quran khatm tracker on the same page record them, so a user never
+ * records the same action twice. Their keys stay in LEGACY_DEFAULTS so items added earlier are still recognised.
+ */
 export const DAY_DEFAULTS: readonly DefaultItem[] = [
   { key: "sehri", window: "sehriToDhuhr" },
-  { key: "fajr", window: "sehriToDhuhr" },
   { key: "morningDhikr", window: "sehriToDhuhr" },
-  { key: "quran", window: "dhuhrToIftar" },
   { key: "charity", window: "dhuhrToIftar" },
   { key: "taraweeh", window: "afterIftar" },
   { key: "sleepDhikr", window: "afterIftar" },
+];
+
+/** Former suggestions, no longer offered (see DAY_DEFAULTS); items with these keys keep their window and title. */
+export const LEGACY_DEFAULTS: readonly DefaultItem[] = [
+  { key: "fajr", window: "sehriToDhuhr" },
+  { key: "quran", window: "dhuhrToIftar" },
 ];
 
 /** Tonight's practices in the last ten nights. Titles are `plan.items.<key without "night:">`. */

@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "@/i18n/use-intl";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { ChevronRightIcon } from "@/components/icons/islamic-icons";
 import { Label } from "@/components/ui/label";
 import { useGuestData, getTodayKey } from "@/hooks/use-guest-data";
 import { SignupPrompt } from "@/components/shared/signup-prompt";
@@ -68,11 +69,19 @@ export function JournalSection({ day }: { day: number }) {
 
   return (
     <>
-      <Card>
-        <CardHeader>
-          <h3 className="rp-h2 text-rp-ink">{t("journal")}</h3>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      {/* Optional reflection, collapsed by default (native details: keyboard and screen-reader friendly). */}
+      <Card className="py-0">
+        <details className="group" data-testid="journal">
+          <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 rounded-rp-lg px-6 py-4 outline-none focus-visible:ring-[3px] focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+            <span className="flex flex-col">
+              <span role="heading" aria-level={2} className="rp-h2 text-rp-ink">
+                {t("journal")}
+              </span>
+              <span className="rp-caption text-rp-muted">{t("journalOptional")}</span>
+            </span>
+            <ChevronRightIcon size={20} className="shrink-0 text-rp-muted transition-transform group-open:rotate-90 motion-reduce:transition-none" />
+          </summary>
+        <CardContent className="space-y-4 pb-6">
           <div className="space-y-2">
             <Label htmlFor="reflection" className="rp-small text-rp-ink">
               {t("reflection")}
@@ -100,6 +109,7 @@ export function JournalSection({ day }: { day: number }) {
             />
           </div>
         </CardContent>
+        </details>
       </Card>
       <SignupPrompt open={showPrompt} onClose={dismissPrompt} />
     </>
