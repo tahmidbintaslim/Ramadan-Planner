@@ -70,6 +70,20 @@ test.describe("timetable zone (browser in UTC)", () => {
     expect(sehri).toBeLessThan(6 * 60);
   });
 
+  test("the Home's Sehri/Iftar (/api/timings) equals the timetable row for the same day", async ({ request }) => {
+    test.skip(!NET, "set E2E_NETWORK=1 to call the upstream APIs");
+    const table = (await (await request.get("/api/ramadan-timetable?tz=Asia/Dhaka&lat=23.81&lng=90.41")).json()) as {
+      days: { gregorianDate: string; sehri: string; iftar: string }[];
+    };
+    for (const row of [table.days[0], table.days[11], table.days.at(-1)!]) {
+      const [dd, mm, yyyy] = row.gregorianDate.split("-");
+      const home = (await (await request.get(`/api/timings?tz=Asia/Dhaka&lat=23.81&lng=90.41&date=${yyyy}-${mm}-${dd}`)).json()) as {
+        prayerTimes: { sehri: string; iftar: string };
+      };
+      expect({ date: row.gregorianDate, ...home.prayerTimes }).toMatchObject({ date: row.gregorianDate, sehri: row.sehri, iftar: row.iftar });
+    }
+  });
+
   test("the API never pairs Dhaka's sun with the UTC clock", async ({ request }) => {
     test.skip(!NET, "set E2E_NETWORK=1 to call the upstream timetable API");
     const res = await request.get("/api/ramadan-timetable?tz=UTC");
