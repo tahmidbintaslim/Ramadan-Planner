@@ -4,9 +4,10 @@ import { SectionHeader } from "@/components/design/section-header";
 import { Link } from "@/components/shared/link";
 import { buttonVariants } from "@/components/ui/button";
 import {
-  CheckIcon,
+  ChevronRightIcon,
   DuaIcon,
   LanternIcon,
+  PlanIcon,
   QuranIcon,
   TasbihIcon,
   ZakatIcon,
@@ -117,78 +118,44 @@ export interface PlanPreviewState {
   error?: boolean;
 }
 
+/**
+ * Today's plan on the Home: one small link row (title with the same count as /plan, and the next deed still open),
+ * never the checklist itself: ticking and tracking live on /plan only.
+ */
 export function PlanPreview({ state, className }: { state: PlanPreviewState; className?: string }) {
   const t = useTranslations("home");
   const locale = useLocale();
-  const items = planDisplayOrder(state.rows).slice(0, PLAN_PREVIEW_COUNT);
+  const next = planDisplayOrder(state.rows).find((row) => !row.done);
+  const showCount = state.ready && !(state.error && state.rows.length === 0);
 
   return (
-    <section aria-labelledby="home-plan" data-testid="plan-preview" className={cn("flex flex-col gap-3", className)}>
-      <SectionHeader
-        title={
-          <span id="home-plan">
+    <section aria-labelledby="home-plan" data-testid="plan-preview" className={cn("flex flex-col gap-2", className)}>
+      <Link
+        href={PLAN_HREF}
+        aria-label={t("planAllLabel")}
+        className="flex min-h-14 items-center gap-3 rounded-rp-lg bg-rp-surface px-4 py-3 text-rp-ink shadow-rp-soft outline-none transition-colors hover:bg-rp-accent-tint/60 focus-visible:ring-[3px] focus-visible:ring-ring"
+      >
+        <span aria-hidden="true" className="flex size-10 shrink-0 items-center justify-center rounded-rp-full bg-rp-accent-tint text-rp-accent">
+          <PlanIcon size={22} />
+        </span>
+        <span className="flex min-w-0 flex-1 flex-col">
+          <h2 id="home-plan" className="rp-row font-semibold">
             {/* No count after a failed load with nothing to show: "০/০" would read as an empty plan. */}
-            {state.ready && !(state.error && state.rows.length === 0)
-              ? t("planTitle", {
-                  done: formatLocalizedNumber(state.done, locale),
-                  total: formatLocalizedNumber(state.total, locale),
-                })
+            {showCount
+              ? t("planTitle", { done: formatLocalizedNumber(state.done, locale), total: formatLocalizedNumber(state.total, locale) })
               : t("planTitleNoCount")}
+          </h2>
+          <span className="rp-small truncate text-rp-muted" data-testid="plan-preview-next">
+            {!state.ready ? " " : next ? t("planNext", { title: next.title }) : state.rows.length > 0 ? t("planAllDone") : t("planEmpty")}
           </span>
-        }
-        action={
-          <Link href={PLAN_HREF} aria-label={t("planAllLabel")}>
-            {t("planAll")}
-          </Link>
-        }
-      />
+        </span>
+        <ChevronRightIcon size={20} className="shrink-0 text-rp-muted" />
+      </Link>
       {state.error ? (
         <p role="alert" data-testid="plan-preview-error" className="rp-small rounded-rp-md bg-destructive/10 px-4 py-3 text-destructive">
-          {t("planError")}{" "}
-          <Link href={PLAN_HREF} className="inline-flex min-h-[44px] items-center font-semibold underline underline-offset-4">
-            {t("planErrorAction")}
-          </Link>
+          {t("planError")}
         </p>
       ) : null}
-      {!state.ready ? (
-        <div aria-hidden="true" className="min-h-[72px] rounded-rp-lg bg-rp-surface shadow-rp-soft" />
-      ) : items.length === 0 ? (
-        state.error ? null : (
-        <div data-testid="plan-preview-empty" className="flex flex-col items-start gap-2 rounded-rp-lg bg-rp-surface p-5 shadow-rp-soft">
-          <p className="rp-small text-rp-muted">{t("planEmpty")}</p>
-          <Link href={PLAN_HREF} className={cn(buttonVariants({ variant: "soft" }))}>
-            {t("planEmptyAction")}
-          </Link>
-        </div>
-        )
-      ) : (
-        <ul className="flex flex-col gap-3">
-          {items.map((row) => (
-            <li key={row.id}>
-              <button
-                type="button"
-                role="checkbox"
-                aria-checked={row.done}
-                disabled={state.pending.has(row.id)}
-                onClick={() => state.toggleRow(row, !row.done)}
-                data-testid={`plan-item-${row.id}`}
-                className="flex min-h-[72px] w-full items-center gap-4 rounded-rp-lg bg-rp-surface px-4 py-3 text-left text-rp-ink shadow-rp-soft outline-none focus-visible:ring-[3px] focus-visible:ring-ring disabled:opacity-60"
-              >
-                <span
-                  aria-hidden="true"
-                  className={cn(
-                    "flex size-7 shrink-0 items-center justify-center rounded-rp-full border-2",
-                    row.done ? "border-rp-done bg-rp-done text-rp-surface" : "border-rp-input",
-                  )}
-                >
-                  {row.done ? <CheckIcon size={16} /> : null}
-                </span>
-                <span className={cn("rp-row", row.done && "text-rp-muted")}>{row.title}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
     </section>
   );
 }

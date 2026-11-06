@@ -42,7 +42,7 @@ test.describe("Quran list (mobile)", () => {
     await expect(card).toContainText("যেখানে থেমেছিলেন");
     await expect(card).toContainText("আল-কাহফ");
     await expect(card).toContainText("আয়াত ১০");
-    const cont = card.getByRole("link", { name: /পড়া চালিয়ে যান/ });
+    const cont = card.getByRole("link", { name: /আজ এখান থেকে আবার শুরু করুন/ });
     await expect(cont).toHaveAttribute("href", /\/quran\/18#ayah-10$/);
     const box = await cont.boundingBox();
     expect(box!.height).toBeGreaterThanOrEqual(48);

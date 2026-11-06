@@ -108,7 +108,7 @@ describe("Last read card", () => {
     expect(card).toHaveTextContent("যেখানে থেমেছিলেন");
     expect(within(card).getByRole("heading", { name: "আল-বাকারা" })).toBeInTheDocument();
     expect(card).toHaveTextContent("আয়াত ২৫৫");
-    const link = within(card).getByRole("link", { name: /পড়া চালিয়ে যান/ });
+    const link = within(card).getByRole("link", { name: /আজ এখান থেকে আবার শুরু করুন/ });
     expect(link.getAttribute("href")).toContain("/quran/2");
     expect(link.getAttribute("href")).toContain("ayah-255");
   });
@@ -118,7 +118,7 @@ describe("Last read card", () => {
     await renderList();
     const card = await screen.findByTestId("last-read-card");
     expect(card).toHaveTextContent("আয়াত ৭");
-    expect(within(card).getByRole("link", { name: /পড়া চালিয়ে যান/ }).getAttribute("href")).toContain("ayah-7");
+    expect(within(card).getByRole("link", { name: /আজ এখান থেকে আবার শুরু করুন/ }).getAttribute("href")).toContain("ayah-7");
   });
 
   it("falls back to the surah number when its name is not loaded", async () => {
@@ -126,6 +126,6 @@ describe("Last read card", () => {
     await renderList();
     const card = await screen.findByTestId("last-read-card");
     expect(within(card).getByRole("heading", { name: "সূরা ৬৭" })).toBeInTheDocument();
-    expect(within(card).getByRole("link", { name: /পড়া চালিয়ে যান/ })).toHaveAttribute("href", "/quran/67");
+    expect(within(card).getByRole("link", { name: /আজ এখান থেকে আবার শুরু করুন/ })).toHaveAttribute("href", "/quran/67");
   });
 });

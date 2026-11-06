@@ -144,9 +144,9 @@ export function HomeOverview({
               dayLabel={pairTomorrow ? t("tomorrow") : undefined}
             />
             {cardKind ? (
-              <PhaseCard className="order-3" kind={cardKind} />
+              <PhaseCard className="order-4" kind={cardKind} />
             ) : (
-              <DailyAyahCard className="order-5" ramadanDay={ramadanDay} />
+              <DailyAyahCard className="order-4" ramadanDay={ramadanDay} />
             )}
           </>
         ) : status === "error" ? (
@@ -165,7 +165,7 @@ export function HomeOverview({
           <div
             data-testid="hero-skeleton"
             role="status"
-            className="order-1 flex min-h-[300px] items-end justify-center rounded-rp-xl bg-rp-accent-tint p-5 motion-safe:animate-pulse"
+            className="order-1 flex min-h-[240px] lg:min-h-[300px] items-end justify-center rounded-rp-xl bg-rp-accent-tint p-5 motion-safe:animate-pulse"
           >
             <span className="rp-small text-rp-muted">{t("timingsLoading")}</span>
           </div>
@@ -176,7 +176,7 @@ export function HomeOverview({
       <div className="contents lg:flex lg:flex-col lg:gap-6">
         {phaseTimings ? (
           <PrayerList
-            className="order-4"
+            className="order-3"
             timings={phaseTimings}
             timeZone={timeZone}
             reminders={reminders}
@@ -185,10 +185,10 @@ export function HomeOverview({
             initialNow={initialNow}
           />
         ) : null}
-        <PlanPreview className="order-7" state={plan} />
+        <PlanPreview className="order-5" state={plan} />
         {showSupport ? (
           <SupportCard
-            className="order-8"
+            className="order-7"
             lastTen={ramadanDay !== null && ramadanDay >= LAST_TEN_FROM_DAY}
             onDismiss={onDismissSadaqah}
           />

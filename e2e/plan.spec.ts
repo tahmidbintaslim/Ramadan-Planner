@@ -216,8 +216,8 @@ test.describe("Home plan preview matches /plan", () => {
     await mockRamadan(page, 12, dhakaToday(12));
     await visit(page, "/today");
     const preview = page.getByTestId("plan-preview");
-    await expect(preview.getByRole("heading", { level: 2 })).toHaveText("আজকের পরিকল্পনা · ০/০");
-    await expect(preview.getByTestId("plan-preview-empty")).toBeVisible();
+    await expect(preview.getByRole("heading", { level: 2 })).toHaveText("আজকের আমল · ০/০");
+    await expect(preview.getByTestId("plan-preview-next")).toHaveText("আজকের আমল বেছে নিন");
 
     await visit(page, "/plan");
     await page.getByRole("button", { name: "প্রস্তাবিত আমল যোগ করুন" }).click();
@@ -226,11 +226,11 @@ test.describe("Home plan preview matches /plan", () => {
     await expect(page.getByTestId("plan-progress").getByRole("img")).toHaveText("১/৫");
 
     await visit(page, "/today");
-    await expect(preview.getByRole("heading", { level: 2 })).toHaveText("আজকের পরিকল্পনা · ১/৫");
-    const boxes = preview.getByRole("checkbox");
-    await expect(boxes).toHaveCount(3);
-    await expect(boxes.first()).toContainText("সেহরি ও নিয়ত");
-    await expect(boxes.first()).toHaveAttribute("aria-checked", "true");
+    await expect(preview.getByRole("heading", { level: 2 })).toHaveText("আজকের আমল · ১/৫");
+    // The Home only links to the plan (the next open deed); ticking happens on /plan.
+    await expect(preview.getByRole("checkbox")).toHaveCount(0);
+    await expect(preview.getByTestId("plan-preview-next")).toHaveText("এরপর: সকালের যিকির");
+    await expect(preview.getByRole("link")).toHaveAttribute("href", "/plan");
     expect(appErrors()).toEqual([]);
   });
 });

@@ -87,15 +87,15 @@ describe("PrayerList", () => {
 
   it("without a toggle handler each bell links to /reminders", async () => {
     await renderList();
-    const bell = screen.getByRole("link", { name: "আসর রিমাইন্ডার সেট করুন" });
+    const bell = screen.getByRole("link", { name: "আসর নামাজের রিমাইন্ডার সেট করুন" });
     expect(bell).toHaveAttribute("href", "/reminders");
   });
 
   it("with a toggle handler the bell is a pressed/unpressed toggle", async () => {
     const onToggle = vi.fn();
     await renderList({ reminders: { asr: true }, onToggleReminder: onToggle });
-    const asr = screen.getByRole("button", { name: "আসর রিমাইন্ডার" });
-    const isha = screen.getByRole("button", { name: "ইশা রিমাইন্ডার" });
+    const asr = screen.getByRole("button", { name: "আসর নামাজের রিমাইন্ডার" });
+    const isha = screen.getByRole("button", { name: "ইশা নামাজের রিমাইন্ডার" });
     expect(asr).toHaveAttribute("aria-pressed", "true");
     expect(isha).toHaveAttribute("aria-pressed", "false");
     fireEvent.click(asr);

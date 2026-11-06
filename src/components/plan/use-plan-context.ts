@@ -1,3 +1,4 @@
+import { localTodayISO } from "@/lib/local-day";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import type { RamadanTimetable } from "@/lib/ramadan-timetable";
 import { paraFromText, quranStreak } from "./plan-logic";
@@ -87,7 +88,8 @@ export function useQuranProgress(): { para: number | null; streak: number } {
       para = null;
     }
     const days = new Set(daysRaw ? daysRaw.split(",") : []);
-    const todayISO = new Date().toISOString().slice(0, 10);
+    // The local day (stored location, device zone, Dhaka), not the UTC date: a Dhaka morning before 06:00 is today.
+    const todayISO = localTodayISO();
     return { para, streak: quranStreak(todayISO, (iso) => days.has(iso)) };
   }, [snapshot]);
 }
