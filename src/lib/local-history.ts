@@ -1,29 +1,26 @@
 "use client";
 
+import { localTodayISO, shiftISO } from "@/lib/local-day";
+
 const DATE_SUFFIX_RE = /_(\d{4}-\d{2}-\d{2})$/;
 
-function parseDateSuffix(key: string): Date | null {
-  const match = key.match(DATE_SUFFIX_RE);
-  if (!match) return null;
-  const date = new Date(`${match[1]}T00:00:00.000Z`);
-  return Number.isNaN(date.getTime()) ? null : date;
-}
-
-export function pruneLocalHistory(prefixWithRp: string, keepDays = 7) {
+/**
+ * Removes `${prefixWithRp}_<YYYY-MM-DD>` entries older than `keepDays` local days (today counts as one). Days are
+ * the user's local calendar days (see local-day.ts), the same dates the keys are written under.
+ */
+export function pruneLocalHistory(prefixWithRp: string, keepDays = 7, todayISO: string = localTodayISO()) {
   if (typeof window === "undefined") return;
-  const now = new Date();
-  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  const cutoff = new Date(start);
-  cutoff.setUTCDate(cutoff.getUTCDate() - (keepDays - 1));
+  const cutoffISO = shiftISO(todayISO, -(keepDays - 1));
 
   try {
     const toRemove: string[] = [];
     for (let i = 0; i < window.localStorage.length; i += 1) {
       const key = window.localStorage.key(i);
       if (!key || !key.startsWith(`${prefixWithRp}_`)) continue;
-      const date = parseDateSuffix(key);
-      if (!date) continue;
-      if (date < cutoff) toRemove.push(key);
+      const match = key.match(DATE_SUFFIX_RE);
+      // Only the family's own dated keys (rp_quran_2026-03-01, not rp_quran_last_read_v1_...).
+      if (!match || key.slice(0, -match[0].length) !== prefixWithRp) continue;
+      if (match[1] < cutoffISO) toRemove.push(key);
     }
     toRemove.forEach((key) => window.localStorage.removeItem(key));
   } catch {

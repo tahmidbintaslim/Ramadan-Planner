@@ -12,7 +12,10 @@ import {
   listReminderRulesAction,
 } from "@/actions/planner";
 import { useAuth } from "@/components/providers/auth-provider";
-import { getTodayKey, useGuestData } from "@/hooks/use-guest-data";
+import { useGuestData } from "@/hooks/use-guest-data";
+import { useLocalDayKey, useLocalTodayISO } from "@/hooks/use-local-day";
+import { GUEST_PLAN_GOALS_KEY, GUEST_PLAN_TASKS_KEY, migrateGuestPlanList } from "@/lib/guest-plan";
+import { doneForDay } from "@/components/plan/plan-logic";
 import { useGuestReminderRules } from "@/lib/guest-reminders";
 import { cn } from "@/lib/utils";
 import { formatLocalizedNumber } from "@/lib/locale-number";
@@ -44,24 +47,27 @@ export function DailyIbadahTracker({ day }: { day: number }) {
   const locale = useLocale();
   const { isGuest, loading } = useAuth();
   const [, startTransition] = useTransition();
+  const todayISO = useLocalTodayISO();
 
   const {
     data: guestData,
   } = useGuestData<ManualState>(
-    getTodayKey("daily_ibadah_tracker"),
+    useLocalDayKey("daily_ibadah_tracker"),
     DEFAULT_MANUAL_STATE,
   );
   const { data: guestGoals } = useGuestData<Array<{ isCompleted: boolean }>>(
-    getTodayKey("plan_goals"),
+    GUEST_PLAN_GOALS_KEY,
     [],
+    { migrate: () => void migrateGuestPlanList(GUEST_PLAN_GOALS_KEY) },
   );
-  const { data: guestTasks } = useGuestData<Array<{ isDone: boolean }>>(
-    getTodayKey("plan_tasks"),
+  const { data: guestTasks } = useGuestData<Array<{ isDone: boolean; dueDate: string | null }>>(
+    GUEST_PLAN_TASKS_KEY,
     [],
+    { migrate: () => void migrateGuestPlanList(GUEST_PLAN_TASKS_KEY) },
   );
   const { data: guestReminders } = useGuestReminderRules();
   const { data: guestPrayers } = useGuestData<Record<string, boolean>>(
-    getTodayKey("salah"),
+    useLocalDayKey("salah"),
     {},
   );
   const { data: guestQuran } = useGuestData<{
@@ -69,7 +75,7 @@ export function DailyIbadahTracker({ day }: { day: number }) {
     surah: string;
     ayah: string;
     pages: string;
-  }>(getTodayKey("quran"), {
+  }>(useLocalDayKey("quran"), {
     para: "",
     surah: "",
     ayah: "",
@@ -90,7 +96,7 @@ export function DailyIbadahTracker({ day }: { day: number }) {
     const loadAll = () => {
       startTransition(async () => {
         const [logRes, goalsRes, tasksRes, remindersRes] = await Promise.all([
-          getDailyLogAction(day),
+          getDailyLogAction(day, todayISO),
           listPrayerGoalsAction(),
           listPlanTasksAction(),
           listReminderRulesAction(),
@@ -137,7 +143,7 @@ export function DailyIbadahTracker({ day }: { day: number }) {
       window.removeEventListener("rp-tracker-updated", onRefresh);
       window.removeEventListener("focus", onRefresh);
     };
-  }, [day, isGuest, loading]);
+  }, [day, isGuest, loading, todayISO]);
 
   const guestPrayerCount = useMemo(
     () =>
@@ -166,7 +172,8 @@ export function DailyIbadahTracker({ day }: { day: number }) {
   const effectiveTaskStats = isGuest
     ? {
         total: guestTasks.length,
-        done: guestTasks.filter((t) => Boolean(t.isDone)).length,
+        // Persistent list: only today's ticks count (the tick day is in dueDate).
+        done: guestTasks.filter((t) => doneForDay({ isDone: Boolean(t.isDone), dueDate: t.dueDate ?? null }, todayISO)).length,
       }
     : taskStats;
   const effectiveReminderStats = isGuest

@@ -164,7 +164,9 @@
         "fallbackDayTaskEn": "Arrange iftar for one person today.",
         "dhikrChecklist": "Dhikr and good deeds checklist",
         "reflectionPlaceholder": "Write what you learned or felt today",
-        "myDuaPlaceholder": "The duas you want to make today"
+        "myDuaPlaceholder": "The duas you want to make today",
+        "saveError": "Couldn’t save, so the change was undone. Please try again.",
+        "loadError": "Couldn’t load today’s entries. Please try again later."
     },
     "salah": {
         "fajr": "Fajr",

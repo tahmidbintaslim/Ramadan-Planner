@@ -74,7 +74,8 @@ function onVisibility() {
   }
 }
 
-function subscribeClock(listener: () => void): () => void {
+/** Subscribes to the shared live clock (one 30 s interval for every subscriber, paused while hidden). */
+export function subscribeClock(listener: () => void): () => void {
   // Refresh on (re)subscribe: React re-reads the snapshot after subscribing, so a component that
   // mounts, hydrates or switches from a frozen to a live clock shows the current time at once.
   clockMs = Date.now();

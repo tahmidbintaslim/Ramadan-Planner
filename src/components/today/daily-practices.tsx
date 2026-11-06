@@ -30,7 +30,8 @@ import { getRamadanDayOrdinal } from "@/lib/ramadan-ordinal";
 import { useAuth } from "@/components/providers/auth-provider";
 import { getDailyLogAction, saveDailyLogAction } from "@/actions/planner";
 import { DAILY_TRACKER_MARKERS } from "@/lib/daily-tracker-markers";
-import { getTodayKey, useGuestData } from "@/hooks/use-guest-data";
+import { useGuestData } from "@/hooks/use-guest-data";
+import { useLocalDayKey, useLocalTodayISO } from "@/hooks/use-local-day";
 import { SectionHeader } from "@/components/design/section-header";
 import type { DailyChecklistState } from "./use-daily-checklist";
 
@@ -54,6 +55,7 @@ export function DailyPractices({
   const tQuranReader = useTranslations("quranReader");
   const locale = useLocale();
   const { isGuest, loading: authLoading } = useAuth();
+  const todayISO = useLocalTodayISO();
   const [loadedContent, setLoadedContent] = useState<{
     day: number;
     ayah_ar: string;
@@ -84,7 +86,7 @@ export function DailyPractices({
   const { updateData: updateGuestTracker } = useGuestData<{
     quranRead: boolean;
     hadithRead: boolean;
-  }>(getTodayKey("daily_ibadah_tracker"), {
+  }>(useLocalDayKey("daily_ibadah_tracker"), {
     quranRead: false,
     hadithRead: false,
   });
@@ -285,7 +287,7 @@ export function DailyPractices({
           ? DAILY_TRACKER_MARKERS.quran
           : DAILY_TRACKER_MARKERS.hadith;
 
-      const res = await getDailyLogAction(trackingDay);
+      const res = await getDailyLogAction(trackingDay, todayISO);
       if (!res.ok) return;
 
       const baseChecklist = res.data?.checklist ?? [];
@@ -293,10 +295,11 @@ export function DailyPractices({
 
       await saveDailyLogAction({
         day: trackingDay,
+        logDate: todayISO,
         checklist: [...baseChecklist, marker],
       });
     },
-    [authLoading, isGuest, trackingDay, updateGuestTracker],
+    [authLoading, isGuest, todayISO, trackingDay, updateGuestTracker],
   );
 
   useEffect(() => {

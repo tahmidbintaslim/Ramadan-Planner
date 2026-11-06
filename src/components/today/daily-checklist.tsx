@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SignupPrompt } from "@/components/shared/signup-prompt";
 import { CHECKLIST_ITEMS, useDailyChecklist, type DailyChecklistState } from "./use-daily-checklist";
+import { TrackerError } from "./tracker-error";
 
 /**
  * The daily dhikr and good-deeds checklist (a different list from today's plan on /plan). Pass `state` to share
@@ -26,7 +27,7 @@ function DailyChecklistCard({ state }: { state: DailyChecklistState }) {
   const t = useTranslations("checklist");
   const tToday = useTranslations("today");
   const locale = useLocale();
-  const { checked, toggle, isPending, showPrompt, dismissPrompt } = state;
+  const { checked, toggle, isPending, loadFailed, saveFailed, showPrompt, dismissPrompt } = state;
   const completedCount = CHECKLIST_ITEMS.filter((item) => checked[item]).length;
 
   return (
@@ -60,6 +61,7 @@ function DailyChecklistCard({ state }: { state: DailyChecklistState }) {
               </li>
             ))}
           </ul>
+          <TrackerError loadFailed={loadFailed} saveFailed={saveFailed} />
         </CardContent>
       </Card>
       <SignupPrompt open={showPrompt} onClose={dismissPrompt} />

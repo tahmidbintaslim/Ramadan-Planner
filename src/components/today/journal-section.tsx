@@ -1,60 +1,67 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "@/i18n/use-intl";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { useGuestData, getTodayKey } from "@/hooks/use-guest-data";
+import { useGuestData } from "@/hooks/use-guest-data";
+import { useLocalDayKey, useLocalTodayISO } from "@/hooks/use-local-day";
 import { SignupPrompt } from "@/components/shared/signup-prompt";
 import { useAuth } from "@/components/providers/auth-provider";
-import { getDailyLogAction, saveDailyLogAction } from "@/actions/planner";
+import { saveDailyLogAction } from "@/actions/planner";
+import { JOURNAL_MAX } from "@/actions/planner-schemas";
+import { useServerDailyLogField } from "./use-server-daily-log";
+import { TrackerError } from "./tracker-error";
 
 interface JournalData {
   reflection: string;
   myDua: string;
 }
 
+const EMPTY_JOURNAL: JournalData = { reflection: "", myDua: "" };
+const pickJournal = (log: { journal: JournalData } | null): JournalData => log?.journal ?? EMPTY_JOURNAL;
+
 export function JournalSection({ day }: { day: number }) {
   const t = useTranslations("today");
   const { isGuest, loading } = useAuth();
+  const todayISO = useLocalTodayISO();
 
   const { data: guestData, updateData, showPrompt, dismissPrompt } =
-    useGuestData<JournalData>(getTodayKey("journal"), {
-      reflection: "",
-      myDua: "",
-    });
+    useGuestData<JournalData>(useLocalDayKey("journal"), EMPTY_JOURNAL);
 
-  const [serverData, setServerData] = useState<JournalData>({
-    reflection: "",
-    myDua: "",
-  });
+  const signedIn = !loading && !isGuest;
+  const server = useServerDailyLogField(day, todayISO, signedIn, pickJournal);
+  const serverData = server.value ?? EMPTY_JOURNAL;
   const [dirty, setDirty] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
+  const latestRef = useRef(serverData);
 
   useEffect(() => {
-    if (loading || isGuest) return;
-
-    const load = async () => {
-      const res = await getDailyLogAction(day);
-      if (res.ok && res.data) {
-        setServerData(res.data.journal);
-      }
-    };
-
-    load();
-  }, [day, isGuest, loading]);
+    latestRef.current = serverData;
+  }, [serverData]);
 
   useEffect(() => {
-    if (loading || isGuest || !dirty) return;
+    if (!signedIn || !dirty || server.value === null) return;
 
+    const snapshot = serverData;
+    const payload = JSON.stringify(snapshot);
     const timeout = setTimeout(() => {
-      saveDailyLogAction({ day, journal: serverData });
-      setDirty(false);
+      saveDailyLogAction({ day, logDate: todayISO, journal: snapshot })
+        .then((res) => res.ok)
+        .catch(() => false)
+        .then((ok) => {
+          // The text stays as typed either way; a failed save shows the error and is retried on the next edit.
+          setSaveFailed(!ok);
+          if (JSON.stringify(latestRef.current) === payload) setDirty(false);
+        });
     }, 500);
 
     return () => clearTimeout(timeout);
-  }, [day, dirty, isGuest, loading, serverData]);
+  }, [day, dirty, signedIn, serverData, server.value, todayISO]);
 
   const data = isGuest ? guestData : serverData;
+  // Signed in: writing waits for the day's log (an edit before it would save over the stored entry).
+  const locked = !isGuest && server.value === null;
 
   const updateField = (field: keyof JournalData, value: string) => {
     if (isGuest) {
@@ -62,7 +69,8 @@ export function JournalSection({ day }: { day: number }) {
       return;
     }
 
-    setServerData((prev) => ({ ...prev, [field]: value }));
+    if (locked) return;
+    server.setValue((prev) => ({ ...prev, [field]: value }));
     setDirty(true);
   };
 
@@ -80,6 +88,8 @@ export function JournalSection({ day }: { day: number }) {
             <textarea
               id="reflection"
               rows={3}
+              maxLength={JOURNAL_MAX}
+              disabled={locked}
               placeholder={t("reflectionPlaceholder")}
               value={data.reflection}
               onChange={(e) => updateField("reflection", e.target.value)}
@@ -93,12 +103,15 @@ export function JournalSection({ day }: { day: number }) {
             <textarea
               id="my-dua"
               rows={3}
+              maxLength={JOURNAL_MAX}
+              disabled={locked}
               placeholder={t("myDuaPlaceholder")}
               value={data.myDua}
               onChange={(e) => updateField("myDua", e.target.value)}
               className="rp-body flex min-h-24 w-full resize-none rounded-rp-md border border-rp-input bg-rp-surface px-4 py-3 text-rp-ink placeholder:text-rp-muted focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
             />
           </div>
+          <TrackerError loadFailed={server.loadFailed} saveFailed={saveFailed} />
         </CardContent>
       </Card>
       <SignupPrompt open={showPrompt} onClose={dismissPrompt} />

@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState } from "react";
 import { useTranslations } from "@/i18n/use-intl";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { useGuestData, getTodayKey } from "@/hooks/use-guest-data";
+import { useGuestData } from "@/hooks/use-guest-data";
+import { useLocalDayKey, useLocalTodayISO } from "@/hooks/use-local-day";
 import { SignupPrompt } from "@/components/shared/signup-prompt";
 import { useAuth } from "@/components/providers/auth-provider";
-import { getDailyLogAction, saveDailyLogAction } from "@/actions/planner";
+import { saveDailyLogAction } from "@/actions/planner";
+import { useServerDailyLogField } from "./use-server-daily-log";
+import { TrackerError } from "./tracker-error";
 
 const PRAYERS = [
   "fajr",
@@ -21,33 +24,29 @@ const PRAYERS = [
 
 type PrayerName = (typeof PRAYERS)[number];
 
+const pickPrayers = (log: { prayers: Record<string, boolean> } | null) => log?.prayers ?? {};
+
 export function SalahTracker({ day }: { day: number }) {
   const t = useTranslations("salah");
   const tToday = useTranslations("today");
   const { isGuest, loading } = useAuth();
-  const [isPending, startTransition] = useTransition();
+  const todayISO = useLocalTodayISO();
 
   const {
     data: guestCompleted,
     updateData: setGuestCompleted,
     showPrompt,
     dismissPrompt,
-  } = useGuestData<Record<string, boolean>>(getTodayKey("salah"), {});
+  } = useGuestData<Record<string, boolean>>(useLocalDayKey("salah"), {});
 
-  const [serverCompleted, setServerCompleted] = useState<Record<string, boolean>>({});
+  const signedIn = !loading && !isGuest;
+  const server = useServerDailyLogField(day, todayISO, signedIn, pickPrayers);
+  const [saving, setSaving] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
 
-  useEffect(() => {
-    if (loading || isGuest) return;
-
-    startTransition(async () => {
-      const res = await getDailyLogAction(day);
-      if (res.ok && res.data) {
-        setServerCompleted(res.data.prayers);
-      }
-    });
-  }, [day, isGuest, loading]);
-
-  const completed = isGuest ? guestCompleted : serverCompleted;
+  const completed = isGuest ? guestCompleted : (server.value ?? {});
+  // Signed in: locked until the day's log has loaded, and while a save is in flight (each save sends the whole set).
+  const locked = !isGuest && (server.value === null || saving);
 
   const togglePrayer = (prayer: PrayerName) => {
     if (isGuest) {
@@ -58,12 +57,26 @@ export function SalahTracker({ day }: { day: number }) {
       return;
     }
 
-    const next = { ...serverCompleted, [prayer]: !serverCompleted[prayer] };
-    setServerCompleted(next);
-
-    startTransition(async () => {
-      await saveDailyLogAction({ day, prayers: next });
-    });
+    if (locked || server.value === null) return;
+    const before = server.value;
+    const next = { ...before, [prayer]: !before[prayer] };
+    server.setValue(() => next);
+    setSaving(true);
+    const rollback = () => {
+      server.setValue(() => before);
+      setSaveFailed(true);
+    };
+    saveDailyLogAction({ day, logDate: todayISO, prayers: next })
+      .then((res) => {
+        if (res.ok) {
+          server.setValue(() => res.data.prayers);
+          setSaveFailed(false);
+        } else {
+          rollback();
+        }
+      })
+      .catch(rollback)
+      .finally(() => setSaving(false));
   };
 
   return (
@@ -82,7 +95,7 @@ export function SalahTracker({ day }: { day: number }) {
                   type="button"
                   aria-pressed={Boolean(isDone)}
                   onClick={() => togglePrayer(prayer)}
-                  disabled={isPending}
+                  disabled={locked}
                   className={cn(
                     "flex min-h-[88px] flex-col items-center justify-center gap-1.5 rounded-rp-md border p-2 transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring",
                     isDone
@@ -119,6 +132,7 @@ export function SalahTracker({ day }: { day: number }) {
               );
             })}
           </div>
+          <TrackerError loadFailed={server.loadFailed} saveFailed={saveFailed} />
         </CardContent>
       </Card>
       <SignupPrompt open={showPrompt} onClose={dismissPrompt} />
