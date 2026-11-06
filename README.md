@@ -1,6 +1,6 @@
 # Ramadan Planner
 
-A Bengali-first web app for planning and tracking Ramadan: prayer, sehri and iftar times for your location, a daily ibadah tracker, a Quran reader and reminders. English is the second language.
+A free, Bengali-first Ramadan companion: prayer, sehri and iftar times for your district, a daily amal planner, the Quran, sourced duas and reminders. English is the second language.
 
 [![CI](https://github.com/tahmidbintaslim/Ramadan-Planner/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/tahmidbintaslim/Ramadan-Planner/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/github/license/tahmidbintaslim/Ramadan-Planner)](LICENSE)
@@ -24,19 +24,27 @@ Recorded on 2026-10-26 with Playwright against the live demo, as a guest (no sig
 
 ## Features
 
-- Prayer, sehri and iftar times for your location from the AlAdhan API (Karachi method, Hanafi Asr), with the Hijri date and per-country Hijri offsets. IslamicAPI is used first when a key is set.
-- Ramadan status banner with a countdown, and a 30-day sehri and iftar timetable. Outside Ramadan it shows the next one.
-- Today tracker: the five daily prayers plus Taraweeh and Tahajjud, Quran progress, a daily checklist, a day task, a journal and "My Dua".
-- Goals and a pre-Ramadan plan.
-- Quran reader: 114 surahs with Arabic, Bengali and English text and recitation audio. It reads from the database and falls back to [quranapi.pages.dev](https://quranapi.pages.dev) when the database is empty or unreachable.
-- Hadith browser (from the database, seeded from hadithapi.com).
-- Tasbih counter and zakat calculator.
-- Reminder rules, delivered as a private ICS feed, through Google Calendar sync (OAuth tokens encrypted with AES-256-GCM), or as web push. Push needs the scheduler described in [Push reminders](#push-reminders).
-- Admin announcements.
-- Light, dark and system themes, and a font size control.
+What this branch ships (the live demo may lag behind it; see [Status](#status)):
 
-Not built yet: Islamic books, a duas collection and a quiz (their pages say "coming soon"), plus the Laylatul Qadr mode and sleep dhikr checklist in [docs/PRODUCT_SPEC.md](docs/PRODUCT_SPEC.md).
+- **আজ (Today):** the next prayer and its countdown, Sehri and Iftar, the five prayer times, one sourced card for the moment (the sehri niyyah, the iftar dua, or the day's ayah) and a link to today's amal. Times come from the AlAdhan API (Karachi method, Hanafi Asr) for the district chosen at first run; IslamicAPI is used first when a key is set. Every time follows the 12-hour or 24-hour setting.
+- **সময়সূচি (Sehri & Iftar Timetable):** the 30-day timetable for the stored district, or Dhaka (Asia/Dhaka) when none is stored; print and share. Outside Ramadan it shows the next one.
+- **আমল (Amal):** today's checklist by time of day, the salah tracker (five prayers), Quran khatm progress, your own goals and an optional Ramadan journal. In the last ten nights it switches to the night view with the odd nights and the Laylatul Qadr dua.
+- **কুরআন (Quran):** 114 surahs with Arabic (Amiri Quran), Bengali and English text and recitation audio, with "pick up from here". It reads from the database and falls back to [quranapi.pages.dev](https://quranapi.pages.dev).
+- **দোয়া ও যিকির (Duas & Adhkar):** the sehri niyyah, the iftar dua and the Laylatul Qadr dua with Arabic, transliteration, meaning and source.
+- Digital tasbih, the zakat calculator (you enter the nisab at today's gold or silver price; the app assumes none), prayer and Sehri/Iftar reminders (private ICS feed, Google Calendar sync, web push), Sadaqah & Support, and admin announcements.
+- Bengali first, English second; light, night and auto themes; text size ("লেখা ও থিম").
 
+Hidden until they work (`src/config/features.ts`; reachable only by URL, as a "coming soon" page, noindex): Hadith, Islamic Books, Islamic Quiz.
+
+Limitations:
+
+- Your progress is saved on this device for guests (or in your account when signed in). Times and Quran pages you have already opened keep working offline; anything new needs a connection.
+- Announcements have no place on the screens yet (the old dashboard that showed them is retired).
+- The niyyah and iftar dua Arabic lines are pending scholar review (marked in `src/lib/duas.ts`).
+
+### Credits
+
+Icons: [Hugeicons](https://hugeicons.com) (the free Islamic icon set and the MIT-licensed free stroke-rounded icons, hand-ported in `src/components/icons/islamic-icons.tsx`). Fonts: Tiro Bangla, Noto Sans/Serif Bengali, Noto Sans, Noto Serif, Noto Serif Display, Noto Naskh Arabic and Amiri Quran (SIL Open Font License), self-hosted via Fontsource.
 ## Tech stack
 
 | Layer | What it uses |
