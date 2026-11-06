@@ -1,324 +1,106 @@
-import { useEffect, useId, useRef, useState, useTransition, type KeyboardEvent } from "react";
+import { useState } from "react";
 import { useRouter } from "@tanstack/react-router";
-import { useLocale, useTranslations } from "@/i18n/use-intl";
-import { switchLocaleAction } from "@/actions/locale";
+import { ChevronLeft } from "lucide-react";
+import { useTranslations } from "@/i18n/use-intl";
 import { Button } from "@/components/ui/button";
-import { Chip } from "@/components/ui/chip";
-import { GirihPattern } from "@/components/design/girih-pattern";
-import { MihrabArch } from "@/components/design/mihrab-arch";
-import { CrescentIcon, PinIcon } from "@/components/icons/islamic-icons";
+import { Link } from "@/components/shared/link";
 import { TextThemeButton } from "@/components/shared/accessibility-sidebar";
-import {
-  POPULAR_DISTRICT_IDS,
-  districtById,
-  districtName,
-  findDistrict,
-  matchDistricts,
-  type District,
-} from "@/lib/districts";
-import {
-  defaultLocation,
-  locationFromCoords,
-  locationFromDistrict,
-  markOnboardingDone,
-  readStoredLocation,
-  writeStoredLocation,
-  type StoredLocation,
-} from "@/lib/user-location";
-import { deviceTimeZone } from "@/components/today/use-home-timings";
-import { cn } from "@/lib/utils";
+import { LanguageSegmented } from "@/components/layout/shell-actions";
+import { LUCIDE_STROKE } from "@/components/layout/nav-items";
+import { PrayerHero } from "@/components/prayer/prayer-hero";
+import { useLiveTimes } from "@/components/today/use-live-times";
+import { defaultLocation, markOnboardingDone, writeStoredLocation, type StoredLocation } from "@/lib/user-location";
+import { LocationPickerFields, useLocationPicker } from "./location-picker";
 
-type GeoStatus = "idle" | "locating" | "found" | "abroad" | "denied" | "unavailable";
-/** none: a district is missing; noMatch: nothing by that name; ambiguous: several match, pick one. */
-type InputError = "none" | "noMatch" | "ambiguous" | null;
+type Step = "language" | "location";
 
-/** Why a typed name cannot be used as it is. */
-function inputErrorFor(query: string): Exclude<InputError, null> {
-  if (!query.trim()) return "none";
-  return matchDistricts(query, 2).length > 1 ? "ambiguous" : "noMatch";
-}
+const backClass =
+  "-ml-3 flex size-11 items-center justify-center rounded-rp-full text-rp-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rp-focus";
 
 /**
- * First-run onboarding (no sign-up): a welcome sky, then the district. The choice is stored on this device only
- * (see `@/lib/user-location`) and the Home uses it for its timings. Also reached from the Home's location pill
- * to change the district.
+ * First-run onboarding (v4 welcome steps 3 and 4; no sign-up): choose the language (with a live preview of the
+ * next-prayer card), then the district. The choice is stored on this device only (see `@/lib/user-location`) and
+ * Today uses it for its times. Each step: a 44 nav bar (back, Text & Theme), a Large Title, the content, and the
+ * 56 primary action in the lower part of the screen.
  */
 export function WelcomeScreen() {
   const t = useTranslations("onboarding");
   const tCommon = useTranslations("common");
-  const locale = useLocale();
   const router = useRouter();
-  const [isSwitching, startSwitch] = useTransition();
-
-  const [choice, setChoice] = useState<StoredLocation | null>(null);
-  const [query, setQuery] = useState("");
-  const [open, setOpen] = useState(false);
-  const [active, setActive] = useState(-1);
-  const [geo, setGeo] = useState<GeoStatus>("idle");
-  const [error, setError] = useState<InputError>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const listId = useId();
-  const statusId = useId();
-  const errorId = useId();
-
-  const nameOf = (d: District) => districtName(d, locale);
-
-  // A returning visitor (changing the district) sees the current choice; read after mount (localStorage).
-  useEffect(() => {
-    const stored = readStoredLocation();
-    if (!stored || stored.kind === "default") return;
-    const d = districtById(stored.districtId);
-    setChoice(stored);
-    if (d) setQuery(districtName(d, locale));
-    // Only on mount: later locale switches keep what the visitor typed.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const suggestions = open ? matchDistricts(query) : [];
-  const chosenId = choice?.districtId;
-
-  function pick(d: District) {
-    setChoice(locationFromDistrict(d));
-    setQuery(nameOf(d));
-    setOpen(false);
-    setActive(-1);
-    setError(null);
-    setGeo("idle");
-  }
-
-  function onType(value: string) {
-    setQuery(value);
-    setOpen(true);
-    setActive(-1);
-    setError(null);
-    setGeo("idle");
-    // Typing replaces an earlier pick unless the text still names it.
-    if (choice && !(choice.districtId && findDistrict(value)?.id === choice.districtId)) setChoice(null);
-  }
-
-  function onKeyDown(e: KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "ArrowDown" && suggestions.length) {
-      e.preventDefault();
-      setActive((i) => (i + 1) % suggestions.length);
-    } else if (e.key === "ArrowUp" && suggestions.length) {
-      e.preventDefault();
-      setActive((i) => (i <= 0 ? suggestions.length - 1 : i - 1));
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-      const highlighted = suggestions[active];
-      if (highlighted) {
-        pick(highlighted);
-        return;
-      }
-      // Enter on a district already chosen (or a full name) starts.
-      if (choice || findDistrict(query)) {
-        start();
-        return;
-      }
-      if (query.trim()) setError(inputErrorFor(query));
-    } else if (e.key === "Escape") {
-      setOpen(false);
-      setActive(-1);
-    }
-  }
-
-  function locate() {
-    setError(null);
-    setOpen(false);
-    if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
-      setGeo("unavailable");
-      return;
-    }
-    setGeo("locating");
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        // Rounded to 2 decimals before it is kept anywhere.
-        const loc = locationFromCoords(pos.coords.latitude, pos.coords.longitude, deviceTimeZone());
-        setChoice(loc);
-        const d = districtById(loc.districtId);
-        setQuery(d ? nameOf(d) : "");
-        setGeo(d ? "found" : "abroad");
-      },
-      (err) => setGeo(err.code === err.PERMISSION_DENIED ? "denied" : "unavailable"),
-      { enableHighAccuracy: false, timeout: 10_000, maximumAge: 10 * 60_000 },
-    );
-  }
+  const [step, setStep] = useState<Step>("language");
+  const { phaseTimings, timeZone } = useLiveTimes();
 
   function finish(loc: StoredLocation) {
     writeStoredLocation(loc);
     markOnboardingDone();
     void router.navigate({ to: "/today" });
   }
+  const picker = useLocationPicker({ onSubmit: finish });
 
-  function start() {
-    const loc = choice ?? (findDistrict(query) ? locationFromDistrict(findDistrict(query)!) : null);
-    if (!loc) {
-      setError(inputErrorFor(query));
-      // An ambiguous name opens the list to pick from.
-      setOpen(true);
-      inputRef.current?.focus();
-      return;
-    }
-    finish(loc);
+  function confirm() {
+    const loc = picker.resolve();
+    if (loc) finish(loc);
   }
-
-  const geoText: Record<Exclude<GeoStatus, "idle">, string> = {
-    locating: t("geoLocating"),
-    found: t("geoFound", { district: choice?.districtId ? nameOf(districtById(choice.districtId)!) : "" }),
-    abroad: t("geoAbroad"),
-    denied: t("geoDenied"),
-    unavailable: t("geoUnavailable"),
-  };
 
   return (
     <div className="min-h-dvh bg-rp-page">
-      <main id="main-content" className="mx-auto flex w-full max-w-[480px] flex-col pb-10">
-        <section
-          aria-labelledby="welcome-greeting"
-          className="relative isolate flex h-[360px] flex-col items-center overflow-hidden rounded-b-[40px] px-6 pt-[68px] text-center text-white sm:mt-6 sm:rounded-rp-xl"
-          style={{ backgroundImage: "var(--rp-hero-sehri)" }}
-        >
-          <GirihPattern opacity={0.07} className="-z-10 text-white" />
-          <MihrabArch className="pointer-events-none absolute bottom-0 left-1/2 -z-10 h-[240px] w-[220px] -translate-x-1/2 text-white" />
-          <TextThemeButton tone="sky" className="absolute top-3 right-3" />
-          <p id="welcome-greeting" className="font-display text-[34px] leading-[46px]">
-            {t("greeting")}
-          </p>
-          <p className="rp-small mt-1 text-white/85">{tCommon("appName")}</p>
-          <CrescentIcon size={72} className="mt-12 text-rp-gold" />
-        </section>
+      <main id="main-content" className="mx-auto flex min-h-dvh w-full max-w-[560px] flex-col px-4 medium:px-6">
+        <div className="flex h-11 items-center justify-between">
+          {step === "language" ? (
+            <Link href="/" aria-label={tCommon("back")} className={backClass}>
+              <ChevronLeft size={24} strokeWidth={LUCIDE_STROKE} aria-hidden />
+            </Link>
+          ) : (
+            <button type="button" onClick={() => setStep("language")} aria-label={tCommon("back")} className={backClass}>
+              <ChevronLeft size={24} strokeWidth={LUCIDE_STROKE} aria-hidden />
+            </button>
+          )}
+          <TextThemeButton className="-mr-2" />
+        </div>
 
-        <div className="flex flex-col gap-4 px-4 pt-6">
-          <div className="space-y-2">
-            <h1 className="rp-h1 text-rp-ink">{t("title")}</h1>
-            <p className="rp-body text-rp-muted">{t("subtitle")}</p>
-          </div>
-
-          <div className="relative">
-            <label htmlFor="district-input" className="sr-only">
-              {t("districtLabel")}
-            </label>
-            <div
-              className={cn(
-                "flex h-14 items-center gap-2 rounded-rp-md border bg-rp-surface pl-4 pr-1 shadow-rp-soft focus-within:ring-[3px] focus-within:ring-ring/50",
-                error ? "border-destructive" : "border-rp-input",
-              )}
-            >
-              <PinIcon size={22} className="shrink-0 text-rp-accent" />
-              <input
-                ref={inputRef}
-                id="district-input"
-                type="text"
-                role="combobox"
-                aria-expanded={suggestions.length > 0}
-                aria-controls={listId}
-                aria-autocomplete="list"
-                aria-activedescendant={active >= 0 ? `${listId}-${active}` : undefined}
-                aria-invalid={error ? true : undefined}
-                aria-describedby={[errorId, geo !== "idle" ? statusId : ""].filter(Boolean).join(" ") || undefined}
-                autoComplete="off"
-                enterKeyHint="done"
-                placeholder={t("districtPlaceholder")}
-                value={query}
-                onChange={(e) => onType(e.target.value)}
-                onKeyDown={onKeyDown}
-                onFocus={() => query && setOpen(true)}
-                onBlur={() => setTimeout(() => setOpen(false), 120)}
-                className="rp-row h-full min-w-0 flex-1 bg-transparent text-rp-ink outline-none placeholder:font-normal placeholder:text-rp-muted"
-              />
-              <Button
-                type="button"
-                variant="quiet"
-                size="sm"
-                onClick={locate}
-                disabled={geo === "locating"}
-                className="h-12 shrink-0 px-3 text-[14px]"
-              >
-                {t("useLocation")}
+        {step === "language" ? (
+          <>
+            <div className="flex flex-col gap-2 pt-2 pb-6">
+              <h1 className="rp-large-title text-rp-ink">{t("languageTitle")}</h1>
+              <p className="rp-body text-rp-muted">{t("languageSubtitle")}</p>
+            </div>
+            <LanguageSegmented className="w-full" />
+            {phaseTimings ? (
+              <section aria-labelledby="welcome-preview" className="mt-8 flex flex-col gap-2">
+                <h2 id="welcome-preview" className="rp-headline text-rp-ink">
+                  {t("preview")}
+                </h2>
+                <PrayerHero timings={phaseTimings} timeZone={timeZone} />
+              </section>
+            ) : null}
+            <div className="mt-auto pt-8 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+              <Button size="lg" className="w-full" onClick={() => setStep("location")}>
+                {t("continue")}
               </Button>
             </div>
-            <ul
-              id={listId}
-              role="listbox"
-              aria-label={t("suggestions")}
-              className={cn(
-                "absolute inset-x-0 top-[60px] z-20 overflow-hidden rounded-rp-md border border-rp-rule bg-rp-surface py-1 shadow-rp-soft",
-                suggestions.length === 0 && "hidden",
-              )}
-            >
-              {suggestions.map((d, i) => (
-                <li
-                  key={d.id}
-                  id={`${listId}-${i}`}
-                  role="option"
-                  aria-selected={i === active}
-                  // mousedown (not click) so the input's blur does not close the list first.
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    pick(d);
-                  }}
-                  className={cn(
-                    "rp-row flex min-h-12 cursor-pointer items-center justify-between gap-3 px-4 text-rp-ink",
-                    i === active ? "bg-rp-accent-tint" : "hover:bg-rp-accent-tint/60",
-                  )}
-                >
-                  <span>{nameOf(d)}</span>
-                  <span className="rp-caption text-rp-muted">{locale.startsWith("bn") ? d.en : d.bn}</span>
-                </li>
-              ))}
-            </ul>
-            {/* Always in the DOM so screen readers announce the message when it appears. */}
-            <p id={errorId} role="alert" className={cn("rp-small text-destructive", error ? "mt-2" : "sr-only")}>
-              {error === "none" ? t("chooseFirst") : error === "noMatch" ? t("noMatch") : error === "ambiguous" ? t("ambiguous") : ""}
-            </p>
-            <p id={statusId} role="status" aria-live="polite" className={cn("rp-small mt-2 text-rp-muted", geo === "idle" && "sr-only")}>
-              {geo === "idle" ? "" : geoText[geo]}
-            </p>
-          </div>
-
-          <div role="group" aria-label={t("popular")} className="flex flex-wrap gap-2">
-            {POPULAR_DISTRICT_IDS.map((id) => {
-              const d = districtById(id)!;
-              return (
-                <Chip key={id} selected={chosenId === id && choice?.kind === "district"} onClick={() => pick(d)}>
-                  {nameOf(d)}
-                </Chip>
-              );
-            })}
-          </div>
-
-          <div className="mt-2 flex flex-col gap-2">
-            <Button size="lg" className="w-full" onClick={start}>
-              {t("start")}
-            </Button>
-            <Button
-              variant="quiet"
-              size="lg"
-              className="h-auto min-h-[52px] w-full whitespace-normal py-2"
-              onClick={() => finish(defaultLocation())}
-            >
-              {t("later")}
-            </Button>
-            <p className="rp-caption text-center text-rp-muted">{t("privacyNote")}</p>
-          </div>
-
-          <div className="flex items-center justify-center">
-            <Button
-              variant="quiet"
-              className="px-4"
-              lang={locale.startsWith("bn") ? "en" : "bn"}
-              disabled={isSwitching}
-              onClick={() =>
-                startSwitch(async () => {
-                  await switchLocaleAction();
-                  await router.invalidate();
-                })
-              }
-            >
-              {t("switchLanguage")}
-            </Button>
-          </div>
-        </div>
+          </>
+        ) : (
+          <>
+            <div className="flex flex-col gap-2 pt-2 pb-6">
+              <h1 className="rp-large-title text-rp-ink">{t("title")}</h1>
+              <p className="rp-body text-rp-muted">{t("subtitle")}</p>
+            </div>
+            <LocationPickerFields picker={picker} />
+            <div className="sticky bottom-0 mt-auto flex flex-col gap-2 bg-rp-page pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+              <Button size="lg" className="w-full" onClick={confirm}>
+                {t("start")}
+              </Button>
+              <Button
+                variant="quiet"
+                className="h-auto min-h-11 w-full whitespace-normal py-2"
+                onClick={() => finish(defaultLocation())}
+              >
+                {t("later")}
+              </Button>
+              <p className="rp-caption text-center text-rp-muted">{t("privacyNote")}</p>
+            </div>
+          </>
+        )}
       </main>
     </div>
   );

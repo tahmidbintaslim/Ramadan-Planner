@@ -4,7 +4,6 @@ import { MihrabArch } from "@/components/design/mihrab-arch";
 import { CrescentIcon, PinIcon } from "@/components/icons/islamic-icons";
 import { DuaCard } from "@/components/duas/dua-card";
 import { duaById } from "@/lib/duas";
-import { HERO_SCRIM_RGB, HERO_RING_SCRIM_ALPHA, HERO_SOURCE_PILL_ALPHA } from "@/components/prayer/prayer-hero";
 import { ClockTime } from "@/components/prayer/clock-time";
 import { formatPrayerClock, prayerClockParts } from "@/components/prayer/use-prayer-phase";
 import { formatClock, formatRowDate, digits, type Locale } from "@/components/timetable/timetable-logic";
@@ -16,6 +15,10 @@ import { nightProgress, type NightTimes, type OddNightRow } from "./plan-logic";
 // and cannot show a custom label/time, so the hero here is a night card built from the same parts: the night sky
 // gradient, girih lattice, mihrab arch, crescent and stars, the 196px ring and the source pill.
 
+// Ink backdrops under the night sky's text (white stays >= 4.5:1 on every stop of --rp-hero-night).
+const HERO_SCRIM_RGB = [8, 26, 30] as const;
+const HERO_RING_SCRIM_ALPHA = 0.35;
+const HERO_SOURCE_PILL_ALPHA = 0.5;
 const RING_SIZE = 196;
 const RING_STROKE = 6;
 const RING_R = (RING_SIZE - RING_STROKE) / 2;

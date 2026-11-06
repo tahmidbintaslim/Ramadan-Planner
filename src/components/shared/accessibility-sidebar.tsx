@@ -11,8 +11,8 @@ import {
   MinusIcon,
   PlusIcon,
   ResetIcon,
-  TextSizeIcon,
 } from "@/components/icons/islamic-icons";
+import { ALargeSmall } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -25,10 +25,9 @@ import {
 import { cn } from "@/lib/utils";
 import { formatLocalizedNumber } from "@/lib/locale-number";
 
-// Text size and theme ("লেখা ও থিম", incl. Auto). Inside the app shell they live in the More sheet (mobile) and
-// behind a side-nav footer button (desktop); the landing header, onboarding and the auth pages open the same
-// controls from a labelled অ/Aa button (TextThemeButton). There is no floating button. The stored font size is
-// applied on every page by <AccessibilitySidebar /> in the root.
+// Text size and theme ("লেখা ও থিম", incl. Auto). Every header (app header, regular toolbar, landing, onboarding,
+// auth) opens them from the a-large-small control (TextThemeButton); the More sheet repeats them. There is no
+// floating button. The stored font size is applied on every page by <AccessibilitySidebar /> in the root.
 
 export const FONT_SIZE_KEY = "ramadan-planner-font-size";
 const FONT_SIZE_EVENT = "rp:font-size";
@@ -158,7 +157,7 @@ export function AccessibilityControls({ className }: { className?: string }) {
 
       <div className="space-y-2">
         <p className="text-xs font-medium text-muted-foreground">{t("theme")}</p>
-        <div className="grid grid-cols-4 gap-1.5">
+        <div className="grid grid-cols-2 gap-2">
           {themeOptions.map((option) => (
             <button
               key={option.value}
@@ -174,7 +173,7 @@ export function AccessibilityControls({ className }: { className?: string }) {
               aria-label={option.label}
             >
               <option.icon size={18} />
-              <span className="text-[10px] leading-tight">{option.label}</span>
+              <span className="rp-caption">{option.label}</span>
             </button>
           ))}
         </div>
@@ -210,10 +209,10 @@ function FontSizeSync() {
 }
 
 /**
- * The labelled "লেখা ও থিম" button (অ/Aa icon) that opens the controls in a dialog: the landing header, onboarding
- * and the auth pages. `compact` hides the label visually below 640px (it stays the accessible name).
+ * The "লেখা ও থিম" / "Text & Theme" control (v4): lucide a-large-small 24 optically centred in a 44×44 hit box,
+ * named by aria-label. Opens the controls in a dialog: app header and toolbar, landing header, onboarding, auth.
  */
-export function TextThemeButton({ className, tone = "page", compact = false }: { className?: string; tone?: "page" | "sky"; compact?: boolean }) {
+export function TextThemeButton({ className, tone = "page" }: { className?: string; tone?: "page" | "live" }) {
   const t = useTranslations("accessibility");
   return (
     <AccessibilityDialog
@@ -221,16 +220,17 @@ export function TextThemeButton({ className, tone = "page", compact = false }: {
         <button
           type="button"
           data-testid="text-theme-button"
+          aria-label={t("title")}
+          title={t("title")}
           className={cn(
-            "rp-small inline-flex min-h-12 items-center gap-2 rounded-rp-full px-3.5 font-semibold transition-colors outline-none focus-visible:ring-[3px]",
-            tone === "sky"
-              ? "bg-white/14 text-white hover:bg-white/22 focus-visible:ring-white/70"
-              : "text-rp-ink hover:bg-rp-accent-tint/60 focus-visible:ring-ring",
+            "inline-flex size-11 shrink-0 items-center justify-center rounded-rp-full transition-colors outline-none focus-visible:ring-2",
+            tone === "live"
+              ? "text-rp-on-live hover:bg-white/15 focus-visible:ring-white"
+              : "text-rp-ink hover:bg-rp-accent-tint focus-visible:ring-rp-focus",
             className,
           )}
         >
-          <TextSizeIcon size={22} />
-          <span className={compact ? "sr-only sm:not-sr-only" : undefined}>{t("title")}</span>
+          <ALargeSmall size={24} strokeWidth={1.75} aria-hidden />
         </button>
       }
     />

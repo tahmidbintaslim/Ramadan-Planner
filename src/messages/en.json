@@ -31,7 +31,10 @@
         "pageNotFoundDesc": "We couldn't find the page you're looking for.",
         "greeting": "Assalamu alaikum",
         "fastDay": "Fast {day}",
-        "skipToContent": "Skip to content"
+        "skipToContent": "Skip to content",
+        "cancelShort": "Cancel",
+        "done": "Done",
+        "chooseLocation": "Choose district"
     },
     "nav": {
         "home": "Home",
@@ -67,7 +70,12 @@
         "moreDescription": "Other sections, language and sign-in",
         "mainNav": "Main navigation",
         "support": "Sadaqah & Support",
-        "quickNav": "Quick navigation"
+        "quickNav": "Quick navigation",
+        "moreTools": "More tools",
+        "remindersShort": "Reminders",
+        "duasShort": "Duas",
+        "zakatShort": "Zakat",
+        "tasbihShort": "Tasbih"
     },
     "auth": {
         "login": "Login",
@@ -435,10 +443,10 @@
         "forbidden": "You do not have admin access."
     },
     "landing": {
-        "heroTitle": "From sehri to iftar, a calm Ramadan companion",
-        "heroSubtitle": "Sehri, iftar and prayer times for your district, a daily amal planner, the Quran and reminders. In Bengali, in one place. Completely free, no ads, no sign-up.",
+        "heroTitle": "Your trusted companion for every day of Ramadan",
+        "heroSubtitle": "Sehri, iftar and the five daily prayers — timed for your district.",
         "heroIllustrationLabel": "Ramadan themed illustration",
-        "getStarted": "Start Free",
+        "getStarted": "Get started",
         "exploreApp": "See the live demo",
         "learnMore": "View Features",
         "freeForever": "Free forever",
@@ -560,7 +568,7 @@
         "or": "or",
         "enterCity": "Enter city name",
         "todayTimetable": "Today's timetable",
-        "heroNote": "Works without an account; sign in later to keep it on all your devices.",
+        "heroNote": "Works without an account. No ads.",
         "sampleTitle": "Today's times · Dhaka",
         "sampleBadge": "Sample",
         "sampleSehri": "Sehri ends",
@@ -595,7 +603,12 @@
         "footerTimetable": "Timetable",
         "footerQuran": "Quran",
         "footerSupport": "Sadaqah & contribute",
-        "skipToContent": "Skip to content"
+        "skipToContent": "Skip to content",
+        "heroNoteShort": "Works without an account · No ads",
+        "chooseDistrict": "Choose district",
+        "todayTitle": "Today in {place}",
+        "timesLoading": "Fetching today's times…",
+        "timesUnavailable": "Couldn't fetch the times right now. Get started to see your district's times."
     },
     "tasbih": {
         "currentCount": "Current Count",
@@ -759,14 +772,17 @@
         "location": "Location: {district}",
         "source": "Source: {source}",
         "sampleSource": "Sample times · Source: {source}",
-        "todayPrayers": "Prayer Times",
+        "todayPrayers": "Today's prayer times",
         "reminders": "Reminders",
         "reminderToggle": "{name} prayer reminder",
         "reminderManage": "Set a {name} prayer reminder",
         "progress": "Time progress",
         "sehri": "Sehri",
         "progressText": "{percent}% of the time until {target} has passed",
-        "locationChange": "Location: {district} · change district"
+        "locationChange": "Location: {district} · change district",
+        "seeAll": "See all",
+        "nextPrayerEyebrow": "Next prayer",
+        "upNext": "Up next"
     },
     "timetablePage": {
         "title": "Sehri & Iftar Timetable",
@@ -812,7 +828,7 @@
         "timingsLoading": "Loading prayer times…",
         "timingsError": "Couldn't load prayer times. Check your connection and try again.",
         "retry": "Try again",
-        "sourceAladhan": "AlAdhan · Karachi method, Hanafi Asr",
+        "sourceAladhan": "AlAdhan · Karachi · Hanafi Asr",
         "sourceIslamicApi": "IslamicAPI",
         "sourceUnverified": "pending verification",
         "hijri": "{day} {month} {year}",
@@ -989,16 +1005,16 @@
     "onboarding": {
         "metaTitle": "Get started",
         "greeting": "Ramadan Mubarak",
-        "title": "Choose Your District",
-        "subtitle": "No account needed. Your choice stays on this phone only.",
-        "districtLabel": "District",
-        "districtPlaceholder": "Type your district",
+        "title": "Your location",
+        "subtitle": "Pick your district for accurate sehri and iftar times.",
+        "districtLabel": "Search district",
+        "districtPlaceholder": "e.g. Sylhet",
         "suggestions": "Districts",
         "useLocation": "Use my location",
         "popular": "Popular districts",
-        "start": "Bismillah, let's begin",
+        "start": "Confirm",
         "later": "Later (shows Dhaka's times for now)",
-        "privacyNote": "Your location is rounded to about 1 km and only used to fetch the times. Change it later from the Home screen.",
+        "privacyNote": "Your location is rounded to about 1 km, stays on this phone and is only used to fetch the times.",
         "chooseFirst": "Choose a district, or use your location.",
         "noMatch": "No district by that name. Check the spelling or pick one below.",
         "geoLocating": "Finding your location…",
@@ -1007,7 +1023,12 @@
         "geoDenied": "Location permission wasn't given. No problem: pick your district below.",
         "geoUnavailable": "Couldn't get your location right now. Pick your district below.",
         "switchLanguage": "বাংলায় দেখুন",
-        "ambiguous": "Several districts match. Pick one from the list."
+        "ambiguous": "Several districts match. Pick one from the list.",
+        "districtHelper": "Any of the 64 districts",
+        "languageTitle": "Choose your language",
+        "languageSubtitle": "All text in the app will use this language. You can change it later in Settings.",
+        "preview": "Preview",
+        "continue": "Continue"
     },
     "comingSoon": {
         "label": "Coming soon",

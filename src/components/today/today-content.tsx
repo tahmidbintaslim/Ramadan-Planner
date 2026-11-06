@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useSyncExternalStore } from "react";
-import { useLocale, useTranslations } from "@/i18n/use-intl";
+import { useLocale } from "@/i18n/use-intl";
 import { useOnboardingGate } from "@/components/onboarding/use-onboarding-gate";
 import { districtById, districtName } from "@/lib/districts";
 import { readStoredLocation } from "@/lib/user-location";
@@ -32,7 +32,6 @@ function safeTodayISO(now: Date, timeZone: string): string | null {
  * `initialNow` is the server's render time (route loader), so the server and hydrating renders agree.
  */
 export function TodayContent({ initialNow }: { initialNow?: Date }) {
-  const t = useTranslations("today");
   const locale = useLocale();
 
   // First-run gate (resolved after hydration, so the server and client renders agree): a guest without a chosen
@@ -88,8 +87,7 @@ export function TodayContent({ initialNow }: { initialNow?: Date }) {
   const districtLabel = chosen ? districtName(chosen, locale) : undefined;
 
   return (
-    <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-8">
-      <h1 className="sr-only">{t("title")}</h1>
+    <div className="mx-auto flex w-full max-w-[1200px] flex-col">
       <HomeOverview
         status={home.status}
         timings={home.timings}
@@ -97,7 +95,6 @@ export function TodayContent({ initialNow }: { initialNow?: Date }) {
         tomorrowTimings={tomorrowTimings}
         cached={home.cached}
         districtLabel={districtLabel}
-        locationHref="/welcome"
         ramadan={home.ramadan}
         now={now}
         initialNow={initialNow}

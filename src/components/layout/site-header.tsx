@@ -1,181 +1,43 @@
 "use client";
 
-import { useTransition } from "react";
 import { useTranslations } from "@/i18n/use-intl";
 import { Link } from "@/components/shared/link";
-import { usePathname } from "@/hooks/use-pathname";
-import { useRouter } from "@tanstack/react-router";
-import {
-  CrescentIcon,
-  GlobeIcon,
-  LoginIcon,
-  MenuIcon,
-  TextSizeIcon,
-  UserAddIcon,
-} from "@/components/icons/islamic-icons";
-import { AccessibilityControls, TextThemeButton } from "@/components/shared/accessibility-sidebar";
-import { PRIMARY_NAV, SECONDARY_NAV } from "@/components/layout/nav-items";
-import { Show, UserButton } from "@clerk/tanstack-react-start";
-import { switchLocaleAction } from "@/actions/locale";
+import { CrescentIcon } from "@/components/icons/islamic-icons";
+import { TextThemeButton } from "@/components/shared/accessibility-sidebar";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+import { LanguageSegmented } from "./shell-actions";
 
-// The app's destinations (the same list as the app shell's navs; the admin page is left out here).
-const navItems = [...PRIMARY_NAV, ...SECONDARY_NAV.filter((i) => !i.signedInOnly)];
-
-/** Brand header for pages outside the app shell (the landing page), in the v2 style. */
-export function SiteHeader() {
+/** The brand tile + name (v4): 40 teal tile, radius 12, crescent; Headline name. */
+export function BrandLockup({ className }: { className?: string }) {
   const t = useTranslations("common");
-  const tAuth = useTranslations("auth");
-  const tNav = useTranslations("nav");
-  const tA11y = useTranslations("accessibility");
-  const [isPending, startTransition] = useTransition();
-  const router = useRouter();
-  const pathname = usePathname();
-
-  const handleLocaleSwitch = () => {
-    startTransition(async () => {
-      await switchLocaleAction();
-      // Re-run the root loader so the new locale's messages render (Next refreshed automatically).
-      await router.invalidate();
-    });
-  };
-
   return (
-    <header className="sticky top-0 z-40 border-b border-rp-rule bg-rp-page/95 backdrop-blur supports-backdrop-filter:bg-rp-page/80">
-      <div className="mx-auto flex h-16 max-w-[1120px] items-center justify-between px-4 sm:px-6">
+    <Link
+      href="/"
+      className={cn(
+        "flex min-h-11 items-center gap-3 rounded-rp-input focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rp-focus",
+        className,
+      )}
+    >
+      <span aria-hidden="true" className="flex size-10 items-center justify-center rounded-rp-input bg-rp-live text-rp-on-live">
+        <CrescentIcon size={24} />
+      </span>
+      <span className="rp-headline whitespace-nowrap text-rp-ink">{t("appName")}</span>
+    </Link>
+  );
+}
+
+/**
+ * The web homepage header (medium and regular, v4): brand lockup, the language segmented control (বাংলা | English)
+ * and Text & Theme, in the 1200 content column with a hairline rule.
+ */
+export function SiteHeader({ className }: { className?: string }) {
+  return (
+    <header className={cn("sticky top-0 z-40 border-b border-rp-rule bg-rp-page", className)}>
+      <div className="mx-auto flex h-16 max-w-[1296px] items-center justify-between gap-4 px-6 regular:px-12">
+        <BrandLockup />
         <div className="flex items-center gap-2">
-          <Link
-            href="/"
-            className="flex min-h-12 items-center gap-2.5 hover:opacity-80 transition-opacity"
-          >
-            <span aria-hidden="true" className="flex size-9 items-center justify-center rounded-rp-sm bg-rp-live text-rp-on-live">
-              <CrescentIcon size={20} />
-            </span>
-            <span className="font-display text-[20px] leading-[30px] text-rp-ink whitespace-nowrap">
-              {t("appName")}
-            </span>
-          </Link>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleLocaleSwitch}
-            disabled={isPending}
-            aria-label={t("switchLanguage")}
-          >
-            <GlobeIcon size={20} />
-          </Button>
-
-          {/* md+: "লেখা ও থিম" (অ/Aa) opens the text and theme controls (phones reach them from the menu sheet). */}
-          <div className="hidden md:block">
-            <TextThemeButton />
-          </div>
-
-          <div className="md:hidden">
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label={t("mobileMenu")}>
-                  <MenuIcon size={22} />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-[80vw] sm:w-100">
-                <SheetHeader className="sr-only">
-                  <SheetTitle>{t("mobileMenu")}</SheetTitle>
-                </SheetHeader>
-                <Link
-                  href="/"
-                  className="flex items-center gap-2 py-4 border-b hover:opacity-80 transition-opacity"
-                >
-                  <CrescentIcon size={20} className="text-rp-accent" />
-                  <span className="font-display text-[20px] leading-[30px] text-rp-ink whitespace-nowrap">
-                    {t("appName")}
-                  </span>
-                </Link>
-                <nav className="flex flex-col gap-1 px-2 py-4">
-                  {navItems.map((item) => {
-                    const isActive = pathname.startsWith(item.href);
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        className={cn(
-                          "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-                          isActive && "bg-muted text-primary",
-                        )}
-                      >
-                        <item.icon size={20} />
-                        {tNav(item.labelKey)}
-                      </Link>
-                    );
-                  })}
-                </nav>
-                <section aria-labelledby="site-sheet-a11y" className="space-y-3 border-t border-rp-rule px-3 py-4">
-                  <h2 id="site-sheet-a11y" className="rp-small flex items-center gap-2 font-semibold text-rp-ink">
-                    <TextSizeIcon size={20} aria-hidden />
-                    {tA11y("title")}
-                  </h2>
-                  <AccessibilityControls />
-                </section>
-                <div className="flex flex-col gap-2 p-2 border-t mt-auto">
-                  <Show when="signed-out">
-                    <Button variant="ghost" asChild className="w-full justify-start">
-                      <Link href="/">
-                        <CrescentIcon size={18} className="mr-3" />
-                        {t("exploreTheApp")}
-                      </Link>
-                    </Button>
-                    <Button variant="ghost" asChild className="w-full justify-start">
-                      <Link href="/sign-in">
-                        <LoginIcon size={18} className="mr-3" />
-                        {tAuth("login")}
-                      </Link>
-                    </Button>
-                    <Button asChild className="w-full justify-start">
-                      <Link href="/sign-up">
-                        <UserAddIcon size={18} className="mr-3" />
-                        {tAuth("signup")}
-                      </Link>
-                    </Button>
-                  </Show>
-                  <Show when="signed-in">
-                    <div className="px-2 py-1">
-                      <UserButton />
-                    </div>
-                  </Show>
-                </div>
-              </SheetContent>
-            </Sheet>
-          </div>
-
-          <div className="hidden md:flex items-center gap-2">
-            <Show when="signed-out">
-              <Button variant="ghost" size="sm" asChild className="h-12">
-                <Link href="/sign-in">
-                  <LoginIcon size={18} className="mr-1.5" />
-                  {tAuth("login")}
-                </Link>
-              </Button>
-              <Button size="sm" asChild className="h-12">
-                <Link href="/sign-up">
-                  <UserAddIcon size={18} className="mr-1.5" />
-                  {tAuth("signup")}
-                </Link>
-              </Button>
-            </Show>
-            <Show when="signed-in">
-              <UserButton />
-            </Show>
-          </div>
+          <LanguageSegmented />
+          <TextThemeButton />
         </div>
       </div>
     </header>

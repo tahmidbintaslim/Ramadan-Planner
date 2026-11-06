@@ -26,6 +26,16 @@ async function mockApis(page: Page) {
 }
 
 const hero = (page: Page) => page.getByRole("region", { name: /নামাজের সময় ও কাউন্টডাউন|Prayer time and countdown/ });
+/** The district in Today's header (v4: the location button above the next-prayer card). */
+const place = (page: Page) => page.getByTestId("today-location");
+const CONFIRM = "নিশ্চিত করুন";
+
+/** The welcome flow starts with the language step; Continue leads to the district. */
+async function toLocationStep(page: Page) {
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("ভাষা বেছে নিন");
+  await page.getByRole("button", { name: "চালিয়ে যান" }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("আপনার এলাকা");
+}
 
 test.use({ timezoneId: "Asia/Dhaka", viewport: { width: 390, height: 844 } });
 
@@ -36,17 +46,18 @@ test.describe("first run", () => {
     const timingUrls = await mockApis(page);
     await visit(page, "/today");
     await expect(page).toHaveURL(/\/welcome$/);
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText("আপনার জেলা");
-    // While gated the Home fetched nothing.
-    expect(timingUrls).toEqual([]);
+    await toLocationStep(page);
+    // While gated the Home fetched nothing; the only times so far are the welcome preview's Dhaka times
+    // (live, never sample: #32), fetched without a geolocation prompt.
+    expect(timingUrls.every((u) => /lat=23\.81&lng=90\.41/.test(u))).toBe(true);
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
 
     await page.getByRole("button", { name: "সিলেট", exact: true }).click();
     await expect(page.getByRole("button", { name: "সিলেট", exact: true })).toHaveAttribute("aria-pressed", "true");
-    await page.getByRole("button", { name: "বিসমিল্লাহ, শুরু করুন" }).click();
+    await page.getByRole("button", { name: CONFIRM }).click();
 
     await expect(page).toHaveURL(/\/today$/);
-    await expect(hero(page).getByTestId("hero-location")).toHaveText("সিলেট");
+    await expect(place(page)).toHaveText("সিলেট");
     // Sylhet's coordinates (2 decimals) and Bangladesh's zone, without a geolocation prompt.
     await expect.poll(() => timingUrls.some((u) => /lat=24\.90&lng=91\.87/.test(u) && /tz=Asia%2FDhaka/.test(u))).toBe(true);
     const stored = await page.evaluate(() => JSON.parse(localStorage.getItem("rp_location") ?? "null"));
@@ -54,7 +65,7 @@ test.describe("first run", () => {
 
     await page.reload({ waitUntil: "load" });
     await expect(page).toHaveURL(/\/today$/);
-    await expect(hero(page).getByTestId("hero-location")).toHaveText("সিলেট");
+    await expect(place(page)).toHaveText("সিলেট");
     expect(appErrors()).toEqual([]);
     expect(consoleEntries.filter((e) => HYDRATION.test(e.text))).toEqual([]);
   });
@@ -62,26 +73,28 @@ test.describe("first run", () => {
   test("type a district (old spelling), choose it from the list", async ({ page }) => {
     await mockApis(page);
     await visit(page, "/welcome");
+    await toLocationStep(page);
     const input = page.getByRole("combobox", { name: /জেলা/ });
     await input.fill("chitt");
     await page.getByRole("option", { name: /চট্টগ্রাম/ }).click();
     await expect(input).toHaveValue("চট্টগ্রাম");
-    await page.getByRole("button", { name: "বিসমিল্লাহ, শুরু করুন" }).click();
+    await page.getByRole("button", { name: CONFIRM }).click();
     await expect(page).toHaveURL(/\/today$/);
-    await expect(hero(page).getByTestId("hero-location")).toHaveText("চট্টগ্রাম");
+    await expect(place(page)).toHaveText("চট্টগ্রাম");
   });
 
   test("an unknown name is not accepted; 'later' uses the Dhaka default", async ({ page }) => {
     await mockApis(page);
     await visit(page, "/welcome");
+    await toLocationStep(page);
     await page.getByRole("combobox", { name: /জেলা/ }).fill("Atlantis");
-    await page.getByRole("button", { name: "বিসমিল্লাহ, শুরু করুন" }).click();
+    await page.getByRole("button", { name: CONFIRM }).click();
     await expect(page).toHaveURL(/\/welcome$/);
     await expect(page.getByText(/কোনো জেলা পাওয়া যায়নি/)).toBeVisible();
 
     await page.getByRole("button", { name: /পরে করব.*ঢাকা/ }).click();
     await expect(page).toHaveURL(/\/today$/);
-    await expect(hero(page).getByTestId("hero-location")).toHaveText("ঢাকা");
+    await expect(place(page)).toHaveText("ঢাকা");
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem("rp_location") ?? "null"))).toMatchObject({
       kind: "default",
       districtId: "dhaka",
@@ -107,7 +120,8 @@ test.describe("first run", () => {
       });
     });
     await visit(page, "/welcome");
-    await page.getByRole("button", { name: "লোকেশন দিয়ে খুঁজুন" }).click();
+    await toLocationStep(page);
+    await page.getByRole("button", { name: "আমার অবস্থান ব্যবহার করুন" }).click();
     await expect(page.getByRole("status")).toHaveText(/অনুমতি পাওয়া যায়নি.*জেলা বেছে নিন/);
   });
 });
@@ -118,11 +132,12 @@ test.describe("first run with location allowed", () => {
   test("the device position is rounded and named after the nearest district", async ({ page }) => {
     const timingUrls = await mockApis(page);
     await visit(page, "/welcome");
-    await page.getByRole("button", { name: "লোকেশন দিয়ে খুঁজুন" }).click();
+    await toLocationStep(page);
+    await page.getByRole("button", { name: "আমার অবস্থান ব্যবহার করুন" }).click();
     await expect(page.getByRole("status")).toHaveText(/আপনার কাছের জেলা: চট্টগ্রাম/);
-    await page.getByRole("button", { name: "বিসমিল্লাহ, শুরু করুন" }).click();
+    await page.getByRole("button", { name: CONFIRM }).click();
     await expect(page).toHaveURL(/\/today$/);
-    await expect(hero(page).getByTestId("hero-location")).toHaveText("চট্টগ্রাম");
+    await expect(place(page)).toHaveText("চট্টগ্রাম");
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem("rp_location") ?? "null"))).toMatchObject({
       kind: "geo",
       districtId: "chattogram",
@@ -131,6 +146,25 @@ test.describe("first run with location allowed", () => {
     });
     await expect.poll(() => timingUrls.some((u) => /lat=22\.36&lng=91\.78/.test(u))).toBe(true);
   });
+});
+
+test("Today's location button opens the location sheet; Done saves the district and refetches its times", async ({ page }) => {
+  const timingUrls = await mockApis(page);
+  await visit(page, "/today");
+  await expect(place(page)).toHaveText("ঢাকা");
+  await place(page).click();
+  const sheet = page.getByRole("dialog", { name: "আপনার এলাকা" });
+  await expect(sheet).toBeVisible();
+  await sheet.getByRole("button", { name: "সিলেট", exact: true }).click();
+  await sheet.getByRole("button", { name: "সম্পন্ন" }).click();
+  await expect(sheet).toBeHidden();
+  await expect(place(page)).toHaveText("সিলেট");
+  await expect.poll(() => timingUrls.some((u) => /lat=24\.90&lng=91\.87/.test(u))).toBe(true);
+  // Cancel leaves the choice as it was.
+  await place(page).click();
+  await sheet.getByRole("button", { name: "চট্টগ্রাম", exact: true }).click();
+  await sheet.getByRole("button", { name: "বাতিল" }).click();
+  await expect(place(page)).toHaveText("সিলেট");
 });
 
 test("a returning guest goes straight to /today, and the landing CTA points there", async ({ page }) => {
@@ -184,11 +218,22 @@ test("the timetable uses the district chosen at onboarding, without a location p
   expect(await page.evaluate(() => (window as unknown as { __geoCalls: number }).__geoCalls)).toBe(0);
 });
 
-test("landing shows the sample times card labelled as a sample, with a source line", async ({ page }) => {
+test.describe("landing for a first-time visitor", () => {
+  test.use({ onboarded: false });
+
+test("landing shows today's live times for Dhaka with a source line, never sample times (#32)", async ({ page }) => {
+  await mockApis(page);
   await visit(page, "/");
-  const sample = page.getByTestId("landing-sample");
-  await expect(sample).toContainText("নমুনা");
-  await expect(page.getByTestId("landing-sample-source")).toContainText(/উৎস/);
-  await expect(page.getByRole("link", { name: "আজকের সময়সূচি" })).toHaveAttribute("href", "/timetable");
-  await expect(page.locator('main a[href="/support"]')).toBeVisible();
+  const today = page.getByTestId("landing-sample");
+  await expect(today).toContainText("আজকের সময় · ঢাকা");
+  // The mocked answer's sehri end, the next prayer at 13:00 (Asr) and iftar, period first in Bengali.
+  await expect(today).toContainText("ভোর ৪:৫৭");
+  await expect(today).toContainText("পরবর্তী · আসর");
+  await expect(today).toContainText("বিকাল ৪:১৮");
+  await expect(today).toContainText("সন্ধ্যা ৫:৫৮");
+  await expect(page.locator("main")).not.toContainText("নমুনা");
+  await expect(page.locator("main")).toContainText("উৎস: AlAdhan · করাচি · হানাফি আসর");
+  await expect(page.getByRole("contentinfo").getByRole("link", { name: "সময়সূচি" })).toHaveAttribute("href", "/timetable");
+  await expect(page.locator('footer a[href="/support"]')).toBeVisible();
+});
 });

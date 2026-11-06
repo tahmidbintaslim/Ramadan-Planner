@@ -2,13 +2,15 @@
 
 import { useTransition } from "react";
 import { useRouter } from "@tanstack/react-router";
-import { GlobeIcon, LoginIcon, UserAddIcon } from "@/components/icons/islamic-icons";
+import { Bell } from "lucide-react";
+import { LoginIcon, UserAddIcon } from "@/components/icons/islamic-icons";
 import { Show } from "@clerk/tanstack-react-start";
-import { useTranslations } from "@/i18n/use-intl";
+import { useLocale, useTranslations } from "@/i18n/use-intl";
 import { switchLocaleAction } from "@/actions/locale";
 import { Link } from "@/components/shared/link";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { LUCIDE_STROKE } from "./nav-items";
 
 /** Toggles bn/en and re-runs the root loader so the new locale's messages render. */
 export function useLocaleSwitch() {
@@ -23,23 +25,61 @@ export function useLocaleSwitch() {
   return { switchLocale, isPending };
 }
 
-/** 48px round white button with the soft shadow (top bar actions). */
+/** 44×44 icon button (HIG hit area) for bar actions: a 24 (or 20) glyph optically centred, no chrome. */
 export const roundButtonClass =
-  "inline-flex size-12 shrink-0 items-center justify-center rounded-full bg-rp-surface text-rp-ink shadow-rp-soft transition-colors hover:text-rp-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-rp-page disabled:opacity-50";
+  "inline-flex size-11 shrink-0 items-center justify-center rounded-rp-full text-rp-ink transition-colors hover:bg-rp-accent-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rp-focus disabled:opacity-50";
 
-export function LanguageButton({ className }: { className?: string }) {
+/**
+ * The language segmented control (বাংলা | English): 44 tall, radius 12 = 10 + 2 inset, the selected segment on the
+ * surface. Each segment is labelled in its own language.
+ */
+export function LanguageSegmented({ className }: { className?: string }) {
   const t = useTranslations("common");
+  const locale = useLocale();
   const { switchLocale, isPending } = useLocaleSwitch();
+  const options = [
+    { value: "bn", label: "বাংলা" },
+    { value: "en", label: "English" },
+  ] as const;
   return (
-    <button
-      type="button"
-      onClick={switchLocale}
-      disabled={isPending}
-      aria-label={t("switchLanguage")}
-      className={cn(roundButtonClass, className)}
+    <div
+      role="radiogroup"
+      aria-label={t("language")}
+      className={cn("inline-grid h-11 grid-cols-2 rounded-rp-input bg-rp-accent-tint p-0.5", className)}
     >
-      <GlobeIcon size={20} aria-hidden />
-    </button>
+      {options.map((o) => {
+        const selected = locale.startsWith(o.value);
+        return (
+          <button
+            key={o.value}
+            type="button"
+            role="radio"
+            lang={o.value}
+            aria-checked={selected}
+            disabled={isPending}
+            onClick={() => {
+              if (!selected) switchLocale();
+            }}
+            className={cn(
+              "rp-callout min-w-[88px] rounded-rp-sm px-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rp-focus",
+              selected ? "bg-rp-surface font-semibold text-rp-ink shadow-rp-soft" : "text-rp-muted hover:text-rp-ink",
+            )}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** The bell: Reminders (44 hit, lucide bell). */
+export function RemindersButton({ className }: { className?: string }) {
+  const tNav = useTranslations("nav");
+  return (
+    <Link href="/reminders" aria-label={tNav("reminders")} className={cn(roundButtonClass, className)}>
+      <Bell size={24} strokeWidth={LUCIDE_STROKE} aria-hidden />
+    </Link>
   );
 }
 
@@ -49,15 +89,15 @@ export function GuestAuthButtons({ className, stacked }: { className?: string; s
   return (
     <Show when="signed-out">
       <div className={cn("flex gap-2", stacked && "flex-col", className)}>
-        <Button variant="outline" size={stacked ? "default" : "sm"} asChild className={cn(stacked && "w-full")}>
+        <Button variant="soft" size="sm" asChild className={cn(stacked && "w-full")}>
           <Link href="/sign-in">
-            <LoginIcon size={16} aria-hidden />
+            <LoginIcon size={18} aria-hidden />
             {tAuth("login")}
           </Link>
         </Button>
-        <Button size={stacked ? "default" : "sm"} asChild className={cn(stacked && "w-full")}>
+        <Button size="sm" asChild className={cn(stacked && "w-full")}>
           <Link href="/sign-up">
-            <UserAddIcon size={16} aria-hidden />
+            <UserAddIcon size={18} aria-hidden />
             {tAuth("signup")}
           </Link>
         </Button>

@@ -14,10 +14,10 @@ export const THEME_PREFERENCES = ["light", "dark", "system", "auto"] as const;
 export type ThemePreference = (typeof THEME_PREFERENCES)[number];
 
 type Mode = "light" | "dark";
-const THEME_COLOR = { light: "#F3F8F6", dark: "#0B1F24" } as const;
+const THEME_COLOR = { light: "#F4F7F6", dark: "#0B1A17" } as const;
 const MINUTE = 60_000;
 
-// Keeps <meta name="theme-color"> in step with the active mode (Light #F3F8F6, Night #0B1F24).
+// Keeps <meta name="theme-color"> in step with the active mode (Light #F4F7F6, Night #0B1A17).
 function ThemeColorSync() {
   const { resolvedTheme, forcedTheme } = useTheme();
   const active = forcedTheme ?? resolvedTheme;

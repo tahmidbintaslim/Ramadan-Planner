@@ -1,24 +1,12 @@
 import type { ComponentType } from "react";
+import { BookOpenText, CalendarClock, LayoutGrid, ListChecks, Settings, ShieldCheck, SunMedium } from "lucide-react";
 import { isHiddenPath } from "@/config/features";
-import {
-  BellIcon,
-  CalendarIcon,
-  DuaIcon,
-  HadithIcon,
-  HeartIcon,
-  HomeIcon,
-  PlanIcon,
-  QuranIcon,
-  SettingsIcon,
-  ShieldIcon,
-  TasbihIcon,
-  ZakatIcon,
-  type IconProps,
-} from "@/components/icons/islamic-icons";
+import { BellIcon, DuaIcon, HadithIcon, HeartIcon, TasbihIcon, ZakatIcon } from "@/components/icons/islamic-icons";
 
-// One list of app destinations for the floating bottom nav, the "More" sheet and the desktop side nav.
+// One list of app destinations for the tab bar, the "More" sheet and the sidebar. UI destinations use lucide
+// (stroke 1.75, as in Figma page 10); Islamic tools keep the founder's Hugeicons Islamic set.
 
-export type NavIcon = ComponentType<IconProps>;
+export type NavIcon = ComponentType<{ size?: number | string; strokeWidth?: number | string; className?: string }>;
 
 export type NavLabelKey =
   | "today"
@@ -30,12 +18,16 @@ export type NavLabelKey =
   | "quran"
   | "quranShort"
   | "duas"
+  | "duasShort"
   | "tasbih"
+  | "tasbihShort"
   | "zakat"
+  | "zakatShort"
   | "hadith"
   | "books"
   | "quiz"
   | "reminders"
+  | "remindersShort"
   | "support"
   | "settings"
   | "admin";
@@ -45,36 +37,43 @@ export interface NavItem {
   icon: NavIcon;
   /** The feature's name (More sheet, page titles). */
   labelKey: NavLabelKey;
-  /** The short tab label (bottom nav and the side nav's primary group); defaults to `labelKey`. */
+  /** The short label (tab bar and sidebar); defaults to `labelKey`. */
   shortKey?: NavLabelKey;
   /** Only shown to signed-in users. */
   signedInOnly?: boolean;
 }
 
+/** lucide glyphs are drawn at stroke 1.75 (Figma v4 icons); the Hugeicons set keeps its own 1.5. */
+export const LUCIDE_STROKE = 1.75;
+
 // The Ramadan timetable screen (public, inside the app shell).
 export const TIMETABLE_HREF = "/timetable";
+export const SETTINGS_HREF = "/settings";
 
-/** The four primary destinations (bottom-nav tabs 1–4; the fifth tab opens the More sheet). */
+/** The four primary destinations (tab bar items 1–4; the fifth tab opens the More sheet). */
 export const PRIMARY_NAV: NavItem[] = [
-  { href: "/today", icon: HomeIcon, labelKey: "today", shortKey: "todayShort" },
-  { href: TIMETABLE_HREF, icon: CalendarIcon, labelKey: "timetable", shortKey: "timetableShort" },
-  { href: "/plan", icon: PlanIcon, labelKey: "plan", shortKey: "planShort" },
-  { href: "/quran", icon: QuranIcon, labelKey: "quran", shortKey: "quranShort" },
+  { href: "/today", icon: SunMedium, labelKey: "today", shortKey: "todayShort" },
+  { href: TIMETABLE_HREF, icon: CalendarClock, labelKey: "timetable", shortKey: "timetableShort" },
+  { href: "/plan", icon: ListChecks, labelKey: "plan", shortKey: "planShort" },
+  { href: "/quran", icon: BookOpenText, labelKey: "quran", shortKey: "quranShort" },
 ];
 
+/** The fifth tab (opens the More sheet). */
+export const MORE_ICON: NavIcon = LayoutGrid;
+
 /**
- * Everything else, listed in the More sheet (mobile) and below the primary items (desktop). Features switched off in
- * src/config/features.ts (hadith, books, quiz) are left out.
+ * Everything else, listed in the More sheet (compact, medium) and the sidebar's "More tools" group (regular).
+ * Settings sits at the sidebar's foot. Features switched off in src/config/features.ts are left out.
  */
 export const SECONDARY_NAV: NavItem[] = ([] as NavItem[]).concat([
-  { href: "/duas", icon: DuaIcon, labelKey: "duas" },
-  { href: "/tasbih", icon: TasbihIcon, labelKey: "tasbih" },
-  { href: "/zakat", icon: ZakatIcon, labelKey: "zakat" },
+  { href: "/duas", icon: DuaIcon, labelKey: "duas", shortKey: "duasShort" },
+  { href: "/tasbih", icon: TasbihIcon, labelKey: "tasbih", shortKey: "tasbihShort" },
+  { href: "/zakat", icon: ZakatIcon, labelKey: "zakat", shortKey: "zakatShort" },
   { href: "/hadith", icon: HadithIcon, labelKey: "hadith" },
-  { href: "/reminders", icon: BellIcon, labelKey: "reminders" },
+  { href: "/reminders", icon: BellIcon, labelKey: "reminders", shortKey: "remindersShort" },
   { href: "/support", icon: HeartIcon, labelKey: "support" },
-  { href: "/settings", icon: SettingsIcon, labelKey: "settings" },
-  { href: "/admin/announcements", icon: ShieldIcon, labelKey: "admin", signedInOnly: true },
+  { href: SETTINGS_HREF, icon: Settings, labelKey: "settings" },
+  { href: "/admin/announcements", icon: ShieldCheck, labelKey: "admin", signedInOnly: true },
 ]).filter((item) => !isHiddenPath(item.href));
 
 /** Active when the path is the item's path or below it (hash-only links never match). */

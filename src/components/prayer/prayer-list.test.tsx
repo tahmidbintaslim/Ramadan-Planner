@@ -57,10 +57,10 @@ describe("prayerRowStates", () => {
 });
 
 describe("PrayerList", () => {
-  it("renders the header, five rows with Bengali times, and the reminders link", async () => {
+  it("renders the header, five rows with Bengali times, and the 'see all' timetable link", async () => {
     await renderList();
-    expect(screen.getByRole("heading", { name: "নামাজের সময়" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "রিমাইন্ডার" })).toHaveAttribute("href", "/reminders");
+    expect(screen.getByRole("heading", { name: "আজকের নামাজের সময়" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "সব দেখুন" })).toHaveAttribute("href", "/timetable");
     expect(screen.getAllByRole("listitem")).toHaveLength(5);
     expect(row("fajr")).toHaveTextContent("ফজর");
     expect(row("fajr")).toHaveTextContent("৪:৫৫");
@@ -68,17 +68,22 @@ describe("PrayerList", () => {
     expect(screen.getByRole("list").textContent).not.toMatch(/[0-9]/);
   });
 
-  it("styles past rows muted and the next row tinted with a পরবর্তী badge", async () => {
+  it("marks past rows with a check, the next row tinted with a পরবর্তী chip, upcoming with an empty circle", async () => {
     await renderList();
     expect(row("dhuhr").dataset.state).toBe("past");
-    expect(row("dhuhr").className).toContain("text-rp-muted");
-    expect(row("dhuhr").querySelector("svg")?.getAttribute("class")).toContain("text-rp-strong");
+    const pastIcon = row("dhuhr").querySelector("svg")?.getAttribute("class") ?? "";
+    expect(pastIcon).toContain("lucide-circle-check");
+    expect(pastIcon).toContain("text-rp-icon");
+    // Past times read secondary on the trailing edge, with tabular figures.
+    const pastTime = within(row("dhuhr")).getByText("দুপুর ১২:১০");
+    expect(pastTime.className).toContain("text-rp-muted");
+    expect(pastTime.className).toContain("tabular-nums");
+    expect(row("isha").querySelector("svg")?.getAttribute("class")).toContain("text-rp-muted");
 
     const next = row("asr");
     expect(next.dataset.state).toBe("next");
     expect(next).toHaveAttribute("aria-current", "time");
     expect(next.className).toContain("bg-rp-accent-tint");
-    expect(next.className).toContain("text-rp-accent");
     const badge = within(next).getByText("পরবর্তী");
     expect(badge.className).toContain("bg-rp-live");
     expect(badge.className).toContain("text-rp-on-live");
@@ -106,7 +111,7 @@ describe("PrayerList", () => {
 
   it("renders English names and Latin digits in en", async () => {
     await renderList({}, "en");
-    expect(screen.getByRole("heading", { name: "Prayer Times" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Today's prayer times" })).toBeInTheDocument();
     expect(row("asr")).toHaveTextContent("Asr");
     expect(row("asr")).toHaveTextContent("4:25");
     expect(within(row("asr")).getByText("Next")).toBeInTheDocument();

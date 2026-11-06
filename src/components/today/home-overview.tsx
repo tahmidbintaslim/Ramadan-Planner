@@ -58,8 +58,6 @@ export interface HomeOverviewProps {
   cached: boolean;
   /** The district chosen at onboarding; wins over the API's location label. */
   districtLabel?: string;
-  /** Where the hero's location pill leads (change the district). */
-  locationHref?: string;
   ramadan: RamadanStatus | null;
   now: Date;
   initialNow?: Date;
@@ -74,12 +72,13 @@ export interface HomeOverviewProps {
 }
 
 /**
- * The Home overview. Mobile (one column, DOM order): hero, Sehri/Iftar pair, phase card (niyyah / iftar dua),
- * prayers, the day's ayah (when no phase card shows), companion tiles, today's plan, support. Exactly one sourced
- * devotional card shows at a time; the ayah sits below the prayers so all five stay above the bottom nav at 390x844.
- * From 1024px: two columns, as in the Figma Web/Tablet frame: left = hero, pair, phase card or ayah, tiles;
- * right = prayers, plan, support. The column wrappers are `display: contents` below 1024px and `order`
- * restores the mobile sequence there.
+ * The Today overview (v4, Figma page 10).
+ * Compact / medium (one column, DOM order): next-prayer card, Sehri/Iftar pair, today's prayers with the source
+ * line, then the one contextual card (niyyah / iftar dua, else the day's ayah), today's amal, companions, support.
+ * All five prayers clear the tab bar at 390x844.
+ * Regular (>=835px): the large title with the place, date and Hijri date, then two columns: left = card, pair and
+ * prayers; right = today's amal and the ayah (or phase card), companions, support. The column wrappers are
+ * `display: contents` below 835px and `order` restores the compact sequence there.
  */
 export function HomeOverview({
   status,
@@ -88,7 +87,6 @@ export function HomeOverview({
   tomorrowTimings,
   cached,
   districtLabel,
-  locationHref,
   ramadan,
   now,
   initialNow,
@@ -101,6 +99,8 @@ export function HomeOverview({
   onRetry,
 }: HomeOverviewProps) {
   const t = useTranslations("home");
+  const tToday = useTranslations("today");
+  const tPrayer = useTranslations("prayer");
   const locale = useLocale();
   const ramadanDay = ramadanDayOf(ramadan);
   const inRamadan = ramadanDay !== null;
@@ -118,82 +118,97 @@ export function HomeOverview({
   const source = knownSource
     ? t(timings.source === "islamicapi" ? "sourceIslamicApi" : "sourceAladhan")
     : t("sourceUnverified");
+  const sourceLine = knownSource ? tPrayer("source", { source }) : tPrayer("sampleSource", { source });
+  const place = districtLabel ?? (timings ? districtOf(timings.location) : undefined);
+  const hijri = timings ? hijriLabelOf(timings, locale, (v) => t("hijri", v)) : undefined;
+  const subtitle = [place, longDateOf(now, timeZone, locale), hijri].filter(Boolean).join(" · ");
 
   return (
-    <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6">
-      <div className="contents lg:flex lg:flex-col lg:gap-4">
-        {timings && phaseTimings ? (
-          <>
-            <PrayerHero
-              className="order-1"
+    <div className="flex flex-col gap-6">
+      {/* Large Title (regular); below 835px the header carries the place and date, so the title is read only. */}
+      <div className="sr-only regular:not-sr-only regular:flex regular:flex-col regular:gap-1">
+        <h1 className="rp-large-title text-rp-ink">{tToday("title")}</h1>
+        <p className="rp-small text-rp-muted" data-testid="today-subtitle" suppressHydrationWarning>
+          {subtitle}
+        </p>
+      </div>
+      <div className="flex flex-col gap-6 regular:grid regular:grid-cols-[minmax(0,1.42fr)_minmax(0,1fr)] regular:items-start regular:gap-6">
+        <div className="contents regular:flex regular:flex-col regular:gap-6">
+          {timings && phaseTimings ? (
+            <div className="order-1 flex flex-col gap-4">
+              <PrayerHero timings={phaseTimings} timeZone={timeZone} ramadan={inRamadan} now={frozenNow} initialNow={initialNow} />
+              <SehriIftarPair
+                timings={pairTomorrow ?? phaseTimings}
+                timeZone={timeZone}
+                dayLabel={pairTomorrow ? t("tomorrow") : undefined}
+              />
+            </div>
+          ) : status === "error" ? (
+            <div role="alert" className="order-1 flex flex-col items-start gap-3 rounded-rp-md bg-rp-surface p-5 text-rp-ink">
+              <p className="rp-body">{t("timingsError")}</p>
+              {onRetry ? (
+                <Button variant="soft" onClick={onRetry}>
+                  {t("retry")}
+                </Button>
+              ) : null}
+            </div>
+          ) : (
+            <div
+              data-testid="hero-skeleton"
+              role="status"
+              className="order-1 flex min-h-[272px] items-end justify-center rounded-rp-lg bg-rp-accent-tint p-6 motion-safe:animate-pulse"
+            >
+              <span className="rp-small text-rp-muted">{t("timingsLoading")}</span>
+            </div>
+          )}
+          {phaseTimings ? (
+            <PrayerList
+              className="order-2"
               timings={phaseTimings}
               timeZone={timeZone}
-              district={districtLabel ?? districtOf(timings.location)}
-              locationHref={locationHref}
-              hijriLabel={hijriLabelOf(timings, locale, (v) => t("hijri", v))}
-              source={source}
-              sample={!knownSource}
-              ramadan={inRamadan}
+              reminders={reminders}
+              onToggleReminder={onToggleReminder}
+              source={sourceLine}
               now={frozenNow}
               initialNow={initialNow}
             />
-            <SehriIftarPair
-              className="order-2"
-              timings={pairTomorrow ?? phaseTimings}
-              timeZone={timeZone}
-              dayLabel={pairTomorrow ? t("tomorrow") : undefined}
-            />
-            {cardKind ? (
-              <PhaseCard className="order-4" kind={cardKind} />
-            ) : (
-              <DailyAyahCard className="order-4" ramadanDay={ramadanDay} />
-            )}
-          </>
-        ) : status === "error" ? (
-          <div
-            role="alert"
-            className="order-1 flex flex-col items-start gap-3 rounded-rp-lg bg-rp-surface p-5 text-rp-ink shadow-rp-soft"
-          >
-            <p className="rp-body">{t("timingsError")}</p>
-            {onRetry ? (
-              <Button variant="soft" onClick={onRetry}>
-                {t("retry")}
-              </Button>
-            ) : null}
-          </div>
-        ) : (
-          <div
-            data-testid="hero-skeleton"
-            role="status"
-            className="order-1 flex min-h-[240px] lg:min-h-[300px] items-end justify-center rounded-rp-xl bg-rp-accent-tint p-5 motion-safe:animate-pulse"
-          >
-            <span className="rp-small text-rp-muted">{t("timingsLoading")}</span>
-          </div>
-        )}
-        <FeatureTiles className="order-6 lg:mt-2" />
-      </div>
+          ) : null}
+        </div>
 
-      <div className="contents lg:flex lg:flex-col lg:gap-6">
-        {phaseTimings ? (
-          <PrayerList
-            className="order-3"
-            timings={phaseTimings}
-            timeZone={timeZone}
-            reminders={reminders}
-            onToggleReminder={onToggleReminder}
-            now={frozenNow}
-            initialNow={initialNow}
-          />
-        ) : null}
-        <PlanPreview className="order-5" state={plan} />
-        {showSupport ? (
-          <SupportCard
-            className="order-7"
-            lastTen={ramadanDay !== null && ramadanDay >= LAST_TEN_FROM_DAY}
-            onDismiss={onDismissSadaqah}
-          />
-        ) : null}
+        <div className="contents regular:flex regular:flex-col regular:gap-8">
+          {timings && phaseTimings ? (
+            cardKind ? (
+              <PhaseCard className="order-3 regular:order-2" kind={cardKind} />
+            ) : (
+              <DailyAyahCard className="order-3 regular:order-2" ramadanDay={ramadanDay} />
+            )
+          ) : null}
+          <PlanPreview className="order-4 regular:order-1" state={plan} />
+          <FeatureTiles className="order-5 regular:order-3" />
+          {showSupport ? (
+            <SupportCard
+              className="order-6 regular:order-4"
+              lastTen={ramadanDay !== null && ramadanDay >= LAST_TEN_FROM_DAY}
+              onDismiss={onDismissSadaqah}
+            />
+          ) : null}
+        </div>
       </div>
     </div>
   );
+}
+
+/** "শনিবার, ২০ ফেব্রুয়ারি ২০২৭" / "Saturday, 20 February 2027" in the timings' zone. */
+export function longDateOf(now: Date, timeZone: string, locale: string): string {
+  try {
+    return new Intl.DateTimeFormat(isBnLocale(locale) ? "bn-BD" : "en-GB", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      timeZone,
+    }).format(now);
+  } catch {
+    return "";
+  }
 }
