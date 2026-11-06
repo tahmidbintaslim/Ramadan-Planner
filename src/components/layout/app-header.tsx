@@ -66,11 +66,11 @@ export function AppHeader() {
         </span>
       </Link>
       <div className="min-w-0 flex-1">
-        <p className={cn("rp-greeting text-rp-ink", titleKey && "truncate")}>
+        <p className={cn("rp-greeting text-rp-ink max-[359px]:text-[20px] max-[359px]:leading-[28px]", titleKey && "truncate")}>
           {titleKey ? tNav(titleKey) : t("greeting")}
         </p>
         {/* Reserve the caption line before mount so the layout does not shift. */}
-        <p className="rp-small min-h-[22px] text-rp-muted">
+        <p className="rp-small min-h-[22px] truncate text-rp-muted">
           {caption}
           {caption && fastLabel ? ` · ${fastLabel}` : null}
         </p>

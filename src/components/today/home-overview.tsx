@@ -13,6 +13,7 @@ import {
   toBengaliDigits,
   type PhaseTimings,
 } from "@/lib/prayer-phase";
+import { DailyAyahCard } from "./daily-ayah-card";
 import { FeatureTiles, PhaseCard, PlanPreview, SupportCard, phaseCardKind, type PlanPreviewState } from "./home-sections";
 
 /** Ramadan day (1-30) from the Ramadan status, or null outside Ramadan. */
@@ -73,9 +74,11 @@ export interface HomeOverviewProps {
 }
 
 /**
- * The Home overview. Mobile (one column, DOM order): hero, Sehri/Iftar pair, phase card, prayers, companion tiles,
- * today's plan, support. From 1024px: two columns, as in the Figma Web/Tablet frame: left = hero, pair, phase card,
- * tiles; right = prayers, plan, support. The column wrappers are `display: contents` below 1024px and `order`
+ * The Home overview. Mobile (one column, DOM order): hero, Sehri/Iftar pair, phase card (niyyah / iftar dua),
+ * prayers, the day's ayah (when no phase card shows), companion tiles, today's plan, support. Exactly one sourced
+ * devotional card shows at a time; the ayah sits below the prayers so all five stay above the bottom nav at 390x844.
+ * From 1024px: two columns, as in the Figma Web/Tablet frame: left = hero, pair, phase card or ayah, tiles;
+ * right = prayers, plan, support. The column wrappers are `display: contents` below 1024px and `order`
  * restores the mobile sequence there.
  */
 export function HomeOverview({
@@ -117,7 +120,7 @@ export function HomeOverview({
     : t("sourceUnverified");
 
   return (
-    <div className="flex flex-col gap-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6">
+    <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6">
       <div className="contents lg:flex lg:flex-col lg:gap-4">
         {timings && phaseTimings ? (
           <>
@@ -140,7 +143,11 @@ export function HomeOverview({
               timeZone={timeZone}
               dayLabel={pairTomorrow ? t("tomorrow") : undefined}
             />
-            {cardKind ? <PhaseCard className="order-3" kind={cardKind} /> : null}
+            {cardKind ? (
+              <PhaseCard className="order-4" kind={cardKind} />
+            ) : (
+              <DailyAyahCard className="order-4" ramadanDay={ramadanDay} />
+            )}
           </>
         ) : status === "error" ? (
           <div
@@ -158,18 +165,18 @@ export function HomeOverview({
           <div
             data-testid="hero-skeleton"
             role="status"
-            className="order-1 flex min-h-[300px] items-end justify-center rounded-rp-xl bg-rp-accent-tint p-5 motion-safe:animate-pulse"
+            className="order-1 flex min-h-[240px] lg:min-h-[300px] items-end justify-center rounded-rp-xl bg-rp-accent-tint p-5 motion-safe:animate-pulse"
           >
             <span className="rp-small text-rp-muted">{t("timingsLoading")}</span>
           </div>
         )}
-        <FeatureTiles className="order-5 lg:mt-2" />
+        <FeatureTiles className="order-6 lg:mt-2" />
       </div>
 
       <div className="contents lg:flex lg:flex-col lg:gap-6">
         {phaseTimings ? (
           <PrayerList
-            className="order-4"
+            className="order-3"
             timings={phaseTimings}
             timeZone={timeZone}
             reminders={reminders}
@@ -178,7 +185,7 @@ export function HomeOverview({
             initialNow={initialNow}
           />
         ) : null}
-        <PlanPreview className="order-6" state={plan} />
+        <PlanPreview className="order-5" state={plan} />
         {showSupport ? (
           <SupportCard
             className="order-7"

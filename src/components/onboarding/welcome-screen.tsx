@@ -7,8 +7,7 @@ import { Chip } from "@/components/ui/chip";
 import { GirihPattern } from "@/components/design/girih-pattern";
 import { MihrabArch } from "@/components/design/mihrab-arch";
 import { CrescentIcon, PinIcon } from "@/components/icons/islamic-icons";
-import { AccessibilityDialog } from "@/components/shared/accessibility-sidebar";
-import { Accessibility } from "lucide-react";
+import { TextThemeButton } from "@/components/shared/accessibility-sidebar";
 import {
   POPULAR_DISTRICT_IDS,
   districtById,
@@ -47,7 +46,6 @@ function inputErrorFor(query: string): Exclude<InputError, null> {
 export function WelcomeScreen() {
   const t = useTranslations("onboarding");
   const tCommon = useTranslations("common");
-  const tA11y = useTranslations("accessibility");
   const locale = useLocale();
   const router = useRouter();
   const [isSwitching, startSwitch] = useTransition();
@@ -177,16 +175,17 @@ export function WelcomeScreen() {
       <main id="main-content" className="mx-auto flex w-full max-w-[480px] flex-col pb-10">
         <section
           aria-labelledby="welcome-greeting"
-          className="relative isolate flex h-[360px] flex-col items-center overflow-hidden rounded-b-[40px] px-6 pt-14 text-center text-white sm:mt-6 sm:rounded-rp-xl"
+          className="relative isolate flex h-[360px] flex-col items-center overflow-hidden rounded-b-[40px] px-6 pt-[68px] text-center text-white sm:mt-6 sm:rounded-rp-xl"
           style={{ backgroundImage: "var(--rp-hero-sehri)" }}
         >
           <GirihPattern opacity={0.07} className="-z-10 text-white" />
           <MihrabArch className="pointer-events-none absolute bottom-0 left-1/2 -z-10 h-[240px] w-[220px] -translate-x-1/2 text-white" />
+          <TextThemeButton tone="sky" className="absolute top-3 right-3" />
           <p id="welcome-greeting" className="font-display text-[34px] leading-[46px]">
             {t("greeting")}
           </p>
           <p className="rp-small mt-1 text-white/85">{tCommon("appName")}</p>
-          <CrescentIcon size={72} strokeWidth={1.2} className="mt-12 text-rp-gold" />
+          <CrescentIcon size={72} className="mt-12 text-rp-gold" />
         </section>
 
         <div className="flex flex-col gap-4 px-4 pt-6">
@@ -303,14 +302,7 @@ export function WelcomeScreen() {
             <p className="rp-caption text-center text-rp-muted">{t("privacyNote")}</p>
           </div>
 
-          <div className="flex items-center justify-center gap-1">
-            <AccessibilityDialog
-              trigger={
-                <Button variant="quiet" size="icon" aria-label={tA11y("title")}>
-                  <Accessibility className="size-5" />
-                </Button>
-              }
-            />
+          <div className="flex items-center justify-center">
             <Button
               variant="quiet"
               className="px-4"

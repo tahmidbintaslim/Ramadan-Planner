@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Chip } from "@/components/ui/chip";
 import { useClockFormat } from "@/hooks/use-clock-format";
+import { formatDateTime } from "@/lib/clock-format";
 import { CLOCK_FORMATS } from "@/lib/clock-format";
 import { formatLocalizedNumber } from "@/lib/locale-number";
 
@@ -72,6 +73,7 @@ export function SettingsContent() {
   const tAuth = useTranslations("auth");
   const tCommon = useTranslations("common");
   const locale = useLocale();
+  const [clockFormat] = useClockFormat();
   // Only the `google` result param is read (set by the Google OAuth callback redirect).
   const search = useSearch({ strict: false }) as { google?: unknown };
   const { signOut } = useClerk();
@@ -422,9 +424,7 @@ export function SettingsContent() {
             {googleSyncedAt && (
               <p className="text-xs text-muted-foreground">
                 {t("googleLastSynced", {
-                  at: new Date(googleSyncedAt).toLocaleString(
-                    locale.startsWith("bn") ? "bn-BD-u-nu-beng" : "en-US",
-                  ),
+                  at: formatDateTime(new Date(googleSyncedAt), locale, clockFormat),
                 })}
               </p>
             )}

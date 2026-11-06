@@ -27,7 +27,7 @@ test.describe("Quran list (mobile)", () => {
   test("lists surahs as linked rows, with no last-read card until something was read", async ({ page, appErrors, consoleEntries }) => {
     await mockSurahs(page);
     await visit(page, "/quran");
-    await expect(page.getByRole("heading", { level: 1, name: "আল কুরআন" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "কুরআন" })).toBeVisible();
     const rows = page.getByTestId("surah-list").getByRole("link");
     await expect(rows).toHaveCount(3);
     await expect(rows.nth(1)).toHaveAttribute("href", "/quran/2");
@@ -46,10 +46,10 @@ test.describe("Quran list (mobile)", () => {
     await visit(page, "/quran");
     const card = page.getByTestId("last-read-card");
     await expect(card).toBeVisible();
-    await expect(card).toContainText("সর্বশেষ পড়া");
+    await expect(card).toContainText("যেখানে থেমেছিলেন");
     await expect(card).toContainText("আল-কাহফ");
     await expect(card).toContainText("আয়াত ১০");
-    const cont = card.getByRole("link", { name: /পড়া চালিয়ে যান/ });
+    const cont = card.getByRole("link", { name: /আজ এখান থেকে আবার শুরু করুন/ });
     await expect(cont).toHaveAttribute("href", /\/quran\/18#ayah-10$/);
     const box = await cont.boundingBox();
     expect(box!.height).toBeGreaterThanOrEqual(48);
@@ -70,7 +70,7 @@ test.describe("Support page (mobile)", () => {
     const res = await visit(page, "/support");
     expect(res?.status()).toBe(200);
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "index, follow");
-    await expect(page.getByRole("heading", { level: 1, name: "সাদাকা ও অংশগ্রহণ" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "সাদাকা ও সহযোগিতা" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "এই আমল চলমান থাকুক" })).toBeVisible();
     await expect(page.getByText("রমজান ২০২৭-এর খরচ")).toBeVisible();
     await expect(page.getByTestId("cost-server")).toHaveText("শীঘ্রই প্রকাশ করা হবে");
@@ -108,7 +108,7 @@ test.describe("Support page (mobile)", () => {
     await nav.getByRole("button", { name: /আরও|More/ }).click();
     await page.getByRole("dialog").getByRole("link", { name: "সহযোগিতা" }).click();
     await expect(page).toHaveURL(/\/support$/);
-    await expect(page.getByRole("heading", { level: 1, name: "সাদাকা ও অংশগ্রহণ" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "সাদাকা ও সহযোগিতা" })).toBeVisible();
 
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     const last = (await page.getByTestId("share-button").boundingBox())!;
@@ -122,7 +122,7 @@ test.describe("Support page (English)", () => {
   test.use({ viewport: { width: 390, height: 844 }, appLocale: "en" });
   test("renders in English", async ({ page }) => {
     await visit(page, "/support");
-    await expect(page.getByRole("heading", { level: 1, name: "Sadaqah & contribute" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Sadaqah & Support" })).toBeVisible();
     await expect(page.getByTestId("wallet-button")).toHaveText("Coming soon");
   });
 });

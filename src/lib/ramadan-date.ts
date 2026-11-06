@@ -498,3 +498,29 @@ function getFallbackStatus(): RamadanStatus {
         ramadanTotalDays: null,
     };
 }
+
+// ── Hijri year of a calendar date (no network) ────────
+/** Used when the Umm al-Qura calendar is unavailable in this runtime. */
+export const FALLBACK_RAMADAN_YEAR = 1448;
+
+/**
+ * The Hijri year of a calendar date (YYYY-MM-DD, the user's local date), on the Umm al-Qura calendar. The planner
+ * keys daily logs by this year so each Ramadan keeps its own day 1-30. Local moon-sighting offsets move dates by a
+ * day or two, which never changes the year around Ramadan (the year turns at Muharram, months later).
+ */
+export function hijriYearForDate(dateISO: string): number {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateISO);
+    if (!m) return FALLBACK_RAMADAN_YEAR;
+    try {
+        // Noon UTC of that calendar date, read in UTC, so no zone can move it to a neighbouring day.
+        const at = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12));
+        const parts = new Intl.DateTimeFormat("en-u-ca-islamic-umalqura", {
+            timeZone: "UTC",
+            year: "numeric",
+        }).formatToParts(at);
+        const year = Number.parseInt(parts.find((p) => p.type === "year")?.value ?? "", 10);
+        return Number.isInteger(year) && year >= 1400 && year <= 1600 ? year : FALLBACK_RAMADAN_YEAR;
+    } catch {
+        return FALLBACK_RAMADAN_YEAR;
+    }
+}

@@ -102,6 +102,8 @@ model DailyLog {
   id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId      String      @map("user_id") @db.Uuid
   day         Int
+  /// Hijri year of the Ramadan this log belongs to (day 1-30 repeats every year). Migration 007.
+  ramadanYear Int         @default(1448) @map("ramadan_year")
   logDate     DateTime    @default(now()) @map("log_date") @db.Date
   prayers     Json        @default("{}")
   quranPara   Int         @default(0) @map("quran_para")
@@ -116,7 +118,7 @@ model DailyLog {
   updatedAt   DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   user        UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, day])
+  @@unique([userId, ramadanYear, day])
   @@index([userId, day])
   @@index([userId, logDate])
   @@map("daily_logs")

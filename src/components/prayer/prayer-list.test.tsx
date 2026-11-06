@@ -59,7 +59,7 @@ describe("prayerRowStates", () => {
 describe("PrayerList", () => {
   it("renders the header, five rows with Bengali times, and the reminders link", async () => {
     await renderList();
-    expect(screen.getByRole("heading", { name: "আজকের নামাজ" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "নামাজের সময়" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "রিমাইন্ডার" })).toHaveAttribute("href", "/reminders");
     expect(screen.getAllByRole("listitem")).toHaveLength(5);
     expect(row("fajr")).toHaveTextContent("ফজর");
@@ -87,15 +87,15 @@ describe("PrayerList", () => {
 
   it("without a toggle handler each bell links to /reminders", async () => {
     await renderList();
-    const bell = screen.getByRole("link", { name: "আসর রিমাইন্ডার সেট করুন" });
+    const bell = screen.getByRole("link", { name: "আসর নামাজের রিমাইন্ডার সেট করুন" });
     expect(bell).toHaveAttribute("href", "/reminders");
   });
 
   it("with a toggle handler the bell is a pressed/unpressed toggle", async () => {
     const onToggle = vi.fn();
     await renderList({ reminders: { asr: true }, onToggleReminder: onToggle });
-    const asr = screen.getByRole("button", { name: "আসর রিমাইন্ডার" });
-    const isha = screen.getByRole("button", { name: "ইশা রিমাইন্ডার" });
+    const asr = screen.getByRole("button", { name: "আসর নামাজের রিমাইন্ডার" });
+    const isha = screen.getByRole("button", { name: "ইশা নামাজের রিমাইন্ডার" });
     expect(asr).toHaveAttribute("aria-pressed", "true");
     expect(isha).toHaveAttribute("aria-pressed", "false");
     fireEvent.click(asr);
@@ -106,7 +106,7 @@ describe("PrayerList", () => {
 
   it("renders English names and Latin digits in en", async () => {
     await renderList({}, "en");
-    expect(screen.getByRole("heading", { name: "Today's prayers" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Prayer Times" })).toBeInTheDocument();
     expect(row("asr")).toHaveTextContent("Asr");
     expect(row("asr")).toHaveTextContent("4:25");
     expect(within(row("asr")).getByText("Next")).toBeInTheDocument();

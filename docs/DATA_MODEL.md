@@ -1,6 +1,6 @@
 # Data Model
 
-PostgreSQL hosted on Supabase. Tables are accessed through Prisma and, for planner data, through supabase-js with the service role key (see [ARCHITECTURE.md](ARCHITECTURE.md)).
+PostgreSQL hosted on Supabase. Tables are accessed through Prisma only (see [ARCHITECTURE.md](ARCHITECTURE.md)).
 
 ## Shared content
 

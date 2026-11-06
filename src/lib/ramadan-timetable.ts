@@ -12,6 +12,7 @@
 const ALADHAN_BASE = "https://api.aladhan.com/v1";
 
 import { cachedFetch } from "@/lib/ttl-cache";
+import { ALADHAN_METHOD_PARAMS, fastTimesFromAlAdhan } from "@/lib/fast-times";
 import {
     getHijriOffsetForTimezone,
 } from "./hijri-offsets";
@@ -86,9 +87,6 @@ interface AlAdhanCalendarResponse {
 }
 
 // ── Strip timezone suffixes like " (+07)" or " (ICT)" from time strings ──
-function cleanTime(t: string): string {
-    return t.replace(/\s*\(.*\)$/, "");
-}
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -153,7 +151,7 @@ async function fetchGregorianMonth(
     timezone: string,
     offset: number
 ): Promise<AlAdhanCalendarDay[]> {
-    const url = `${ALADHAN_BASE}/calendar/${year}/${month}?latitude=${latitude}&longitude=${longitude}&method=1&school=1&timezonestring=${encodeURIComponent(timezone)}&calendarMethod=MATHEMATICAL&adjustment=${offset}`;
+    const url = `${ALADHAN_BASE}/calendar/${year}/${month}?latitude=${latitude}&longitude=${longitude}&${ALADHAN_METHOD_PARAMS}&timezonestring=${encodeURIComponent(timezone)}&calendarMethod=MATHEMATICAL&adjustment=${offset}`;
     const res = await cachedFetch(url, 86400);
 
     if (!res.ok) {
@@ -226,10 +224,8 @@ export async function fetchRamadanTimetable(
         day: parseInt(d.date.hijri.day, 10),
         gregorianDate: d.date.gregorian.date,
         weekday: d.date.gregorian.weekday.en.slice(0, 3),
-        sehri: cleanTime(d.timings.Imsak),
-        iftar: cleanTime(d.timings.Maghrib),
-        fajr: cleanTime(d.timings.Fajr),
-        maghrib: cleanTime(d.timings.Maghrib),
+        // The same function as the Home's Sehri and Iftar (src/lib/fast-times.ts).
+        ...fastTimesFromAlAdhan(d.timings),
     }));
 
     const timetable: RamadanTimetable = {

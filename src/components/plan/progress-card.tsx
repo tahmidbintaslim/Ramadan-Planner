@@ -2,6 +2,7 @@ import { useLocale, useTranslations } from "@/i18n/use-intl";
 import { GirihPattern } from "@/components/design/girih-pattern";
 import { formatLocalizedNumber } from "@/lib/locale-number";
 import { cn } from "@/lib/utils";
+import { PlanIcon } from "@/components/icons/islamic-icons";
 import { progressCopy } from "./plan-logic";
 
 const SIZE = 84;
@@ -60,14 +61,19 @@ export function ProgressCard({
             className="transition-[stroke-dashoffset] duration-500 ease-out motion-reduce:transition-none"
           />
         </svg>
+        {/* No "০/০" for an empty list: the checklist sign until there is at least one amal. */}
         <span
           role="img"
-          aria-label={t("progressRing", { done: n(done), total: n(total) })}
+          aria-label={total > 0 ? t("progressRing", { done: n(done), total: n(total) }) : t("progressEmpty")}
           className="rp-h2 absolute inset-0 flex items-center justify-center tabular-nums"
         >
-          <span aria-hidden="true">
-            {n(done)}/{n(total)}
-          </span>
+          {total > 0 ? (
+            <span aria-hidden="true">
+              {n(done)}/{n(total)}
+            </span>
+          ) : (
+            <PlanIcon size={32} data-testid="plan-progress-empty" />
+          )}
         </span>
       </div>
       <div className="min-w-0 flex-1">

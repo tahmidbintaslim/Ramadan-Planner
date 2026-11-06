@@ -3,6 +3,26 @@
 import "@tanstack/react-start/server-only";
 import { AUTH_UNAVAILABLE_MESSAGE, INTERNAL_ERROR_MESSAGE } from "@/server/errors";
 
+/** True for an IANA zone the runtime knows (`Intl.DateTimeFormat` accepts it). */
+export function isValidTimeZoneParam(tz: string): boolean {
+  if (!tz || tz.length > 64) return false;
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** True for a real calendar date written YYYY-MM-DD. */
+export function isValidDateParam(date: string): boolean {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  if (!m) return false;
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const at = new Date(Date.UTC(y, mo - 1, d));
+  return at.getUTCFullYear() === y && at.getUTCMonth() === mo - 1 && at.getUTCDate() === d;
+}
+
 /** `NextResponse.json(body, init)` equivalent. */
 export function json(body: unknown, init?: ResponseInit): Response {
   return Response.json(body, init);

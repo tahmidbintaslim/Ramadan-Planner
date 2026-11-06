@@ -3,9 +3,11 @@ import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router";
 import { ClerkProvider } from "@clerk/tanstack-react-start";
 import { Analytics } from "@vercel/analytics/react";
 import appCss from "@/styles/globals.css?url";
-// The one font worth preloading: the UI face (Noto Sans Bengali 400, Bengali subset) that nearly every screen paints
-// first. Same file the stylesheet's @font-face points at, so Vite emits it once under one hashed name.
-import uiFont400 from "@fontsource/noto-sans-bengali/files/noto-sans-bengali-bengali-400-normal.woff2?url";
+// The one font worth preloading: the UI face (Noto Sans Bengali variable, Bengali subset: every weight in one file)
+// that nearly every screen paints first. Same file the stylesheet's @font-face points at, so Vite emits it once.
+import uiFont400 from "@fontsource-variable/noto-sans-bengali/files/noto-sans-bengali-bengali-wght-normal.woff2?url";
+// English pages paint Latin UI text first: Noto Sans variable, latin subset.
+import uiFontLatin from "@fontsource-variable/noto-sans/files/noto-sans-latin-wght-normal.woff2?url";
 import { getLocaleAndMessages } from "@/i18n/load";
 import { AppIntlProvider } from "@/i18n/provider";
 import { AuthProvider } from "@/components/providers/auth-provider";
@@ -36,7 +38,13 @@ export const Route = createRootRoute({
         { name: "theme-color", content: "#F3F8F6" },
       ],
       links: [
-        { rel: "preload", href: uiFont400, as: "font", type: "font/woff2", crossOrigin: "anonymous" },
+        {
+          rel: "preload",
+          href: loaderData?.locale === "en" ? uiFontLatin : uiFont400,
+          as: "font",
+          type: "font/woff2",
+          crossOrigin: "anonymous",
+        },
         { rel: "stylesheet", href: appCss },
         { rel: "icon", href: "/favicon.ico", sizes: "any" },
         { rel: "manifest", href: "/manifest.webmanifest" },

@@ -11,7 +11,8 @@ import { ShareIcon } from "@/components/icons/islamic-icons";
 import { Printer } from "lucide-react";
 import { oddNightStartingAfter } from "@/lib/ramadan-nights";
 import { todayISOInZone } from "@/lib/prayer-phase";
-import { storedRequestLocation } from "@/lib/user-location";
+import { readStoredLocation, storedRequestLocation } from "@/lib/user-location";
+import { districtById, districtName } from "@/lib/districts";
 import type { RamadanTimetable, TimetableDay } from "@/lib/ramadan-timetable";
 import { TimetableRow } from "./timetable-row";
 import {
@@ -28,6 +29,8 @@ import {
 } from "./timetable-logic";
 
 type WeekdayKey = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun";
+
+const DHAKA_TIME_ZONE = "Asia/Dhaka";
 
 async function loadTimetable(tz: string, coords?: { lat: number; lng: number }): Promise<RamadanTimetable> {
   const params = new URLSearchParams({ tz });
@@ -53,27 +56,16 @@ export function TimetableScreen() {
 
   useEffect(() => {
     let cancelled = false;
-    // The location chosen at onboarding wins: its coordinates and zone, and no geolocation at all.
+    // The location chosen at onboarding wins: its coordinates and zone. Without a valid one the timetable is Dhaka's
+    // (Asia/Dhaka, labelled Dhaka), never the device's zone: a browser in UTC used to get Dhaka's sun times printed
+    // as UTC clock times (sehri "11:09 PM"). No geolocation on this public page.
     const stored = storedRequestLocation();
-    const tz = stored?.tz ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const tz = stored?.tz ?? DHAKA_TIME_ZONE;
     loadTimetable(tz, stored ?? undefined)
-      .then(async (data) => {
+      .then((data) => {
         if (cancelled) return;
         setTimetable(data);
         setStatus("ready");
-        if (stored) return;
-        // Refine to the device position only when the visitor has already allowed it; never prompt on a public page.
-        try {
-          const perm = await navigator.permissions?.query({ name: "geolocation" });
-          if (perm?.state !== "granted") return;
-          const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
-            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 }),
-          );
-          const refined = await loadTimetable(tz, { lat: pos.coords.latitude, lng: pos.coords.longitude });
-          if (!cancelled) setTimetable(refined);
-        } catch {
-          // Keep the time-zone default.
-        }
       })
       .catch(() => {
         if (!cancelled) setStatus("error");
@@ -83,6 +75,14 @@ export function TimetableScreen() {
     };
   }, [tick]);
 
+  // The caption names the stored district, else Dhaka (the default), in the UI language; a GPS-only location keeps
+  // the server's label.
+  const placeLabel = useMemo(() => {
+    if (!timetable) return null;
+    const stored = readStoredLocation();
+    const d = districtById(stored?.districtId ?? (stored ? undefined : "dhaka"));
+    return d ? districtName(d, locale) : null;
+  }, [timetable, locale]);
   const days = timetable?.days ?? [];
   const todayISO = useMemo(
     () => (timetable ? todayISOInZone(new Date(), timetable.timezone) : ""),
@@ -126,7 +126,7 @@ export function TimetableScreen() {
         <h1 className="rp-h1 text-rp-ink print:text-black">{t("title")}</h1>
         {timetable && range ? (
           <p className="rp-small text-rp-muted print:text-black" data-testid="timetable-caption">
-            {t("caption", { location: timetable.location, range: formatRange(range, locale) })}
+            {t("caption", { location: placeLabel ?? timetable.location, range: formatRange(range, locale) })}
           </p>
         ) : null}
         {timetable && !duringRamadan ? <p className="rp-small text-rp-muted print:hidden">{t("nextRamadan")}</p> : null}

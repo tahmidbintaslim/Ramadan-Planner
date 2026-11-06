@@ -1,4 +1,5 @@
 import { cachedFetch } from "@/lib/ttl-cache";
+import { ALADHAN_METHOD_PARAMS, cleanAlAdhanTime, fastTimesFromAlAdhan } from "@/lib/fast-times";
 import type { PrayerTimes, TimingData } from "@/types/database";
 import { fetchIslamicApiPrayerTimes } from "./islamic-api";
 import { HIJRI_MONTHS_BN } from "./hijri-months";
@@ -114,7 +115,7 @@ export async function fetchPrayerTimes(
         const country = getCountryCodeForTimezone(timezone) ?? "DEFAULT";
         const offset = getHijriOffsetForLocation(country);
         const adjustmentParams = getHijriAdjustmentParams(offset);
-        const url = `${ALADHAN_BASE}/${date}?latitude=${latitude}&longitude=${longitude}&method=1&school=1&timezonestring=${encodeURIComponent(timezone)}${adjustmentParams}`;
+        const url = `${ALADHAN_BASE}/${date}?latitude=${latitude}&longitude=${longitude}&${ALADHAN_METHOD_PARAMS}&timezonestring=${encodeURIComponent(timezone)}${adjustmentParams}`;
         const res = await cachedFetch(url, 86400); // cached 24h
         if (!res.ok) {
             throw new Error(`AlAdhan API error: ${res.status} ${res.statusText}`);
@@ -130,17 +131,19 @@ export async function fetchPrayerTimes(
     }
 
     // Strip " (BST)" etc. timezone suffixes from time strings
-    const clean = (t: string) => t.replace(/\s*\(.*\)$/, "");
+    const clean = cleanAlAdhanTime;
+    // Sehri and Iftar come from the same function as the timetable's rows (src/lib/fast-times.ts).
+    const fast = fastTimesFromAlAdhan(timings);
 
     const prayerTimes: PrayerTimes = {
-        fajr: clean(timings.Fajr),
+        fajr: fast.fajr,
         sunrise: clean(timings.Sunrise),
         dhuhr: clean(timings.Dhuhr),
         asr: clean(timings.Asr),
-        maghrib: clean(timings.Maghrib),
+        maghrib: fast.maghrib,
         isha: clean(timings.Isha),
-        sehri: clean(timings.Imsak), // Imsak = Sehri end time
-        iftar: clean(timings.Maghrib), // Iftar = Maghrib
+        sehri: fast.sehri, // Imsak = Sehri end time
+        iftar: fast.iftar, // Iftar = Maghrib
     };
 
     const hijriMonth = dateInfo.hijri.month;

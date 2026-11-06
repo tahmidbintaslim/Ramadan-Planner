@@ -1,3 +1,5 @@
+import { isHiddenPath } from "@/config/features";
+
 // robots.txt and sitemap.xml bodies. Ported from src/app/robots.txt/route.ts and src/app/sitemap.xml/route.ts
 // (same URLs, same lines, same whitespace). Pure functions so tests can pin the output.
 
@@ -38,7 +40,9 @@ export function robotsTxt(baseUrl: string): string {
 
 // Public pages only. The Next sitemap also listed the signed-in noindex pages /plan, /today, /reminders,
 // /settings; they were dropped deliberately (Task 10 fix round 1).
-export const SITEMAP_STATIC_PAGES = ["/", "/quran", "/hadith", "/timetable", "/support"];
+// /duas joined in the Home design fixes (public, sourced duas). Features switched off in src/config/features.ts
+// (hadith today) are left out until they work.
+export const SITEMAP_STATIC_PAGES = ["/", "/quran", "/hadith", "/timetable", "/support", "/duas"].filter((p) => !isHiddenPath(p));
 export const SURAH_COUNT = 114;
 
 /** Every path the sitemap lists, in order (static pages, then /quran/1..114). */

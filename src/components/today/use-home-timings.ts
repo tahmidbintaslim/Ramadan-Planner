@@ -28,7 +28,7 @@ export function coarseCoord(value: number): string {
 /**
  * The Home's requests for one local day. Every URL carries the date, so the CDN (cached per URL for an hour)
  * cannot answer a just-after-midnight request with yesterday's entry. /api/timings reads `date`; /api/ramadan
- * computes "today" itself and ignores `day`, which only keys the cache.
+ * computes "today" itself and only validates `date`, which keys the cache.
  */
 export function homeRequestUrls(
   tz: string,
@@ -48,7 +48,7 @@ export function homeRequestUrls(
   return {
     today: `/api/timings?${withParam("date", todayISO)}`,
     tomorrow: `/api/timings?${withParam("date", nextDayISO(todayISO))}`,
-    ramadan: `/api/ramadan?${withParam("day", todayISO)}`,
+    ramadan: `/api/ramadan?${withParam("date", todayISO)}`,
   };
 }
 

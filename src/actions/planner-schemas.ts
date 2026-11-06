@@ -73,26 +73,42 @@ export interface UserProfileDTO {
   locationLabel: string;
 }
 
+const coarse2 = (value: number) => Math.round(value * 100) / 100;
+
 export const daySchema = z.object({
   day: z.number().int().min(1).max(30),
+  /** The user's local calendar date (YYYY-MM-DD): picks the Ramadan (Hijri year) the day belongs to. */
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
 });
+
+/** The prayers the salah tracker records: the five daily prayers plus taraweeh and tahajjud. */
+export const TRACKED_PRAYERS = ["fajr", "dhuhr", "asr", "maghrib", "isha", "taraweeh", "tahajjud"] as const;
+
+export const JOURNAL_MAX = 5000;
+export const CHECKLIST_MAX_ITEMS = 50;
+export const CHECKLIST_ITEM_MAX = 200;
+export const QURAN_FIELD_MAX = 500;
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export const saveDailyLogSchema = z.object({
   day: z.number().int().min(1).max(30),
-  prayers: z.record(z.string(), z.boolean()).optional(),
+  /** The user's local calendar date (YYYY-MM-DD) the save belongs to; the server falls back to the profile zone. */
+  logDate: z.string().regex(ISO_DATE).optional(),
+  prayers: z.partialRecord(z.enum(TRACKED_PRAYERS), z.boolean()).optional(),
   quran: z
     .object({
-      para: z.string(),
-      surah: z.string(),
-      ayah: z.string(),
-      pages: z.string(),
+      para: z.string().max(QURAN_FIELD_MAX),
+      surah: z.string().max(QURAN_FIELD_MAX),
+      ayah: z.string().max(QURAN_FIELD_MAX),
+      pages: z.string().max(QURAN_FIELD_MAX),
     })
     .optional(),
-  checklist: z.array(z.string()).optional(),
+  checklist: z.array(z.string().max(CHECKLIST_ITEM_MAX)).max(CHECKLIST_MAX_ITEMS).optional(),
   journal: z
     .object({
-      reflection: z.string(),
-      myDua: z.string(),
+      reflection: z.string().max(JOURNAL_MAX),
+      myDua: z.string().max(JOURNAL_MAX),
     })
     .optional(),
   dayTaskDone: z.boolean().optional(),
@@ -153,6 +169,7 @@ export const updateProfileSchema = z.object({
   displayName: z.string().trim().max(120),
   timezone: z.string().trim().min(1).max(120),
   locationLabel: z.string().trim().min(1).max(180),
-  latitude: z.number().min(-90).max(90),
-  longitude: z.number().min(-180).max(180),
+  // Rounded to 2 decimals (about 1 km): enough for prayer times, and no precise position is stored.
+  latitude: z.number().min(-90).max(90).transform(coarse2),
+  longitude: z.number().min(-180).max(180).transform(coarse2),
 });

@@ -3,7 +3,9 @@ import {
   CLOCK_FORMAT_EVENT,
   CLOCK_FORMAT_KEY,
   DEFAULT_CLOCK_FORMAT,
+  bnDayPeriod,
   clockParts,
+  formatDateTime,
   formatHHMM,
   joinClockParts,
   parseClockFormat,
@@ -12,6 +14,34 @@ import {
   writeClockFormat,
 } from "./clock-format";
 import { formatPrayerClock } from "@/components/prayer/use-prayer-phase";
+
+describe("formatDateTime", () => {
+  const at = new Date("2027-02-12T11:55:00Z"); // 17:55 in Dhaka
+  it("uses the clock format for the time, never seconds", () => {
+    expect(formatDateTime(at, "en", "12h", "Asia/Dhaka")).toBe("12 Feb 2027 · 5:55 PM");
+    expect(formatDateTime(at, "en", "24h", "Asia/Dhaka")).toBe("12 Feb 2027 · 17:55");
+    expect(formatDateTime(at, "bn", "12h", "Asia/Dhaka")).toMatch(/· সন্ধ্যা ৫:৫৫$/);
+  });
+});
+
+describe("bnDayPeriod (Bangladeshi day periods for bn 12-hour times)", () => {
+  it.each([
+    [0, 5, "রাত"], [3, 59, "রাত"], [4, 0, "ভোর"], [4, 57, "ভোর"], [5, 59, "ভোর"], [6, 0, "সকাল"], [11, 59, "সকাল"],
+    [12, 0, "দুপুর"], [12, 14, "দুপুর"], [14, 59, "দুপুর"], [15, 0, "বিকাল"], [16, 18, "বিকাল"], [17, 29, "বিকাল"],
+    [17, 30, "সন্ধ্যা"], [17, 58, "সন্ধ্যা"], [18, 59, "সন্ধ্যা"], [19, 0, "রাত"], [19, 12, "রাত"], [23, 59, "রাত"],
+  ] as const)("%i:%i -> %s", (h, m, word) => {
+    expect(bnDayPeriod(h, m)).toBe(word);
+  });
+
+  it("every bn 12-hour time carries a period; English keeps AM/PM", () => {
+    expect(formatHHMM("04:57", "bn")).toBe("ভোর ৪:৫৭");
+    expect(formatHHMM("17:58", "bn")).toBe("সন্ধ্যা ৫:৫৮");
+    expect(formatHHMM("16:18", "bn")).toBe("বিকাল ৪:১৮");
+    expect(formatHHMM("04:57", "en")).toBe("4:57 AM");
+    expect(formatHHMM("17:58", "en")).toBe("5:58 PM");
+    expect(formatHHMM("04:57", "bn", "24h")).toBe("০৪:৫৭");
+  });
+});
 
 describe("formatHHMM", () => {
   it.each([
@@ -24,9 +54,9 @@ describe("formatHHMM", () => {
     // bn 12h: a day-period word only from 00:00 to 03:59, where a bare time is ambiguous
     ["00:05", "bn", "12h", "রাত ১২:০৫"],
     ["03:59", "bn", "12h", "রাত ৩:৫৯"],
-    ["04:00", "bn", "12h", "৪:০০"],
-    ["04:12", "bn", "12h", "৪:১২"],
-    ["17:55", "bn", "12h", "৫:৫৫"],
+    ["04:00", "bn", "12h", "ভোর ৪:০০"],
+    ["04:12", "bn", "12h", "ভোর ৪:১২"],
+    ["17:55", "bn", "12h", "সন্ধ্যা ৫:৫৫"],
     // 24h: zero-padded, no period, in either language
     ["04:12", "en", "24h", "04:12"],
     ["17:55", "en", "24h", "17:55"],
@@ -39,7 +69,7 @@ describe("formatHHMM", () => {
   it("defaults to 12-hour and tolerates suffixes and bad input", () => {
     expect(DEFAULT_CLOCK_FORMAT).toBe("12h");
     expect(formatHHMM("05:02 (+06)", "en")).toBe("5:02 AM");
-    expect(formatHHMM("5:02", "bn")).toBe("৫:০২");
+    expect(formatHHMM("5:02", "bn")).toBe("ভোর ৫:০২");
     expect(formatHHMM("--:--", "bn")).toBe("--:--");
     expect(formatHHMM("24:10", "en", "24h")).toBe("00:10");
   });
@@ -49,7 +79,8 @@ describe("clockParts / joinClockParts", () => {
   it("puts the period after the time in English and before it in Bengali", () => {
     expect(clockParts(17, 5, "en")).toEqual({ time: "5:05", period: "PM", periodFirst: false });
     expect(clockParts(2, 30, "bn")).toEqual({ time: "২:৩০", period: "রাত", periodFirst: true });
-    expect(clockParts(17, 5, "bn")).toEqual({ time: "৫:০৫", period: null, periodFirst: true });
+    expect(clockParts(17, 5, "bn")).toEqual({ time: "৫:০৫", period: "বিকাল", periodFirst: true });
+    expect(clockParts(17, 5, "bn", "24h")).toEqual({ time: "১৭:০৫", period: null, periodFirst: true });
     expect(joinClockParts(clockParts(2, 30, "bn"))).toBe("রাত ২:৩০");
     expect(joinClockParts(clockParts(2, 30, "en", "24h"))).toBe("02:30");
   });

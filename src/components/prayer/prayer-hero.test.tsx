@@ -139,21 +139,20 @@ describe("PrayerHero ring", () => {
 });
 
 describe("PrayerHero live clock", () => {
-  it("ticks every 30 s and announces in the tick that enters a new minute", () => {
+  it("ticks every 30 s; the live region announces the target, never the countdown", () => {
     vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
     vi.setSystemTime(at("13:00:15"));
     renderHero();
     const live = screen.getByTestId("hero-live");
     expect(live.getAttribute("aria-live")).toBe("polite");
-    expect(live).toHaveTextContent("আর ৩ ঘণ্টা ২৫ মিনিট");
+    const first = live.textContent;
+    expect(first).toMatch(/আসর/);
+    expect(first).not.toMatch(/ঘণ্টা|মিনিট/);
 
-    act(() => vi.advanceTimersByTime(PRAYER_TICK_MS)); // 13:00:45, same minute, same text
-    expect(live).toHaveTextContent("আর ৩ ঘণ্টা ২৫ মিনিট");
-
-    // Jittered tick just into the next minute: announced now, not one tick later.
-    act(() => vi.advanceTimersByTime(PRAYER_TICK_MS + 50)); // 13:01:15.05
+    act(() => vi.advanceTimersByTime(PRAYER_TICK_MS)); // 13:00:45
+    act(() => vi.advanceTimersByTime(PRAYER_TICK_MS + 50)); // 13:01:15: the countdown moved, the target did not
     expect(hero()).toHaveTextContent("আর ৩ ঘণ্টা ২৪ মিনিট");
-    expect(live).toHaveTextContent("আর ৩ ঘণ্টা ২৪ মিনিট");
+    expect(live.textContent).toBe(first);
   });
 
   it("switching from a frozen to a live clock shows the current time at once", () => {

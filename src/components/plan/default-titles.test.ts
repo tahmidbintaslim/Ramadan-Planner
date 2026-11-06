@@ -2,13 +2,13 @@ import { describe, expect, it } from "vitest";
 import bn from "@/messages/bn.json";
 import en from "@/messages/en.json";
 import { DEFAULT_TITLES, defaultTitlesByKey } from "./default-titles";
-import { DAY_DEFAULTS, NIGHT_DEFAULTS, buildPlanRows, itemMessageKey, matchDefaultKey } from "./plan-logic";
+import { DAY_DEFAULTS, LEGACY_DEFAULTS, NIGHT_DEFAULTS, buildPlanRows, itemMessageKey, matchDefaultKey } from "./plan-logic";
 
 const items = (m: unknown) => (m as { plan: { items: Record<string, string> } }).plan.items;
 
 describe("DEFAULT_TITLES", () => {
-  it("covers exactly the default suggestions", () => {
-    expect(Object.keys(DEFAULT_TITLES).sort()).toEqual([...DAY_DEFAULTS, ...NIGHT_DEFAULTS].map((d) => d.key).sort());
+  it("covers exactly the default suggestions and the former ones (fajr, quran)", () => {
+    expect(Object.keys(DEFAULT_TITLES).sort()).toEqual([...DAY_DEFAULTS, ...LEGACY_DEFAULTS, ...NIGHT_DEFAULTS].map((d) => d.key).sort());
   });
 
   it("stays in sync with plan.items in both message files", () => {
@@ -46,7 +46,6 @@ describe("matchDefaultKey across languages", () => {
     const rows = buildPlanRows({
       tasks: [{ id: "t1", title: "Tahajjud", isDone: false, dueDate: null }],
       goals: [],
-      isGuest: true,
       notes: {},
       titlesByKey: titles,
       defaultWindows: { "night:tahajjud": "afterIftar" },

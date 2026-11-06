@@ -10,15 +10,38 @@ afterEach(cleanup);
 const names = Object.keys(icons) as (keyof typeof icons)[];
 
 describe("islamic icons", () => {
-  it("exports the 23 expected icons", () => {
-    expect(names).toHaveLength(23);
+  it("exports the 58 expected icons", () => {
+    expect(names).toHaveLength(58);
     expect(names).toEqual(
       expect.arrayContaining(["Home", "Mosque", "Crescent", "Lantern", "Quran", "Tasbih", "Dua", "Calendar", "Zakat"]),
     );
     expect(names).toEqual(
+      expect.arrayContaining(["Mihrab", "Kaaba", "Adzan", "SalahTime", "Dates", "EidMubarak", "RamadanMonth", "MosqueLocation"]),
+    );
+    expect(names).toEqual(
       expect.arrayContaining(["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha", "Bell", "Pin", "Heart", "Share", "Code"]),
     );
-    expect(names).toEqual(expect.arrayContaining(["Plan", "More", "Check", "ChevronRight"]));
+    expect(names).toEqual(expect.arrayContaining(["Plan", "More", "Check", "ChevronRight", "Settings", "Print"]));
+    expect(names).toEqual(expect.arrayContaining(["TextSize"]));
+  });
+
+  it("uses one stroke width (1.5) on every shape except the Hugeicons dot accents", () => {
+    for (const name of names) {
+      const Icon = icons[name];
+      const { container, unmount } = render(<Icon />);
+      const overrides = Array.from(container.querySelectorAll("[stroke-width]"))
+        .filter((el) => el.tagName.toLowerCase() !== "svg")
+        .map((el) => el.getAttribute("d") ?? "");
+      // Only the zero-length "dot" paths (e.g. "M14 4H14.009") draw heavier, as in the Hugeicons originals.
+      for (const d of overrides) expect(d).toMatch(/^M[\d.]+ [\d.]+H[\d.]+$/);
+      unmount();
+    }
+  });
+
+  it("the text-size icon draws a Latin A and a Bengali অ, not a wheelchair", () => {
+    const { container } = render(<icons.TextSize title="লেখা ও থিম" />);
+    expect(container.querySelectorAll("path").length).toBeGreaterThanOrEqual(6);
+    expect(container.querySelector("title")?.textContent).toBe("লেখা ও থিম");
   });
 
   it.each(names)("%s renders a decorative currentColor svg", (name) => {
@@ -30,7 +53,7 @@ describe("islamic icons", () => {
     expect(svg.getAttribute("width")).toBe("24");
     expect(svg.getAttribute("stroke")).toBe("currentColor");
     expect(svg.getAttribute("fill")).toBe("none");
-    expect(svg.getAttribute("stroke-width")).toBe("1.6");
+    expect(svg.getAttribute("stroke-width")).toBe("1.5");
     expect(svg.getAttribute("stroke-linecap")).toBe("round");
     expect(svg.getAttribute("aria-hidden")).toBe("true");
     expect(svg.getAttribute("role")).toBeNull();
