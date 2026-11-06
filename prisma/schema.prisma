@@ -759,3 +759,23 @@ enum one_time_token_type {
 
   @@schema("auth")
 }
+
+/// Anonymous card-donation ledger (supabase/migrations/009_donations.sql). Written only by the Stripe webhook;
+/// no donor PII (no name, email or address). RLS on, no anon/authenticated grants: server (service role) only.
+model Donation {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  stripeEventId        String   @unique @map("stripe_event_id")
+  stripeObjectId       String   @map("stripe_object_id")
+  stripeSubscriptionId String?  @map("stripe_subscription_id")
+  amountMinor          Int      @map("amount_minor")
+  currency             String
+  frequency            String
+  status               String
+  country              String?
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([stripeObjectId])
+  @@index([createdAt])
+  @@map("donations")
+  @@schema("public")
+}
