@@ -1,0 +1,27 @@
+// The default-suggestion titles in both languages, so an item added in one language is still recognised as its
+// suggestion after a language switch or on a device set to the other language (matchDefaultKey). Only these few
+// strings are bundled, not the other language's whole message file. They must equal `plan.items.<key>` in
+// src/messages/bn.json and en.json (default-titles.test.ts fails otherwise); keys match DAY_DEFAULTS/NIGHT_DEFAULTS.
+export const DEFAULT_TITLES: Readonly<Record<string, { readonly bn: string; readonly en: string }>> = {
+  sehri: { bn: "সেহরি ও নিয়ত", en: "Sehri and intention" },
+  fajr: { bn: "ফজর জামাতে", en: "Fajr in congregation" },
+  morningDhikr: { bn: "সকালের যিকির", en: "Morning dhikr" },
+  quran: { bn: "কুরআন · আজকের পারা", en: "Quran · today's juz" },
+  charity: { bn: "দান · আজকের লক্ষ্য", en: "Charity · today's goal" },
+  taraweeh: { bn: "তারাবি", en: "Taraweeh" },
+  sleepDhikr: { bn: "ঘুমের আগের যিকির", en: "Dhikr before sleep" },
+  "night:ishaTaraweeh": { bn: "এশা ও তারাবি", en: "Isha and Taraweeh" },
+  "night:nightQuran": { bn: "কুরআন তিলাওয়াত", en: "Quran recitation" },
+  "night:tahajjud": { bn: "তাহাজ্জুদ", en: "Tahajjud" },
+  "night:qadrDua": { bn: "লাইলাতুল কদরের দোয়া", en: "Laylat al-Qadr dua" },
+};
+
+/** Every known title per default key: both bundled languages plus any extra (e.g. the current locale's message). */
+export function defaultTitlesByKey(extra: Readonly<Record<string, string>> = {}): Record<string, string[]> {
+  const out: Record<string, string[]> = {};
+  for (const [key, { bn, en }] of Object.entries(DEFAULT_TITLES)) {
+    out[key] = [...new Set([extra[key], bn, en].filter((x): x is string => Boolean(x)))];
+  }
+  for (const [key, title] of Object.entries(extra)) if (!out[key]) out[key] = [title];
+  return out;
+}
