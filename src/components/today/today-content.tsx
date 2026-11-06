@@ -88,8 +88,7 @@ export function TodayContent({ initialNow }: { initialNow?: Date }) {
   const districtLabel = chosen ? districtName(chosen, locale) : undefined;
 
   return (
-    <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-8">
-      <h1 className="sr-only">{t("title")}</h1>
+    <div className="mx-auto flex w-full max-w-[1200px] flex-col">
       <HomeOverview
         status={home.status}
         timings={home.timings}
@@ -97,7 +96,6 @@ export function TodayContent({ initialNow }: { initialNow?: Date }) {
         tomorrowTimings={tomorrowTimings}
         cached={home.cached}
         districtLabel={districtLabel}
-        locationHref="/welcome"
         ramadan={home.ramadan}
         now={now}
         initialNow={initialNow}

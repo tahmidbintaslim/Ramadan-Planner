@@ -4,7 +4,8 @@ import { msg, pageHead, rootData, safeJsonLd, webApplicationJsonLd } from "@/lib
 
 export const Route = createFileRoute("/")({
   // The server's year for the footer, so the hydrating render matches the server HTML (see useFooterYear).
-  loader: () => ({ serverYear: new Date().getFullYear() }),
+  // The render time too, so the server and hydrating renders share one clock (see useNowTick).
+  loader: () => ({ serverYear: new Date().getFullYear(), now: Date.now() }),
   head: ({ matches }) => {
     const root = rootData(matches);
     // Landing title = the app name (common.metaTitle, same as before); canonical is the site root.
@@ -19,5 +20,6 @@ export const Route = createFileRoute("/")({
 });
 
 function LandingRoute() {
-  return <LandingPage serverYear={Route.useLoaderData().serverYear} />;
+  const { serverYear, now } = Route.useLoaderData();
+  return <LandingPage serverYear={serverYear} initialNow={new Date(now)} />;
 }

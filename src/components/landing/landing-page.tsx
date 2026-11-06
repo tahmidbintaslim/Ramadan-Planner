@@ -1,106 +1,41 @@
-import { useSyncExternalStore, type ComponentType } from "react";
+import { useState, useSyncExternalStore, type ComponentType } from "react";
 import { useLocale, useTranslations } from "@/i18n/use-intl";
 import { formatLocalizedNumber } from "@/lib/locale-number";
 import { Link } from "@/components/shared/link";
 import { buttonVariants } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { GirihPattern } from "@/components/design/girih-pattern";
-import { MihrabArch } from "@/components/design/mihrab-arch";
-import { SectionHeader } from "@/components/design/section-header";
-import {
-  BellIcon,
-  CalendarIcon,
-  CheckIcon,
-  ChevronRightIcon,
-  CrescentIcon,
-  FajrIcon,
-  HeartIcon,
-  LanternIcon,
-  MaghribIcon,
-  MosqueIcon,
-  PinIcon,
-  PlanIcon,
-  QuranIcon,
-  TasbihIcon,
-  type IconProps,
-} from "@/components/icons/islamic-icons";
-import { SiteHeader } from "@/components/layout/site-header";
+import { CrescentIcon, DatesIcon, SalahTimeIcon, type IconProps } from "@/components/icons/islamic-icons";
+import { BrandLockup, SiteHeader } from "@/components/layout/site-header";
+import { TextThemeButton } from "@/components/shared/accessibility-sidebar";
 import { useAuth } from "@/components/providers/auth-provider";
-import { needsOnboarding } from "@/lib/user-location";
+import { PrayerHero, heroLabel, heroResult } from "@/components/prayer/prayer-hero";
+import { SehriIftarPair } from "@/components/prayer/sehri-iftar-pair";
+import { PrayerList } from "@/components/prayer/prayer-list";
+import { formatPrayerClock } from "@/components/prayer/use-prayer-phase";
+import { LocationSheet } from "@/components/onboarding/location-sheet";
+import { useDistrictLabel } from "@/components/layout/app-header";
+import { useLiveTimes } from "@/components/today/use-live-times";
+import { districtOf, hijriLabelOf } from "@/components/today/home-overview";
+import { useClockFormat } from "@/hooks/use-clock-format";
+import { getPrayerPhase, type PhaseTimings } from "@/lib/prayer-phase";
+import { needsOnboarding, subscribeStoredLocation } from "@/lib/user-location";
 import { cn } from "@/lib/utils";
-import { isHiddenPath } from "@/config/features";
-
-type LandingKey = Parameters<ReturnType<typeof useTranslations<"landing">>>[0];
-
-const FEATURES: ReadonlyArray<{ title: LandingKey; desc: LandingKey; href: string; Icon: ComponentType<IconProps> }> = [
-  { title: "tilePrayerTitle", desc: "tilePrayerDesc", href: "/today", Icon: MosqueIcon },
-  { title: "tileTimetableTitle", desc: "tileTimetableDesc", href: "/timetable", Icon: CalendarIcon },
-  { title: "tilePlanTitle", desc: "tilePlanDesc", href: "/plan", Icon: PlanIcon },
-  { title: "tileQuranTitle", desc: "tileQuranDesc", href: "/quran", Icon: QuranIcon },
-  { title: "tileRemindersTitle", desc: "tileRemindersDesc", href: "/reminders", Icon: BellIcon },
-  { title: "tileTasbihTitle", desc: "tileTasbihDesc", href: "/tasbih", Icon: TasbihIcon },
-].filter((f) => !isHiddenPath(f.href)); // src/config/features.ts decides what is shown
-
-const PROMISES: ReadonlyArray<{ title: LandingKey; desc: LandingKey; Icon: ComponentType<IconProps> }> = [
-  { title: "promiseFreeTitle", desc: "promiseFreeDesc", Icon: HeartIcon },
-  { title: "promiseNoAdsTitle", desc: "promiseNoAdsDesc", Icon: CheckIcon },
-  { title: "promisePrivacyTitle", desc: "promisePrivacyDesc", Icon: PinIcon },
-];
+import { DEFAULT_DISTRICT_ID, districtById, districtName } from "@/lib/districts";
 
 /**
- * Where "start free" leads: onboarding for a first-time guest, straight to the Home otherwise. The server (and
- * the hydrating render) link to onboarding; the device's choice is read after mount.
+ * Where "Get started" leads: onboarding for a first-time guest, straight to Today otherwise. The server (and
+ * the hydrating render) link to onboarding; the device's choice is read after mount and followed on every save.
  */
-const noSubscribe = () => () => {};
-
 function useStartHref(): string {
   const { user } = useAuth();
   const onboard = useSyncExternalStore(
-    noSubscribe,
+    subscribeStoredLocation,
     () => needsOnboarding(user !== null),
     () => true,
   );
   return onboard ? "/welcome" : "/today";
 }
 
-/** A sample Sehri/Iftar card (static, labelled নমুনা): what the Home shows, without a network request. */
-function SampleTimesCard() {
-  const t = useTranslations("landing");
-  return (
-    <section
-      aria-labelledby="sample-title"
-      data-testid="landing-sample"
-      className="relative flex flex-col gap-4 rounded-rp-lg bg-rp-surface p-5 text-rp-ink shadow-rp-soft"
-    >
-      <div className="flex items-center justify-between gap-3">
-        <h2 id="sample-title" className="rp-row inline-flex items-center gap-2 font-semibold">
-          <PinIcon size={20} className="text-rp-accent" />
-          {t("sampleTitle")}
-        </h2>
-        <Badge variant="gold">{t("sampleBadge")}</Badge>
-      </div>
-      <dl className="grid grid-cols-2 gap-3">
-        <div className="rounded-rp-md bg-rp-accent-tint p-4">
-          <dt className="rp-small inline-flex items-center gap-1.5 text-rp-muted">
-            <FajrIcon size={18} className="text-rp-accent" />
-            {t("sampleSehri")}
-          </dt>
-          <dd className="rp-time-l mt-1 tabular-nums text-rp-ink">{t("sampleSehriTime")}</dd>
-        </div>
-        <div className="rounded-rp-md bg-rp-gold-tint p-4">
-          <dt className="rp-small inline-flex items-center gap-1.5 text-rp-muted">
-            <MaghribIcon size={18} className="text-rp-gold-text" />
-            {t("sampleIftar")}
-          </dt>
-          <dd className="rp-time-l mt-1 tabular-nums text-rp-ink">{t("sampleIftarTime")}</dd>
-        </div>
-      </dl>
-      <p data-testid="landing-sample-source" className="rp-caption text-rp-muted">
-        {t("sampleSource")}
-      </p>
-    </section>
-  );
-}
+const noSubscribe = () => () => {};
 
 /**
  * The copyright year: the server's year (from the route loader, so the hydrating render matches the HTML), then
@@ -110,119 +45,174 @@ export function useFooterYear(serverYear: number): number {
   return useSyncExternalStore(noSubscribe, () => new Date().getFullYear(), () => serverYear);
 }
 
-export function LandingPage({ serverYear = new Date().getFullYear() }: { serverYear?: number }) {
+function TimeRow({ Icon, label, time, next }: { Icon: ComponentType<IconProps>; label: string; time: string; next?: boolean }) {
+  return (
+    <li className={cn("flex min-h-12 items-center gap-3 rounded-rp-input px-3", next && "bg-rp-accent-tint")}>
+      <Icon size={24} className="shrink-0 text-rp-icon" />
+      <span className="rp-row min-w-0 flex-1 truncate">{label}</span>
+      <span className="rp-headline whitespace-nowrap tabular-nums" suppressHydrationWarning>
+        {time}
+      </span>
+    </li>
+  );
+}
+
+/** Compact "Today in Dhaka" card (welcome value screen): sehri end, the next prayer (tinted) and iftar. */
+function TodayCard({ timings, timeZone, now, title, hijri }: { timings: PhaseTimings; timeZone: string; now: Date; title: string; hijri?: string }) {
+  const t = useTranslations("prayer");
+  const tSalah = useTranslations("salah");
+  const locale = useLocale();
+  const [clockFormat] = useClockFormat();
+  const r = heroResult(getPrayerPhase(now, timings), timings, now, false);
+  const sehriEnd = timings.sehriEnd && timings.sehriEnd.getTime() < timings.fajr.getTime() ? timings.sehriEnd : timings.fajr;
+  const clock = (at: Date) => formatPrayerClock(at, timeZone, locale, clockFormat);
+  return (
+    <section aria-labelledby="landing-today" data-testid="landing-sample" className="rounded-rp-lg bg-rp-surface p-2 text-rp-ink">
+      <div className="flex items-baseline justify-between gap-3 px-3 pt-2 pb-1">
+        <h2 id="landing-today" className="rp-headline">
+          {title}
+        </h2>
+        {hijri ? <span className="rp-caption text-rp-muted">{hijri}</span> : null}
+      </div>
+      <ul className="flex flex-col">
+        <TimeRow Icon={CrescentIcon} label={t("sehriEnds")} time={clock(sehriEnd)} />
+        <TimeRow Icon={SalahTimeIcon} label={heroLabel(r, timings, t, tSalah, false)} time={clock(r.next.at)} next />
+        <TimeRow Icon={DatesIcon} label={t("iftar")} time={clock(timings.maghrib)} />
+      </ul>
+    </section>
+  );
+}
+
+/**
+ * The web homepage = the app's welcome (Figma page 10).
+ * Compact (<=430): the welcome value screen: a teal band with the brand, the title and the line, then today's real
+ * times for the visitor's district (Dhaka until one is chosen) and "Get started" in the lower part of the screen.
+ * Medium / regular: the homepage header (brand, বাংলা | English, Text & Theme), the copy and the two actions on
+ * the left, and the next-prayer card, Sehri/Iftar pair and today's prayers on the right, in a 1200 column.
+ * Every time is live from /api/timings (no sample times); until they arrive a quiet placeholder holds the space.
+ */
+export function LandingPage({ serverYear = new Date().getFullYear(), initialNow }: { serverYear?: number; initialNow?: Date }) {
   const t = useTranslations("landing");
   const tCommon = useTranslations("common");
+  const tHome = useTranslations("home");
+  const tPrayer = useTranslations("prayer");
   const locale = useLocale();
   const startHref = useStartHref();
   const year = useFooterYear(serverYear);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const { home, phaseTimings, timeZone, now } = useLiveTimes(initialNow);
+  const chosen = useDistrictLabel();
+  const timings = home.timings;
+  const place = chosen ?? (timings ? districtOf(timings.location) : districtName(districtById(DEFAULT_DISTRICT_ID)!, locale));
+  const hijri = timings ? hijriLabelOf(timings, locale, (v) => tHome("hijri", v)) : undefined;
+  const fresh = !home.cached && timings?.source;
+  const source = tPrayer(fresh ? "source" : "sampleSource", {
+    source: fresh ? tHome(timings.source === "islamicapi" ? "sourceIslamicApi" : "sourceAladhan") : tHome("sourceUnverified"),
+  });
+  const weekday = (() => {
+    try {
+      return new Intl.DateTimeFormat(locale === "bn" ? "bn-BD" : "en-GB", { weekday: "long", timeZone }).format(now);
+    } catch {
+      return "";
+    }
+  })();
+  const dateLine = [weekday, hijri, place].filter(Boolean).join(" · ");
+
+  const placeholder = (
+    <div
+      role="status"
+      className="flex min-h-[176px] items-end rounded-rp-lg bg-rp-surface p-6 text-rp-muted motion-safe:animate-pulse"
+    >
+      <span className="rp-small">{home.status === "error" ? t("timesUnavailable") : t("timesLoading")}</span>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-rp-page">
+    <div className="flex min-h-dvh flex-col bg-rp-page">
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-rp-sm focus:bg-rp-surface focus:px-3 focus:py-2 focus:text-sm focus:shadow"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-rp-sm focus:bg-rp-surface focus:px-3 focus:py-2 focus:shadow"
       >
         {t("skipToContent")}
       </a>
-      <SiteHeader />
+      <SiteHeader className="hidden medium:block" />
 
-      <main id="main-content" className="mx-auto flex w-full max-w-[1120px] flex-col gap-14 px-4 pb-16 pt-4 sm:gap-20 sm:px-6 sm:pt-8">
-        {/* Hero: a calm mint sky with the arch, the lattice and the crescent; the sample card is its picture. */}
+      <main
+        id="main-content"
+        className="mx-auto flex min-h-dvh w-full max-w-[1296px] flex-1 flex-col medium:min-h-0 medium:px-6 medium:py-12 regular:grid regular:grid-cols-[minmax(0,1fr)_minmax(0,560px)] regular:items-center regular:gap-12 regular:px-12 regular:py-16"
+      >
         <section
           aria-labelledby="hero-title"
-          className="relative isolate overflow-hidden rounded-rp-xl bg-rp-accent-tint px-5 py-10 sm:px-10 sm:py-14 lg:px-14"
+          className="flex flex-col gap-4 bg-rp-live px-4 pt-4 pb-20 text-rp-on-live medium:bg-transparent medium:p-0 medium:pb-10 medium:text-rp-ink regular:pb-0"
         >
-          <GirihPattern opacity={0.07} className="-z-10 text-rp-accent" />
-          <MihrabArch className="pointer-events-none absolute bottom-0 right-[-40px] -z-10 h-[340px] w-[340px] text-rp-accent sm:right-6 lg:right-[38%]" />
-          <div className="grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14">
-            <div className="flex flex-col gap-5">
-              <CrescentIcon size={40} className="text-rp-gold-text" />
-              <h1 id="hero-title" className="font-display text-[34px] leading-[48px] text-rp-ink sm:text-[44px] sm:leading-[60px]">
-                {t("heroTitle")}
-              </h1>
-              <p className="rp-body max-w-xl text-rp-muted sm:text-[18px] sm:leading-[30px]">{t("heroSubtitle")}</p>
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <Link href={startHref} className={cn(buttonVariants({ size: "lg" }), "w-full sm:w-auto")} data-testid="landing-start">
-                  {t("getStarted")}
-                </Link>
-                <Link
-                  href="/timetable"
-                  className={cn(buttonVariants({ variant: "outline", size: "lg" }), "w-full sm:w-auto")}
-                >
-                  {t("todayTimetable")}
-                </Link>
-              </div>
-              <p className="rp-small text-rp-muted">{t("heroNote")}</p>
-            </div>
-            <SampleTimesCard />
+          {/* Compact: the brand sits in the teal band (the header shows from medium up). */}
+          <div className="flex items-center justify-between medium:hidden">
+            <span className="flex items-center gap-2">
+              <CrescentIcon size={24} />
+              <span className="rp-headline">{tCommon("appName")}</span>
+            </span>
+            <TextThemeButton tone="live" className="-mr-2" />
+          </div>
+          <p className="rp-caption hidden text-rp-accent medium:block" data-testid="landing-date" suppressHydrationWarning>
+            {dateLine}
+          </p>
+          <h1 id="hero-title" className="rp-h1 medium:rp-display-l">
+            {t("heroTitle")}
+          </h1>
+          <p className="rp-body max-w-[560px] medium:text-rp-muted regular:rp-greeting regular:font-normal">
+            {t("heroSubtitle")} <span className="hidden medium:inline">{t("heroNote")}</span>
+          </p>
+          <div className="mt-4 hidden gap-4 medium:flex">
+            <Link href={startHref} className={buttonVariants({ size: "lg" })} data-testid="landing-start-web">
+              {t("getStarted")}
+            </Link>
+            <button type="button" onClick={() => setSheetOpen(true)} className={buttonVariants({ variant: "soft", size: "lg" })}>
+              {t("chooseDistrict")}
+            </button>
           </div>
         </section>
 
-        <section aria-labelledby="features-title" className="flex flex-col gap-5">
-          <SectionHeader id="features-title" title={t("featuresTitle")} />
-          <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
-            {FEATURES.map(({ title, desc, href, Icon }) => (
-              <li key={href}>
-                <Link
-                  href={href}
-                  className="flex h-full min-h-[132px] flex-col gap-3 rounded-rp-lg bg-rp-surface p-4 text-rp-ink shadow-rp-soft outline-none transition-colors hover:bg-rp-accent-tint/60 focus-visible:ring-[3px] focus-visible:ring-ring sm:p-5"
-                >
-                  <span aria-hidden="true" className="flex size-11 items-center justify-center rounded-full bg-rp-accent-tint text-rp-accent">
-                    <Icon size={24} />
-                  </span>
-                  <span className="rp-row block">{t(title)}</span>
-                  <span className="rp-small block text-rp-muted">{t(desc)}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <section aria-labelledby="promise-title" className="flex flex-col gap-5">
-          <SectionHeader id="promise-title" title={t("promiseTitle")} />
-          <ul className="grid gap-3 sm:gap-4 md:grid-cols-3">
-            {PROMISES.map(({ title, desc, Icon }) => (
-              <li key={title} className="flex gap-4 rounded-rp-lg bg-rp-surface p-5 shadow-rp-soft">
-                <span aria-hidden="true" className="flex size-11 shrink-0 items-center justify-center rounded-full bg-rp-accent-tint text-rp-accent">
-                  <Icon size={24} />
-                </span>
-                <span className="flex flex-col gap-1">
-                  <span className="rp-row text-rp-ink">{t(title)}</span>
-                  <span className="rp-small text-rp-muted">{t(desc)}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <section
-          aria-labelledby="support-teaser-title"
-          className="relative isolate flex flex-col gap-4 overflow-hidden rounded-rp-xl bg-rp-gold-tint p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8"
-        >
-          <GirihPattern opacity={0.06} className="-z-10 text-rp-gold-text" />
-          <div className="flex gap-4">
-            <LanternIcon size={48} className="shrink-0 text-rp-gold-text" />
-            <div className="flex flex-col gap-1">
-              <h2 id="support-teaser-title" className="rp-h2 text-rp-ink">
-                {t("supportTitle")}
-              </h2>
-              <p className="rp-small max-w-xl text-rp-ink">{t("supportDesc")}</p>
-            </div>
+        {/* Today's real times. */}
+        <div className="-mt-14 px-4 medium:mt-0 medium:px-0">
+          <div className="medium:hidden">
+            {timings && phaseTimings ? (
+              <TodayCard timings={phaseTimings} timeZone={timeZone} now={now} title={t("todayTitle", { place })} hijri={hijri} />
+            ) : (
+              placeholder
+            )}
           </div>
-          <Link href="/support" className={cn(buttonVariants({ variant: "outline" }), "shrink-0 self-start sm:self-center")}>
-            {t("supportAction")}
-            <ChevronRightIcon size={18} />
+          <div className="hidden flex-col gap-4 medium:flex">
+            {timings && phaseTimings ? (
+              <>
+                <PrayerHero timings={phaseTimings} timeZone={timeZone} initialNow={initialNow} />
+                <SehriIftarPair timings={phaseTimings} timeZone={timeZone} />
+                <PrayerList timings={phaseTimings} timeZone={timeZone} hideHeader hideReminders initialNow={initialNow} />
+              </>
+            ) : (
+              placeholder
+            )}
+            <p className="rp-caption text-rp-muted" data-testid="landing-sample-source">
+              {source}
+            </p>
+          </div>
+        </div>
+
+        {/* Compact: the primary action in the lower part of the screen, with the source line. */}
+        <div className="mt-auto flex flex-col gap-3 px-4 pt-8 pb-[calc(1.5rem+env(safe-area-inset-bottom))] text-center medium:hidden">
+          <Link href={startHref} className={cn(buttonVariants({ size: "lg" }), "w-full")} data-testid="landing-start">
+            {t("getStarted")}
           </Link>
-        </section>
+          <p className="rp-caption text-rp-muted">
+            {source}
+            <br />
+            {t("heroNoteShort")}
+          </p>
+        </div>
       </main>
 
-      <footer className="border-t border-rp-rule bg-rp-surface py-8">
-        <div className="mx-auto flex max-w-[1120px] flex-col items-center gap-3 px-4 text-center sm:px-6">
-          <p className="rp-small inline-flex items-center gap-2 text-rp-muted">
-            <CrescentIcon size={18} className="text-rp-accent" />
-            {t("footerTagline")}
-          </p>
+      <footer className="border-t border-rp-rule py-6">
+        <div className="mx-auto flex max-w-[1296px] flex-col items-center gap-2 px-4 text-center medium:flex-row medium:justify-between medium:px-6 regular:px-12">
+          <BrandLockup className="hidden medium:flex" />
           <nav aria-label={t("footerNav")} className="flex flex-wrap justify-center gap-x-2">
             {(
               [
@@ -231,7 +221,7 @@ export function LandingPage({ serverYear = new Date().getFullYear() }: { serverY
                 ["/support", "footerSupport"],
               ] as const
             ).map(([href, key]) => (
-              <Link key={href} href={href} className="rp-small inline-flex min-h-12 items-center px-2 text-rp-accent underline-offset-4 hover:underline">
+              <Link key={href} href={href} className="rp-small inline-flex min-h-11 items-center px-2 font-medium text-rp-accent underline-offset-4 hover:underline">
                 {t(key)}
               </Link>
             ))}
@@ -241,6 +231,8 @@ export function LandingPage({ serverYear = new Date().getFullYear() }: { serverY
           </p>
         </div>
       </footer>
+
+      <LocationSheet open={sheetOpen} onOpenChange={setSheetOpen} />
     </div>
   );
 }

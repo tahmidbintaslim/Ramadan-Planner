@@ -29,13 +29,13 @@ describe("font stack", () => {
 
   it("sets text at 15px and below in the text face (Noto Sans Bengali in bn), never below 13px", () => {
     for (const role of ["rp-small", "rp-caption", "rp-overline", "rp-reading-small"]) {
-      const rule = new RegExp(`\\.${role} \\{([^}]+)\\}`).exec(css)?.[1] ?? "";
+      const rule = new RegExp(`@utility ${role} \\{([^}]+)`).exec(css)?.[1] ?? "";
       expect(rule, role).toContain("var(--font-rp-sans)");
       expect(Number(/font-size: (\d+)px/.exec(rule)?.[1]), role).toBeGreaterThanOrEqual(13);
     }
     // Bengali text roles keep a 1.4-1.5 line height (Footnote 13/20, Subheadline 15/22, Body 17/26).
-    expect(css).toMatch(/\.rp-caption \{[^}]*font-size: 13px; line-height: 20px/);
-    expect(css).toMatch(/\.rp-body \{[^}]*font-size: 17px; line-height: 26px/);
+    expect(css).toMatch(/@utility rp-caption \{[^}]*font-size: 13px; line-height: 20px/);
+    expect(css).toMatch(/@utility rp-body \{[^}]*font-size: 17px; line-height: 26px/);
   });
 
   it("every imported face swaps", () => {

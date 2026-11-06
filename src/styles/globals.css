@@ -64,6 +64,9 @@
   /* HIG size classes: medium starts at 431px, regular (sidebar, toolbar) at 835px. */
   --breakpoint-medium: 431px;
   --breakpoint-regular: 835px;
+  /* No Bengali below 13px: the smallest Tailwind size is the Footnote (13/20). */
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: calc(20 / 13);
 }
 
 @theme inline {
@@ -300,45 +303,79 @@
   --chart-5: var(--rp-cs-night-ink-2);
 }
 
-@layer utilities {
-  /* Display/UI roles (Anek Bangla / Figtree). Bengali line heights first; English overrides below. */
-  .rp-display-l { font-family: var(--font-rp-display); font-size: 48px; line-height: 64px; font-weight: 600; }
-  .rp-large-title { font-family: var(--font-rp-display); font-size: 34px; line-height: 48px; font-weight: 600; }
-  .rp-h1 { font-family: var(--font-rp-display); font-size: 28px; line-height: 40px; font-weight: 600; }
-  .rp-greeting { font-family: var(--font-rp-display); font-size: 22px; line-height: 32px; font-weight: 600; }
-  .rp-h2 { font-family: var(--font-rp-display); font-size: 20px; line-height: 30px; font-weight: 600; }
-  .rp-headline { font-family: var(--font-rp-display); font-size: 17px; line-height: 26px; font-weight: 600; }
-  .rp-row { font-family: var(--font-rp-display); font-size: 17px; line-height: 26px; font-weight: 400; }
-  .rp-body { font-family: var(--font-rp-display); font-size: 17px; line-height: 26px; font-weight: 400; }
-  .rp-callout { font-family: var(--font-rp-display); font-size: 16px; line-height: 24px; font-weight: 400; }
-  .rp-button { font-family: var(--font-rp-display); font-size: 17px; line-height: 26px; font-weight: 600; }
-  .rp-time-xl { font-family: var(--font-rp-display); font-size: 48px; line-height: 56px; font-weight: 600; font-variant-numeric: tabular-nums; }
-  .rp-time-l { font-family: var(--font-rp-display); font-size: 34px; line-height: 48px; font-weight: 600; font-variant-numeric: tabular-nums; }
-  /* Text roles at 15px and below (Noto Sans Bengali / Figtree). */
-  .rp-small { font-family: var(--font-rp-sans); font-size: 15px; line-height: 22px; font-weight: 400; }
-  .rp-caption { font-family: var(--font-rp-sans); font-size: 13px; line-height: 20px; font-weight: 500; }
-  .rp-overline { font-family: var(--font-rp-sans); font-size: 13px; line-height: 20px; font-weight: 500; }
-  /* Reading text (ayah translations, hadith, dua meanings, niyyah). */
-  .rp-reading { font-family: var(--font-rp-scripture); font-size: 17px; line-height: 30px; font-weight: 400; }
-  .rp-reading-small { font-family: var(--font-rp-sans); font-size: 15px; line-height: 26px; font-weight: 400; }
-
-  /* English (html lang="en"): Figtree with the HIG line heights. */
-  .rp-display-l:lang(en) { line-height: 56px; letter-spacing: -0.01em; }
-  .rp-large-title:lang(en) { line-height: 41px; font-weight: 700; letter-spacing: -0.01em; }
-  .rp-h1:lang(en) { line-height: 34px; letter-spacing: -0.01em; }
-  .rp-greeting:lang(en) { line-height: 28px; }
-  .rp-h2:lang(en) { line-height: 25px; }
-  .rp-headline:lang(en),
-  .rp-row:lang(en),
-  .rp-body:lang(en),
-  .rp-button:lang(en) { line-height: 22px; }
-  .rp-callout:lang(en) { line-height: 21px; }
-  .rp-time-l:lang(en) { line-height: 41px; }
-  .rp-small:lang(en) { line-height: 20px; }
-  .rp-caption:lang(en),
-  .rp-overline:lang(en) { line-height: 18px; }
-  .rp-reading:lang(en) { line-height: 28px; }
-  .rp-reading-small:lang(en) { line-height: 24px; }
+/*
+ * Type roles as Tailwind utilities, so they take variants (e.g. `regular:rp-display-l`). Bengali line heights first;
+ * the :lang(en) rules give English (Figtree) the HIG line heights.
+ */
+/* Display/UI roles (Anek Bangla / Figtree). */
+@utility rp-display-l {
+  font-family: var(--font-rp-display); font-size: 48px; line-height: 64px; font-weight: 600;
+  &:lang(en) { line-height: 56px; letter-spacing: -0.01em; }
+}
+@utility rp-large-title {
+  font-family: var(--font-rp-display); font-size: 34px; line-height: 48px; font-weight: 600;
+  &:lang(en) { line-height: 41px; font-weight: 700; letter-spacing: -0.01em; }
+}
+@utility rp-h1 {
+  font-family: var(--font-rp-display); font-size: 28px; line-height: 40px; font-weight: 600;
+  &:lang(en) { line-height: 34px; letter-spacing: -0.01em; }
+}
+@utility rp-greeting {
+  font-family: var(--font-rp-display); font-size: 22px; line-height: 32px; font-weight: 600;
+  &:lang(en) { line-height: 28px; }
+}
+@utility rp-h2 {
+  font-family: var(--font-rp-display); font-size: 20px; line-height: 30px; font-weight: 600;
+  &:lang(en) { line-height: 25px; }
+}
+@utility rp-headline {
+  font-family: var(--font-rp-display); font-size: 17px; line-height: 26px; font-weight: 600;
+  &:lang(en) { line-height: 22px; }
+}
+@utility rp-row {
+  font-family: var(--font-rp-display); font-size: 17px; line-height: 26px; font-weight: 400;
+  &:lang(en) { line-height: 22px; }
+}
+@utility rp-body {
+  font-family: var(--font-rp-display); font-size: 17px; line-height: 26px; font-weight: 400;
+  &:lang(en) { line-height: 22px; }
+}
+@utility rp-callout {
+  font-family: var(--font-rp-display); font-size: 16px; line-height: 24px; font-weight: 400;
+  &:lang(en) { line-height: 21px; }
+}
+@utility rp-button {
+  font-family: var(--font-rp-display); font-size: 17px; line-height: 26px; font-weight: 600;
+  &:lang(en) { line-height: 22px; }
+}
+@utility rp-time-xl {
+  font-family: var(--font-rp-display); font-size: 48px; line-height: 56px; font-weight: 600; font-variant-numeric: tabular-nums;
+}
+@utility rp-time-l {
+  font-family: var(--font-rp-display); font-size: 34px; line-height: 48px; font-weight: 600; font-variant-numeric: tabular-nums;
+  &:lang(en) { line-height: 41px; }
+}
+/* Text roles at 15px and below (Noto Sans Bengali / Figtree). */
+@utility rp-small {
+  font-family: var(--font-rp-sans); font-size: 15px; line-height: 22px; font-weight: 400;
+  &:lang(en) { line-height: 20px; }
+}
+@utility rp-caption {
+  font-family: var(--font-rp-sans); font-size: 13px; line-height: 20px; font-weight: 500;
+  &:lang(en) { line-height: 18px; }
+}
+@utility rp-overline {
+  font-family: var(--font-rp-sans); font-size: 13px; line-height: 20px; font-weight: 500;
+  &:lang(en) { line-height: 18px; }
+}
+/* Reading text (ayah translations, hadith, dua meanings, niyyah). */
+@utility rp-reading {
+  font-family: var(--font-rp-scripture); font-size: 17px; line-height: 30px; font-weight: 400;
+  &:lang(en) { line-height: 28px; }
+}
+@utility rp-reading-small {
+  font-family: var(--font-rp-sans); font-size: 15px; line-height: 26px; font-weight: 400;
+  &:lang(en) { line-height: 24px; }
 }
 
 /* English type tokens (html lang="en"): Figtree for every role, the Bengali faces for any Bengali words. Arabic is

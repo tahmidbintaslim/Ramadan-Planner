@@ -57,7 +57,7 @@ export function TimetableRow({
         <p className="rp-row">
           {formatRowDate(day, labels.weekday, locale)}
           {isToday ? (
-            <span className="ms-2 rounded-rp-full bg-rp-surface px-2 py-0.5 text-[12px] font-semibold text-rp-accent print:hidden">{labels.today}</span>
+            <span className="ms-2 rounded-rp-full bg-rp-surface px-2 py-0.5 rp-caption font-semibold text-rp-accent print:hidden">{labels.today}</span>
           ) : null}
         </p>
       </div>

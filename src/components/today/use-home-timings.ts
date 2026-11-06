@@ -3,7 +3,7 @@ import type { TimingData } from "@/types/database";
 import type { RamadanStatus } from "@/lib/ramadan-date";
 import { readKnownTimings, rememberTimings } from "@/lib/auto-night";
 import { todayISOInZone } from "@/lib/prayer-phase";
-import { readStoredLocation, type StoredLocation } from "@/lib/user-location";
+import { readStoredLocation, subscribeStoredLocation, type StoredLocation } from "@/lib/user-location";
 
 export type HomeTimingsStatus = "loading" | "ready" | "error";
 
@@ -106,9 +106,14 @@ function cachedTimings(tz: string): TimingData | null {
  * Home data: today's timings and the Ramadan status. With a location chosen at onboarding (district or coarse
  * device position) the requests use it and nothing prompts. Without one: first the device timezone (fast, no
  * prompt), then refined with the device location when the user allows it.
- * Refetches when `todayISO` changes (local midnight). `enabled: false` holds every request. Fresh timings are remembered for Auto Night mode.
+ * Refetches when `todayISO` changes (local midnight) and when the stored location changes (the location sheet).
+ * `enabled: false` holds every request. `fallback` stands in when nothing is stored (the landing page: Dhaka, so it
+ * never prompts for geolocation). Fresh timings are remembered for Auto Night mode.
  */
-export function useHomeTimings(todayISO: string, { enabled = true }: { enabled?: boolean } = {}): HomeTimings & { retry: () => void } {
+export function useHomeTimings(
+  todayISO: string,
+  { enabled = true, fallback }: { enabled?: boolean; fallback?: StoredLocation } = {},
+): HomeTimings & { retry: () => void } {
   const [state, setState] = useState<HomeTimings>({
     status: "loading",
     timings: null,
@@ -122,6 +127,8 @@ export function useHomeTimings(todayISO: string, { enabled = true }: { enabled?:
     setState((prev) => ({ ...prev, status: "loading" }));
     setAttempt((n) => n + 1);
   }, []);
+  // A new location (saved from the location sheet) refetches; the current times stay until the new ones arrive.
+  useEffect(() => subscribeStoredLocation(() => setAttempt((n) => n + 1)), []);
 
   useEffect(() => {
     // Nothing is fetched (and nothing prompts) until the caller says so, e.g. while the first-run gate decides.
@@ -129,7 +136,8 @@ export function useHomeTimings(todayISO: string, { enabled = true }: { enabled?:
     const controller = new AbortController();
     const { signal } = controller;
     // Effects run only in the browser, after hydration: reading localStorage here cannot cause a mismatch.
-    const stored = readStoredLocation();
+    const own = readStoredLocation();
+    const stored = own ?? fallback ?? null;
     const tz = stored?.tz ?? deviceTimeZone();
 
     const json = async <T,>(res: Response | null): Promise<T | null> =>
@@ -154,7 +162,8 @@ export function useHomeTimings(todayISO: string, { enabled = true }: { enabled?:
       const first = await load(stored ? { lat: stored.lat, lng: stored.lng } : undefined);
       if (signal.aborted) return;
       if (first.timings) {
-        rememberTimings(first.timings, stored ? "geo" : "tz");
+        // Fallback (landing) times are not this visitor's: Auto Night keeps its own.
+        if (own || !fallback) rememberTimings(first.timings, stored ? "geo" : "tz");
         setState({
           status: "ready",
           timings: first.timings,
@@ -193,6 +202,8 @@ export function useHomeTimings(todayISO: string, { enabled = true }: { enabled?:
 
     void run();
     return () => controller.abort();
+    // `fallback` is a module constant at its one call site.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [todayISO, attempt, enabled]);
 
   return { ...state, retry };

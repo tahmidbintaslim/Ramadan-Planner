@@ -20,14 +20,14 @@ function SectionHeader({
   return (
     <div
       data-slot="section-header"
-      className={cn("flex items-center justify-between gap-3", className)}
+      className={cn("flex items-baseline justify-between gap-3", className)}
       {...props}
     >
-      <Heading className="rp-h2 text-rp-ink">{title}</Heading>
+      <Heading className="rp-headline text-rp-ink">{title}</Heading>
       {action ? (
         <div
           data-slot="section-header-action"
-          className="text-[14px] leading-[22px] font-semibold text-rp-accent [&_a]:text-rp-accent [&_button]:text-rp-accent"
+          className="rp-callout font-medium text-rp-accent [&_a]:-my-2.5 [&_a]:inline-flex [&_a]:min-h-11 [&_a]:items-center [&_a]:text-rp-accent [&_button]:text-rp-accent"
         >
           {action}
         </div>
