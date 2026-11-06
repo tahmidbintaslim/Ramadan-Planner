@@ -19,11 +19,13 @@ import {
 import { getRamadanDayOrdinal } from "@/lib/ramadan-ordinal";
 import { rememberTimings } from "@/lib/auto-night";
 import { storedRequestLocation } from "@/lib/user-location";
+import { useClockFormat } from "@/hooks/use-clock-format";
 
 export function DashboardContent() {
   const t = useTranslations("dashboard");
   const tSalah = useTranslations("salah");
   const locale = useLocale();
+  const [clockFormat] = useClockFormat();
 
   const [timings, setTimings] = useState<TimingData | null>(null);
   const [ramadan, setRamadan] = useState<RamadanStatus | null>(null);
@@ -122,7 +124,7 @@ export function DashboardContent() {
   const isPreRamadan = ramadan?.phase === "pre-ramadan";
   const ramadanDay = ramadan?.currentDay ?? null;
 
-  const clock = (hhmm: string | undefined) => (hhmm ? formatClock(hhmm, locale as Locale) : "--:--");
+  const clock = (hhmm: string | undefined) => (hhmm ? formatClock(hhmm, locale as Locale, clockFormat) : "--:--");
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">

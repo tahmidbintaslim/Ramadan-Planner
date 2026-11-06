@@ -1,9 +1,16 @@
 import { useCallback, useSyncExternalStore } from "react";
 import {
+  DEFAULT_CLOCK_FORMAT,
+  clockParts,
+  joinClockParts,
+  wallClock,
+  type ClockFormat,
+  type ClockParts,
+} from "@/lib/clock-format";
+import {
   formatRemainingBn,
   formatRemainingEn,
   getPrayerPhase,
-  toBengaliDigits,
   todayISOInZone,
   type PhaseTimings,
   type PrayerPhaseResult,
@@ -18,27 +25,18 @@ export type FivePrayer = (typeof FIVE_PRAYERS)[number];
 
 export const isBnLocale = (locale: string) => locale.toLowerCase().startsWith("bn");
 
-const clockFormats = new Map<string, Intl.DateTimeFormat>();
-function clockFormat(timeZone: string): Intl.DateTimeFormat {
-  let f = clockFormats.get(timeZone);
-  if (!f) {
-    f = new Intl.DateTimeFormat("en-US", { timeZone, hour: "numeric", minute: "2-digit", hourCycle: "h12" });
-    clockFormats.set(timeZone, f);
-  }
-  return f;
+/** The parts of the wall-clock time of `at` in `timeZone`, in the user's clock format (see src/lib/clock-format.ts). */
+export function prayerClockParts(at: Date, timeZone: string, locale: string, format: ClockFormat = DEFAULT_CLOCK_FORMAT): ClockParts {
+  const { hour, minute } = wallClock(at, timeZone);
+  return clockParts(hour, minute, locale, format);
 }
 
 /**
- * Wall-clock time of `at` in `timeZone`, 12-hour "h:mm" without a day-period suffix
- * (the label beside it says which prayer it is). Bengali digits in bn, Latin otherwise.
- * The formatter is cached per zone (digits are localised afterwards, so the locale is not part of the key).
+ * Wall-clock time of `at` in `timeZone` as one string in the user's clock format: "5:55 PM" / "৫:৫৫" (12-hour,
+ * the default; "রাত ৩:১০" from 00:00 to 03:59 in bn) or "17:55" / "১৭:৫৫" (24-hour). Locale digits.
  */
-export function formatPrayerClock(at: Date, timeZone: string, locale: string): string {
-  const parts = clockFormat(timeZone).formatToParts(at);
-  const hour = parts.find((p) => p.type === "hour")?.value ?? "";
-  const minute = parts.find((p) => p.type === "minute")?.value ?? "";
-  const text = `${hour}:${minute}`;
-  return isBnLocale(locale) ? toBengaliDigits(text) : text;
+export function formatPrayerClock(at: Date, timeZone: string, locale: string, format: ClockFormat = DEFAULT_CLOCK_FORMAT): string {
+  return joinClockParts(prayerClockParts(at, timeZone, locale, format));
 }
 
 /** "আর ২ ঘণ্টা ১৪ মিনিট" in bn, "2h 14m left" otherwise. */

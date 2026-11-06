@@ -6,7 +6,9 @@ import { CrescentIcon, PinIcon } from "@/components/icons/islamic-icons";
 import { toBengaliDigits, type PhaseTimings, type PrayerPhase, type PrayerPhaseResult } from "@/lib/prayer-phase";
 import { cn } from "@/lib/utils";
 import { Link } from "@/components/shared/link";
-import { formatPrayerClock, formatRemaining, isBnLocale, usePrayerPhase } from "./use-prayer-phase";
+import { useClockFormat } from "@/hooks/use-clock-format";
+import { joinClockParts } from "@/lib/clock-format";
+import { formatRemaining, isBnLocale, prayerClockParts, usePrayerPhase } from "./use-prayer-phase";
 
 export interface PrayerHeroProps {
   /** Today's timings (with tomorrow's fajr), from `timingsFromPrayerTimes`. */
@@ -164,12 +166,14 @@ export function PrayerHero({
   const t = useTranslations("prayer");
   const tSalah = useTranslations("salah");
   const locale = useLocale();
+  const [clockFormat] = useClockFormat();
   const { now, phase: result } = usePrayerPhase(timings, timeZone, { now: nowOverride, initialNow });
 
   // usePrayerPhase only returns null without timings; timings is required here.
   const r = heroResult(result as PrayerPhaseResult, timings, now, ramadan);
   const label = heroLabel(r, timings, t, tSalah, ramadan);
-  const time = formatPrayerClock(r.next.at, timeZone, locale);
+  const clock = prayerClockParts(r.next.at, timeZone, locale, clockFormat);
+  const time = joinClockParts(clock);
   const remaining = formatRemaining(r.remainingMs, locale);
   const progress = Math.min(1, Math.max(0, r.progress));
   const nightSky = r.phase === "sehri" || r.phase === "night";
@@ -281,8 +285,11 @@ export function PrayerHero({
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
             <span className="rp-small text-white/90">{label}</span>
+            {/* The day period (AM/PM, or রাত after midnight in bn) is set small so the digits keep the ring's size. */}
             <span className="rp-time-xl tabular-nums" suppressHydrationWarning>
-              {time}
+              {clock.period && clock.periodFirst ? <span className="rp-row me-1 align-middle">{clock.period}</span> : null}
+              {clock.time}
+              {clock.period && !clock.periodFirst ? <span className="rp-row ms-1 align-middle">{clock.period}</span> : null}
             </span>
             <span className="rp-caption tabular-nums text-white/90" suppressHydrationWarning>
               {remaining}

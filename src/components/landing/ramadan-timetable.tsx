@@ -22,6 +22,7 @@ import { getRamadanDayOrdinal } from "@/lib/ramadan-ordinal";
 import { localizeAsciiDigits } from "@/lib/locale-number";
 import { formatClock, type Locale } from "@/components/timetable/timetable-logic";
 import { storedRequestLocation } from "@/lib/user-location";
+import { useClockFormat } from "@/hooks/use-clock-format";
 
 interface RamadanTimetableProps {
   /** Compact mode shows fewer columns, used in dashboard */
@@ -32,6 +33,7 @@ export function RamadanTimetable({ compact = false }: RamadanTimetableProps) {
   const t = useTranslations("landing");
   const tNav = useTranslations("nav");
   const locale = useLocale() as "bn" | "en";
+  const [clockFormat] = useClockFormat();
 
   const [timetable, setTimetable] = useState<TimetableType | null>(null);
   const [loading, setLoading] = useState(true);
@@ -215,15 +217,15 @@ export function RamadanTimetable({ compact = false }: RamadanTimetableProps) {
                       </TableCell>
                     )}
                     <TableCell className="text-center tabular-nums">
-                      {formatClock(day.sehri, locale as Locale)}
+                      {formatClock(day.sehri, locale as Locale, clockFormat)}
                     </TableCell>
                     {!compact && (
                       <TableCell className="text-center tabular-nums text-muted-foreground">
-                        {formatClock(day.fajr, locale as Locale)}
+                        {formatClock(day.fajr, locale as Locale, clockFormat)}
                       </TableCell>
                     )}
                     <TableCell className="text-center tabular-nums">
-                      {formatClock(day.iftar, locale as Locale)}
+                      {formatClock(day.iftar, locale as Locale, clockFormat)}
                     </TableCell>
                   </TableRow>
                 );

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useKnownTimings, useRamadanDay } from "@/hooks/use-shell-day";
+import { useClockFormat } from "@/hooks/use-clock-format";
 import { useNowTick } from "@/components/prayer/use-prayer-phase";
 import { digits, ddmmyyyyToISO, formatClock, type Locale } from "@/components/timetable/timetable-logic";
 import { shouldShowSadaqah, timingsFromPrayerTimes, todayISOInZone } from "@/lib/prayer-phase";
@@ -64,6 +65,7 @@ function deviceZone(): string {
 export function PlanContent() {
   const t = useTranslations("plan");
   const locale = useLocale() as Locale;
+  const [clockFormat] = useClockFormat();
   const mounted = useSyncExternalStore(subscribeNoop, () => true, () => false);
 
   const ramadanDay = useRamadanDay();
@@ -100,12 +102,12 @@ export function PlanContent() {
     if (!key) return undefined;
     const msg = itemMessageKey(key);
     if (STATIC_META.has(msg)) return t(`itemMeta.${msg}` as "itemMeta.quran");
-    if (key === "sehri" && todayRow) return formatClock(todayRow.sehri, locale);
-    if (key === "fajr" && todayRow) return formatClock(todayRow.fajr, locale);
-    if (key === "night:ishaTaraweeh" && knownToday) return formatClock(knownToday.prayerTimes.isha, locale);
+    if (key === "sehri" && todayRow) return formatClock(todayRow.sehri, locale, clockFormat);
+    if (key === "fajr" && todayRow) return formatClock(todayRow.fajr, locale, clockFormat);
+    if (key === "night:ishaTaraweeh" && knownToday) return formatClock(knownToday.prayerTimes.isha, locale, clockFormat);
     if (key === "night:tahajjud" && tonight) {
       const hhmm = new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(tonight.tahajjud);
-      return t("itemMeta.tahajjudAt", { time: formatClock(hhmm, locale) });
+      return t("itemMeta.tahajjudAt", { time: formatClock(hhmm, locale, clockFormat) });
     }
     return undefined;
   };

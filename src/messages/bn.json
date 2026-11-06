@@ -345,6 +345,10 @@
     "settings": {
         "title": "সেটিংস",
         "language": "ভাষা",
+        "clockFormat": "সময়ের ফরম্যাট",
+        "clockFormat12": "১২ ঘণ্টা",
+        "clockFormat24": "২৪ ঘণ্টা",
+        "clockFormatHint": "১২ ঘণ্টায় মাঝরাত থেকে ভোর ৪টা পর্যন্ত সময়ের আগে “রাত” লেখা থাকে।",
         "timezone": "সময় অঞ্চল",
         "location": "অবস্থান",
         "theme": "থিম",

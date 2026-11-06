@@ -5,7 +5,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useClerk } from "@clerk/tanstack-react-start";
 import { useLocale, useTranslations } from "@/i18n/use-intl";
 import { useRouter, useSearch } from "@tanstack/react-router";
-import { Bell, CalendarClock, Globe, LogIn, LogOut, UserPlus } from "lucide-react";
+import { Bell, CalendarClock, Clock, Globe, LogIn, LogOut, UserPlus } from "lucide-react";
 import { switchLocaleAction } from "@/actions/locale";
 import { getUserProfileAction, updateUserProfileAction } from "@/actions/planner";
 import {
@@ -22,6 +22,9 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { Chip } from "@/components/ui/chip";
+import { useClockFormat } from "@/hooks/use-clock-format";
+import { CLOCK_FORMATS } from "@/lib/clock-format";
 import { formatLocalizedNumber } from "@/lib/locale-number";
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
@@ -36,6 +39,32 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   }
 
   return outputArray;
+}
+
+/** 12-hour (default) or 24-hour clock, kept on this device; every time on every screen follows it. */
+function ClockFormatCard() {
+  const t = useTranslations("settings");
+  const [format, setFormat] = useClockFormat();
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle id="clock-format-title" className="flex items-center gap-2 text-base">
+          <Clock className="h-4 w-4 text-primary" aria-hidden="true" />
+          {t("clockFormat")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        <div role="group" aria-labelledby="clock-format-title" className="flex flex-wrap gap-2" data-testid="clock-format">
+          {CLOCK_FORMATS.map((f) => (
+            <Chip key={f} selected={format === f} onClick={() => setFormat(f)}>
+              {t(f === "12h" ? "clockFormat12" : "clockFormat24")}
+            </Chip>
+          ))}
+        </div>
+        {format === "12h" ? <p className="rp-small text-rp-muted">{t("clockFormatHint")}</p> : null}
+      </CardContent>
+    </Card>
+  );
 }
 
 export function SettingsContent() {
@@ -321,6 +350,8 @@ export function SettingsContent() {
           </div>
         </CardContent>
       </Card>
+
+      <ClockFormatCard />
 
       <Card>
         <CardHeader className="pb-3">

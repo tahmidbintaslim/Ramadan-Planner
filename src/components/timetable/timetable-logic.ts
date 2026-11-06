@@ -1,6 +1,7 @@
 // Pure helpers for the Ramadan timetable screen: row states, decades, the date range and display formats.
 // Input is the TimetableDay[] from src/lib/ramadan-timetable.ts (gregorianDate is DD-MM-YYYY, times HH:MM 24h).
 import type { TimetableDay } from "@/lib/ramadan-timetable";
+import { DEFAULT_CLOCK_FORMAT, formatHHMM, type ClockFormat } from "@/lib/clock-format";
 import { toBengaliDigits } from "@/lib/prayer-phase";
 
 export type Locale = "bn" | "en";
@@ -91,12 +92,12 @@ export function formatRange(range: { start: string; end: string }, locale: Local
   return `${start} – ${formatDayMonth(range.end, locale)} ${digits(year, locale)}`;
 }
 
-/** "17:55" to "5:55" (12-hour, no am/pm, like the home screen), with locale digits. */
-export function formatClock(hhmm: string, locale: Locale): string {
-  const m = /^(\d{1,2}):(\d{2})/.exec(hhmm.trim());
-  if (!m) return hhmm;
-  const h = Number(m[1]) % 12 || 12;
-  return digits(`${h}:${m[2]}`, locale);
+/**
+ * "17:55" in the user's clock format with locale digits: "5:55 PM" / "৫:৫৫" (12-hour, the default) or "17:55" /
+ * "১৭:৫৫" (24-hour). See src/lib/clock-format.ts; components pass the format from useClockFormat().
+ */
+export function formatClock(hhmm: string, locale: Locale, format: ClockFormat = DEFAULT_CLOCK_FORMAT): string {
+  return formatHHMM(hhmm, locale, format);
 }
 
 /** Weekday and day-month for a row, e.g. "সোম · ৯ ফেব্রুয়ারি". */

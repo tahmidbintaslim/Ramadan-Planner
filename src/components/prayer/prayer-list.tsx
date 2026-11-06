@@ -15,6 +15,7 @@ import {
 } from "@/components/icons/islamic-icons";
 import type { PhaseTimings } from "@/lib/prayer-phase";
 import { cn } from "@/lib/utils";
+import { useClockFormat } from "@/hooks/use-clock-format";
 import { FIVE_PRAYERS, formatPrayerClock, useNowTick, type FivePrayer } from "./use-prayer-phase";
 
 const ICONS: Record<FivePrayer, ComponentType<IconProps>> = {
@@ -79,6 +80,7 @@ export function PrayerList({
   const t = useTranslations("prayer");
   const tSalah = useTranslations("salah");
   const locale = useLocale();
+  const [clockFormat] = useClockFormat();
   const now = useNowTick(nowOverride, initialNow);
   const states = prayerRowStates(now, timings);
 
@@ -119,7 +121,7 @@ export function PrayerList({
               <span className={cn("rp-row flex-1 truncate", state === "next" && "font-semibold")}>{name}</span>
               {state === "next" ? <Badge>{t("next")}</Badge> : null}
               <span className={cn("rp-row tabular-nums", state === "next" && "font-semibold")}>
-                {formatPrayerClock(timings[key], timeZone, locale)}
+                {formatPrayerClock(timings[key], timeZone, locale, clockFormat)}
               </span>
               {onToggleReminder ? (
                 <button

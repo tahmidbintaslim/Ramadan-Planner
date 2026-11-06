@@ -345,6 +345,10 @@
     "settings": {
         "title": "Settings",
         "language": "Language",
+        "clockFormat": "Time format",
+        "clockFormat12": "12-hour",
+        "clockFormat24": "24-hour",
+        "clockFormatHint": "12-hour times show AM or PM.",
         "timezone": "Timezone",
         "location": "Location",
         "theme": "Theme",
