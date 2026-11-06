@@ -53,6 +53,9 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [
       nitro({
+        // Vercel functions run in Seoul (icn1), beside the Supabase database (ap-northeast-2); also set in
+        // vercel.json. Written into the function's .vc-config.json so the prebuilt output carries it too.
+        vercel: { functions: { regions: ["icn1"] } },
         // Node server builds (no NITRO_PRESET, or node-server/node-cluster/...): pre-compress the static assets (JS, CSS, fonts) as .br/.gz, served
         // when the browser accepts them. Vercel compresses on its CDN, so its build skips this. HTML responses
         // are rendered per request and stay uncompressed on the Node server.
