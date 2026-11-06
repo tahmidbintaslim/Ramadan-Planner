@@ -37,7 +37,7 @@ console.log("head links");
 await page.goto(`${BASE}/duas`, { waitUntil: "load" });
 (await page.locator('link[rel="manifest"]').getAttribute("href")) === "/manifest.webmanifest" ? ok("manifest link") : fail("manifest link");
 (await page.locator('link[rel="apple-touch-icon"]').getAttribute("href")) ? ok("apple-touch-icon link") : fail("apple-touch-icon link");
-(await page.locator('meta[name="theme-color"]').getAttribute("content")) === "#F3F8F6" ? ok("theme-color (light)") : fail("theme-color");
+(await page.locator('meta[name="theme-color"]').getAttribute("content")) === "#F4F7F6" ? ok("theme-color (light)") : fail("theme-color");
 
 console.log("service worker");
 // Registered from /duas (a static page outside the landing).
