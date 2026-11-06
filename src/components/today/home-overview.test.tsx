@@ -365,6 +365,8 @@ describe("today's plan preview", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("আজকের পরিকল্পনা এখন লোড বা সংরক্ষণ করা যায়নি।");
     expect(screen.getByRole("link", { name: "পরিকল্পনায় আবার চেষ্টা করুন" })).toHaveAttribute("href", "/plan");
     expect(screen.queryByTestId("plan-preview-empty")).toBeNull();
+    // A failed load must not read as an empty "০/০" plan.
+    expect(screen.getByRole("heading")).toHaveTextContent(/^আজকের পরিকল্পনা$/);
   });
 
   it("shows no count before the list is known, and English labels in en", async () => {

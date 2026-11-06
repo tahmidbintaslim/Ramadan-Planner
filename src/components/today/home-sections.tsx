@@ -136,7 +136,8 @@ export function PlanPreview({ state, className }: { state: PlanPreviewState; cla
       <SectionHeader
         title={
           <span id="home-plan">
-            {state.ready
+            {/* No count after a failed load with nothing to show: "০/০" would read as an empty plan. */}
+            {state.ready && !(state.error && state.rows.length === 0)
               ? t("planTitle", {
                   done: formatLocalizedNumber(state.done, locale),
                   total: formatLocalizedNumber(state.total, locale),
