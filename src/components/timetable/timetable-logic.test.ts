@@ -70,9 +70,12 @@ describe("formatting", () => {
   });
   it("converts times to 12-hour with locale digits", () => {
     expect(formatClock("17:55", "bn")).toBe("৫:৫৫");
-    expect(formatClock("04:50", "en")).toBe("4:50");
-    expect(formatClock("12:05", "en")).toBe("12:05");
-    expect(formatClock("00:30", "en")).toBe("12:30");
+    expect(formatClock("04:50", "en")).toBe("4:50 AM");
+    expect(formatClock("12:05", "en")).toBe("12:05 PM");
+    expect(formatClock("00:30", "en")).toBe("12:30 AM");
+    expect(formatClock("00:30", "bn")).toBe("রাত ১২:৩০");
+    expect(formatClock("17:55", "en", "24h")).toBe("17:55");
+    expect(formatClock("04:50", "bn", "24h")).toBe("০৪:৫০");
   });
   it("formats a row date", () => expect(formatRowDate(days[0], "মঙ্গল", "bn")).toBe("মঙ্গল · ৯ ফেব্রুয়ারি"));
 });

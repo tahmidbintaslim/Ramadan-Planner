@@ -14,7 +14,7 @@ function Chip({ className, selected = false, ...props }: ChipProps) {
       data-selected={selected}
       aria-pressed={selected}
       className={cn(
-        "relative inline-flex h-10 min-h-[36px] shrink-0 before:absolute before:-inset-[4px] before:content-[''] items-center justify-center gap-1.5 whitespace-nowrap rounded-rp-full px-4 text-[14px] font-semibold leading-[22px] transition-colors outline-none focus-visible:ring-ring focus-visible:ring-[3px] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4",
+        "inline-flex min-h-[48px] shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-rp-full px-4 py-2 text-[14px] font-semibold transition-colors outline-none focus-visible:ring-ring focus-visible:ring-[3px] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4",
         selected
           ? "bg-rp-live text-rp-on-live"
           : "border border-rp-rule bg-rp-surface text-rp-ink hover:bg-rp-accent-tint",

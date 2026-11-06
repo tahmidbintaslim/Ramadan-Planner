@@ -55,8 +55,8 @@ export function PhaseCard({ kind, className }: { kind: PhaseCardKind; className?
         <DuaIcon size={24} className="text-rp-accent" />
         {t(kind === "niyyah" ? "niyyahTitle" : "iftarDuaTitle")}
       </h2>
-      <p className="rp-h2">{t(kind === "niyyah" ? "niyyahText" : "iftarDuaText")}</p>
-      <p className="rp-small text-rp-muted">{t(kind === "niyyah" ? "niyyahMeaning" : "iftarDuaMeaning")}</p>
+      <p className="font-reading text-[20px] leading-[34px] font-medium">{t(kind === "niyyah" ? "niyyahText" : "iftarDuaText")}</p>
+      <p className="rp-reading-small text-rp-muted">{t(kind === "niyyah" ? "niyyahMeaning" : "iftarDuaMeaning")}</p>
       <p className="rp-caption text-rp-gold-text">{t(kind === "niyyah" ? "niyyahSource" : "iftarDuaSource")}</p>
     </section>
   );

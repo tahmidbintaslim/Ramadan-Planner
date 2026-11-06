@@ -116,7 +116,7 @@ describe("PrayerHero renders the values the contrast check assumes", () => {
   it("uses the scrim disc, source pill and text alphas", () => {
     render(
       <WithIntl>
-        <PrayerHero timings={TIMINGS} timeZone={TZ} district="ঢাকা" hijriLabel="২২ রমযান" source="IFB" now={at("17:35")} />
+        <PrayerHero timings={TIMINGS} timeZone={TZ} district="ঢাকা" hijriLabel="২২ রমজান" source="IFB" now={at("17:35")} />
       </WithIntl>,
     );
     const rgba = (a: number) => `rgba(${HERO_SCRIM_RGB.join(", ")}, ${a})`;
@@ -124,6 +124,6 @@ describe("PrayerHero renders the values the contrast check assumes", () => {
     const source = screen.getByTestId("hero-source");
     expect(source.style.backgroundColor).toBe(rgba(HERO_SOURCE_PILL_ALPHA));
     expect(source.className).toContain("text-white/90");
-    expect(screen.getByText("২২ রমযান").className).toContain("text-white/85");
+    expect(screen.getByText("২২ রমজান").className).toContain("text-white/85");
   });
 });

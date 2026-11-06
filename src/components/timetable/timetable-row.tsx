@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import type { TimetableDay } from "@/lib/ramadan-timetable";
 import { oddNightStartingAfter } from "@/lib/ramadan-nights";
+import { useClockFormat } from "@/hooks/use-clock-format";
 import { type Locale, type RowState, digits, formatClock, formatRowDate } from "./timetable-logic";
 
 export interface TimetableRowLabels {
@@ -25,6 +26,7 @@ export function TimetableRow({
   locale: Locale;
   labels: TimetableRowLabels;
 }) {
+  const [clockFormat] = useClockFormat();
   const odd = oddNightStartingAfter(day.day) !== null;
   const isToday = state === "today";
   const past = state === "past";
@@ -59,8 +61,8 @@ export function TimetableRow({
           ) : null}
         </p>
       </div>
-      <Time caption={labels.sehri} value={formatClock(day.sehri, locale)} tone={isToday ? "live" : "default"} muted={past && !odd} />
-      <Time caption={labels.iftar} value={formatClock(day.iftar, locale)} tone={isToday ? "live" : "default"} muted={past && !odd} />
+      <Time caption={labels.sehri} value={formatClock(day.sehri, locale, clockFormat)} tone={isToday ? "live" : "default"} muted={past && !odd} />
+      <Time caption={labels.iftar} value={formatClock(day.iftar, locale, clockFormat)} tone={isToday ? "live" : "default"} muted={past && !odd} />
       {odd ? (
         <p
           className={cn(

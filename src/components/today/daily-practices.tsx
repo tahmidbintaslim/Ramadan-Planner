@@ -378,8 +378,9 @@ export function DailyPractices({
               </CardHeader>
               <CardContent className="space-y-3">
                 <p
-                  className="text-right text-xl leading-loose font-arabic"
+                  className="font-arabic text-right text-[24px] leading-[48px]"
                   dir="rtl"
+                  lang="ar"
                 >
                   {dayContent.ayah_ar}
                 </p>
@@ -444,7 +445,7 @@ export function DailyPractices({
                     </Button>
                   </div>
                 )}
-                <p className="rp-body text-rp-ink">
+                <p className="rp-reading text-rp-ink">
                   {showEnglish
                     ? dayContent.ayah_en || dayContent.ayah_bn
                     : dayContent.ayah_bn}
@@ -465,7 +466,7 @@ export function DailyPractices({
                 </h3>
               </CardHeader>
               <CardContent className="space-y-2">
-                <p className="rp-body text-rp-ink">
+                <p className="rp-reading text-rp-ink">
                   {showEnglish
                     ? dayContent.hadith_en || dayContent.hadith_bn
                     : dayContent.hadith_bn}
@@ -486,8 +487,9 @@ export function DailyPractices({
               </CardHeader>
             <CardContent className="space-y-3">
               <p
-                className="text-right text-lg leading-loose font-arabic"
+                className="font-arabic text-right text-[24px] leading-[48px]"
                 dir="rtl"
+                lang="ar"
               >
                 {dayContent.dua_ar}
               </p>
@@ -499,7 +501,7 @@ export function DailyPractices({
                       onClick={() => speakText("dua", dayContent.dua_ar)}
                     >
                       <Play className="h-4 w-4 mr-1.5" />
-                      {tQuranReader("listenRecitation")}
+                      {tQuranReader("listen")}
                     </Button>
                   ) : isDuaPaused ? (
                     <>
@@ -549,7 +551,7 @@ export function DailyPractices({
                   </Button>
                 </div>
               )}
-              <p className="rp-body text-rp-ink">
+              <p className="rp-reading text-rp-ink">
                 {showEnglish
                   ? dayContent.dua_en || dayContent.dua_bn
                   : dayContent.dua_bn}

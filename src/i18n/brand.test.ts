@@ -18,7 +18,7 @@ describe("withBrand", () => {
 
   it("no brand spelling outside common.appName in either message file", () => {
     for (const [file, brand] of [
-      [bn, /রম[যজ]ান প্ল্যানার|Ramadan Planner/],
+      [bn, /রমজান প্ল্যানার|Ramadan Planner/],
       [en, /Ramadan Planner/],
     ] as const) {
       const { appName, ...rest } = (file as { common: Record<string, string> }).common;

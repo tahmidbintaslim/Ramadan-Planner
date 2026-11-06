@@ -2,6 +2,7 @@ import { useLocale, useTranslations } from "@/i18n/use-intl";
 import { FajrIcon, MaghribIcon } from "@/components/icons/islamic-icons";
 import type { PhaseTimings } from "@/lib/prayer-phase";
 import { cn } from "@/lib/utils";
+import { useClockFormat } from "@/hooks/use-clock-format";
 import { formatPrayerClock } from "./use-prayer-phase";
 
 export interface SehriIftarPairProps {
@@ -17,11 +18,12 @@ export interface SehriIftarPairProps {
 export function SehriIftarPair({ timings, timeZone, dayLabel, className }: SehriIftarPairProps) {
   const t = useTranslations("prayer");
   const locale = useLocale();
+  const [clockFormat] = useClockFormat();
   // Same guard as the phase engine: a sehri end at or after fajr is ignored.
   const sehriEnd =
     timings.sehriEnd && timings.sehriEnd.getTime() < timings.fajr.getTime() ? timings.sehriEnd : timings.fajr;
-  const sehri = formatPrayerClock(sehriEnd, timeZone, locale);
-  const iftar = formatPrayerClock(timings.maghrib, timeZone, locale);
+  const sehri = formatPrayerClock(sehriEnd, timeZone, locale, clockFormat);
+  const iftar = formatPrayerClock(timings.maghrib, timeZone, locale, clockFormat);
 
   return (
     <div

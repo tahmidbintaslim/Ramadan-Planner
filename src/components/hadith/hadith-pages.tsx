@@ -279,22 +279,24 @@ export function HadithChapterPage({
                     <CardContent>
                       {it.textArabic && (
                         <p
-                          className="text-sm font-arabic text-muted-foreground mt-3 leading-relaxed"
+                          className="font-arabic text-[24px] leading-[48px] text-rp-ink mt-3"
                           dir="rtl"
+                          lang="ar"
                         >
                           {it.textArabic}
                         </p>
                       )}
                       {!it.textArabic && editionName.startsWith("ara-") && (
                         <p
-                          className="text-sm font-arabic text-muted-foreground mt-3 leading-relaxed"
+                          className="font-arabic text-[24px] leading-[48px] text-rp-ink mt-3"
                           dir="rtl"
+                          lang="ar"
                         >
                           {it.text}
                         </p>
                       )}
-                      <p className="mt-2 text-sm leading-relaxed">{it.english ?? t("noEnglishMeaning")}</p>
-                      <p className="mt-2 text-sm leading-relaxed">{it.bengali ?? t("noBengaliMeaning")}</p>
+                      <p lang="en" className="mt-2 rp-reading-small">{it.english ?? t("noEnglishMeaning")}</p>
+                      <p className="mt-2 rp-reading">{it.bengali ?? t("noBengaliMeaning")}</p>
                       <HadithAudioControls
                         arabicText={it.textArabic ?? it.text}
                         fallbackText={it.english || it.text}

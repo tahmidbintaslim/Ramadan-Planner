@@ -20,7 +20,7 @@ function renderHero(props: Partial<PrayerHeroProps> = {}, locale: "bn" | "en" = 
         timings={TIMINGS}
         timeZone={TZ}
         district="ঢাকা"
-        hijriLabel="২২ রমযান ১৪৪৮"
+        hijriLabel="২২ রমজান ১৪৪৮"
         source="ইসলামিক ফাউন্ডেশন"
         {...props}
       />
@@ -99,7 +99,7 @@ describe("PrayerHero phases (bn)", () => {
   it("top row and source line (sample labelled)", () => {
     renderHero({ now: at("13:00"), sample: true });
     expect(hero()).toHaveTextContent("ঢাকা");
-    expect(hero()).toHaveTextContent("২২ রমযান ১৪৪৮");
+    expect(hero()).toHaveTextContent("২২ রমজান ১৪৪৮");
     expect(hero()).toHaveTextContent("নমুনা সময় · উৎস: ইসলামিক ফাউন্ডেশন");
     cleanup();
     renderHero({ now: at("13:00") });

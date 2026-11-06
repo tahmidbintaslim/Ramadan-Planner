@@ -86,17 +86,16 @@ describe("Card", () => {
 })
 
 describe("Chip", () => {
-  it("keeps the 40px look but extends the hit area 4px each side (48px target)", () => {
+  it("is a 48px pill sized by min-height and padding, not a fixed height or line-height", () => {
     render(createElement(Chip, null, "Fajr"))
     const cls = screen.getByRole("button", { name: "Fajr" }).className
-    expect(cls).toContain("h-10")
-    expect(cls).toContain("relative")
-    expect(cls).toContain("before:absolute")
-    expect(cls).toContain("before:-inset-[4px]")
+    expect(cls).toContain("py-2")
+    expect(cls).not.toMatch(/(^|\s)h-\d/)
+    expect(cls).not.toMatch(/leading-/)
   })
-  it("keeps a 44px pixel target when the font control scales rem down (36px floor + 4px each side)", () => {
+  it("keeps a 48px pixel floor when the font control scales rem down", () => {
     render(createElement(Chip, null, "Asr"))
-    expect(screen.getByRole("button", { name: "Asr" }).className).toContain("min-h-[36px]")
+    expect(screen.getByRole("button", { name: "Asr" }).className).toContain("min-h-[48px]")
   })
   it("is a type=button with aria-pressed reflecting selected", () => {
     function Harness() {

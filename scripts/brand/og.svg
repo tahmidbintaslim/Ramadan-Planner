@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
   <!-- Open Graph image (design system v2), 1200x630 -> public/og.png via scripts/generate-brand-assets.mjs, which
-       supplies the self-hosted fonts: "RP Display" = Tiro Bangla, "RP Sans" = Hind Siliguri (@fontsource files). -->
+       supplies the self-hosted fonts: "RP Display" = Tiro Bangla, "RP Sans" = Noto Sans Bengali (@fontsource files). -->
   <defs>
     <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#0B4F48"/>

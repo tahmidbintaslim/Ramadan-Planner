@@ -81,7 +81,7 @@ const BENGALI_NUMERIC_ORDINALS: Record<number, string> = {
  *
  * @param day - Ramadan day (1-30)
  * @param locale - Language locale (bn/en)
- * @param format - "full" for "প্রথম রোজা" or "short" for "১ম রমযান"
+ * @param format - "full" for "প্রথম রোজা" or "short" for "১ম রমজান"
  * @returns Formatted day string
  */
 export function formatRamadanDay(
@@ -99,9 +99,9 @@ export function formatRamadanDay(
             const ordinal = BENGALI_ORDINALS[day] || `${day}তম`;
             return `${ordinal} রোজা`;
         } else {
-            // Short format: "১ম রমযান", "২য় রমযান"
+            // Short format: "১ম রমজান", "২য় রমজান"
             const numericOrdinal = BENGALI_NUMERIC_ORDINALS[day] || `${day}তম`;
-            return `${numericOrdinal} রমযান`;
+            return `${numericOrdinal} রমজান`;
         }
     }
 
@@ -110,7 +110,7 @@ export function formatRamadanDay(
 }
 
 /**
- * Get just the ordinal part (without "রোজা" or "রমযান")
+ * Get just the ordinal part (without "রোজা" or "রমজান")
  *
  * @param day - Ramadan day (1-30)
  * @param locale - Language locale (bn/en)

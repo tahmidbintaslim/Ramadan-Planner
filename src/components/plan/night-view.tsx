@@ -3,9 +3,11 @@ import { GirihPattern } from "@/components/design/girih-pattern";
 import { MihrabArch } from "@/components/design/mihrab-arch";
 import { CrescentIcon, PinIcon } from "@/components/icons/islamic-icons";
 import { HERO_SCRIM_RGB, HERO_RING_SCRIM_ALPHA, HERO_SOURCE_PILL_ALPHA } from "@/components/prayer/prayer-hero";
-import { formatPrayerClock } from "@/components/prayer/use-prayer-phase";
+import { ClockTime } from "@/components/prayer/clock-time";
+import { formatPrayerClock, prayerClockParts } from "@/components/prayer/use-prayer-phase";
 import { formatClock, formatRowDate, digits, type Locale } from "@/components/timetable/timetable-logic";
 import { cn } from "@/lib/utils";
+import { useClockFormat } from "@/hooks/use-clock-format";
 import { nightProgress, type NightTimes, type OddNightRow } from "./plan-logic";
 
 // The last-ten-nights view (Figma "Last ten nights · 27th night"). PrayerHero is driven by the prayer phase engine
@@ -48,6 +50,7 @@ export function NightHero({
   hijriYear?: string;
 }) {
   const t = useTranslations("plan");
+  const [clockFormat] = useClockFormat();
   const locale = useLocale();
   const progress = nightProgress(now, times);
   const percent = Math.round(progress * 100);
@@ -97,10 +100,10 @@ export function NightHero({
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
             <span className="rp-small text-white/90">{t("nightHeroLabel")}</span>
             <span className="rp-time-xl tabular-nums" data-testid="tahajjud-time" suppressHydrationWarning>
-              {formatPrayerClock(times.tahajjud, timeZone, locale)}
+              <ClockTime parts={prayerClockParts(times.tahajjud, timeZone, locale, clockFormat)} />
             </span>
             <span className="rp-caption text-white/90" suppressHydrationWarning>
-              {t("sehriEndsAt", { time: formatPrayerClock(times.sehriEnd, timeZone, locale) })}
+              {t("sehriEndsAt", { time: formatPrayerClock(times.sehriEnd, timeZone, locale, clockFormat) })}
             </span>
           </div>
           <span
@@ -130,6 +133,7 @@ export function OddNightsCard({ rows }: { rows: readonly OddNightRow[] }) {
   const tTable = useTranslations("timetablePage");
   const tNav = useTranslations("nav");
   const locale = useLocale() as Locale;
+  const [clockFormat] = useClockFormat();
   return (
     <section aria-labelledby="odd-nights-title" className="rounded-rp-lg bg-rp-surface py-1.5 shadow-rp-soft">
       <h2 id="odd-nights-title" className="sr-only">
@@ -167,8 +171,8 @@ export function OddNightsCard({ rows }: { rows: readonly OddNightRow[] }) {
                 </p>
                 {tonight ? <p className="rp-caption text-rp-gold-text">{t("oddNightTonight")}</p> : null}
               </div>
-              <NightTime caption={tTable("sehri")} value={row.morning ? formatClock(row.morning.sehri, locale) : "–"} />
-              <NightTime caption={tTable("iftar")} value={row.evening ? formatClock(row.evening.iftar, locale) : "–"} />
+              <NightTime caption={tTable("sehri")} value={row.morning ? formatClock(row.morning.sehri, locale, clockFormat) : "–"} />
+              <NightTime caption={tTable("iftar")} value={row.evening ? formatClock(row.evening.iftar, locale, clockFormat) : "–"} />
             </li>
           );
         })}
@@ -196,11 +200,11 @@ export function QadrDuaCard() {
       <h2 id="qadr-dua-title" className="rp-row font-semibold">
         {t("items.qadrDua")}
       </h2>
-      <p lang="ar" dir="rtl" className="text-[22px] leading-[40px]">
+      <p lang="ar" dir="rtl" className="font-arabic text-[24px] leading-[48px]">
         {QADR_DUA_ARABIC}
       </p>
-      <p className="rp-small italic text-rp-ink">{t("qadrDuaTranslit")}</p>
-      <p className="rp-small text-rp-ink">{t("qadrDuaMeaning")}</p>
+      <p className="rp-reading-small text-rp-ink">{t("qadrDuaTranslit")}</p>
+      <p className="rp-reading-small text-rp-ink">{t("qadrDuaMeaning")}</p>
       <p className="rp-caption text-rp-muted">{t("qadrDuaSource")}</p>
     </section>
   );

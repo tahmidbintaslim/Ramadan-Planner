@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from "react";
 import { useLocale, useTranslations } from "@/i18n/use-intl";
 import { useItemNotes } from "./plan-item-meta";
+import { defaultTitlesByKey } from "./default-titles";
 import {
   DAY_DEFAULTS,
   NIGHT_DEFAULTS,
@@ -36,8 +37,10 @@ export function useTodayPlan(todayISO: string, eveningISO: string | null = null)
   const quran = useQuranProgress();
 
   const titleOf = useCallback((key: string) => t(`items.${itemMessageKey(key)}` as "items.sehri"), [t]);
+  // Titles in both languages, so an item added before a language switch (or on a device in the other language)
+  // is still recognised as its suggestion.
   const titlesByKey = useMemo<Record<string, string[]>>(
-    () => Object.fromEntries(Object.keys(DEFAULT_WINDOWS).map((k) => [k, [titleOf(k)]])),
+    () => defaultTitlesByKey(Object.fromEntries(Object.keys(DEFAULT_WINDOWS).map((k) => [k, titleOf(k)]))),
     [titleOf],
   );
 

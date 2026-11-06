@@ -6,7 +6,10 @@ import { CrescentIcon, PinIcon } from "@/components/icons/islamic-icons";
 import { toBengaliDigits, type PhaseTimings, type PrayerPhase, type PrayerPhaseResult } from "@/lib/prayer-phase";
 import { cn } from "@/lib/utils";
 import { Link } from "@/components/shared/link";
-import { formatPrayerClock, formatRemaining, isBnLocale, usePrayerPhase } from "./use-prayer-phase";
+import { useClockFormat } from "@/hooks/use-clock-format";
+import { joinClockParts } from "@/lib/clock-format";
+import { ClockTime } from "./clock-time";
+import { formatRemaining, isBnLocale, prayerClockParts, usePrayerPhase } from "./use-prayer-phase";
 
 export interface PrayerHeroProps {
   /** Today's timings (with tomorrow's fajr), from `timingsFromPrayerTimes`. */
@@ -17,7 +20,7 @@ export interface PrayerHeroProps {
   district: string;
   /** When set, the location pill is a link there (to change the district). */
   locationHref?: string;
-  /** Pre-formatted Hijri date, e.g. "১২ রমযান ১৪৪৮". */
+  /** Pre-formatted Hijri date, e.g. "১২ রমজান ১৪৪৮". */
   hijriLabel?: string;
   /** Where the times come from, e.g. "ইসলামিক ফাউন্ডেশন". Always shown. */
   source: string;
@@ -164,12 +167,14 @@ export function PrayerHero({
   const t = useTranslations("prayer");
   const tSalah = useTranslations("salah");
   const locale = useLocale();
+  const [clockFormat] = useClockFormat();
   const { now, phase: result } = usePrayerPhase(timings, timeZone, { now: nowOverride, initialNow });
 
   // usePrayerPhase only returns null without timings; timings is required here.
   const r = heroResult(result as PrayerPhaseResult, timings, now, ramadan);
   const label = heroLabel(r, timings, t, tSalah, ramadan);
-  const time = formatPrayerClock(r.next.at, timeZone, locale);
+  const clock = prayerClockParts(r.next.at, timeZone, locale, clockFormat);
+  const time = joinClockParts(clock);
   const remaining = formatRemaining(r.remainingMs, locale);
   const progress = Math.min(1, Math.max(0, r.progress));
   const nightSky = r.phase === "sehri" || r.phase === "night";
@@ -220,7 +225,7 @@ export function PrayerHero({
             href={locationHref}
             data-testid="hero-location"
             aria-label={t("locationChange", { district })}
-            className="rp-caption relative inline-flex min-w-0 items-center gap-1.5 rounded-rp-full bg-white/14 px-3 py-1.5 outline-none transition-colors before:absolute before:-inset-x-1 before:-inset-y-[9px] before:content-[''] hover:bg-white/22 focus-visible:ring-[3px] focus-visible:ring-white/70"
+            className="rp-caption inline-flex min-h-[48px] min-w-0 items-center gap-1.5 rounded-rp-full bg-white/14 px-4 py-2 outline-none transition-colors hover:bg-white/22 focus-visible:ring-[3px] focus-visible:ring-white/70"
           >
             <PinIcon size={16} />
             <span aria-hidden="true" className="truncate">
@@ -282,9 +287,9 @@ export function PrayerHero({
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
             <span className="rp-small text-white/90">{label}</span>
             <span className="rp-time-xl tabular-nums" suppressHydrationWarning>
-              {time}
+              <ClockTime parts={clock} />
             </span>
-            <span className="rp-caption text-white/90" suppressHydrationWarning>
+            <span className="rp-caption tabular-nums text-white/90" suppressHydrationWarning>
               {remaining}
             </span>
           </div>

@@ -145,8 +145,8 @@ test.describe("last ten nights (mobile, night)", () => {
 
     const hero = page.getByTestId("night-hero");
     await expect(hero).toContainText("আজ রাতের তাহাজ্জুদ");
-    // 18:06 -> 04:58 next morning: the last third starts at 01:21.
-    await expect(page.getByTestId("tahajjud-time")).toHaveText("১:২১");
+    // 18:06 -> 04:58 next morning: the last third starts at 01:21 (after midnight, so bn 12-hour says রাত).
+    await expect(page.getByTestId("tahajjud-time")).toHaveText("রাত ১:২১");
     await expect(hero).toContainText("সেহরি শেষ ৪:৪৮");
 
     const rows = page.locator("li[data-night]");

@@ -2,13 +2,25 @@
  * Design system v2 tokens (source of truth: Figma variables, names = --rp-*).
  *
  * Modes: :root is Light, .dark is Night (class set by next-themes; "auto" phase switching arrives in Task 6).
- * Fonts (self-hosted via @fontsource, Bengali + Latin subsets, font-display: swap):
- *   - default sans / body ........ Hind Siliguri 400/500/600  -> `font-sans` (applied to body)
- *   - greeting + H1 .............. Tiro Bangla Regular        -> `font-display` utility
+ * Fonts (self-hosted via @fontsource, font-display: swap; a face downloads only when a page uses it):
+ *   - UI / body (nav, settings, menus, buttons) .. Noto Sans Bengali 400/500/600/700, bengali + latin -> `font-sans` (body)
+ *   - scripture + long reading (ayah translations,
+ *     hadith, dua meanings, niyyah) .............. Noto Serif Bengali 400/500, bengali + latin -> `font-reading` (= `font-serif`)
+ *     (references and sources stay in Noto Sans `.rp-caption`)
+ *   - greetings, H1, surah titles, banners ....... Tiro Bangla 400 only, bengali + latin     -> `font-display`
+ *     (never font-semibold/bold on Tiro: hierarchy comes from size)
+ *   - Arabic (ayahs, dua Arabic) ................. Noto Naskh Arabic 400/500, arabic subset  -> `font-arabic`
+ *     (always with dir="rtl" lang="ar"; about 1.4-1.5x the Bengali beside it, line-height >= 2:
+ *     Quran reader 28/56, Today cards 24/48, surah list 20/32)
+ *   Each stack falls back to Kalpurush / SolaimanLipi (common Bangladeshi system fonts), then the system sans/serif.
+ *   Only Noto Sans Bengali 400 (bengali subset) is preloaded (src/routes/__root.tsx).
  * Type roles (CSS classes, use together with font-display where noted):
- *   .rp-greeting 24/34 (Tiro)  .rp-h1 28/40 (Tiro)  .rp-time-xl 56/64 600  .rp-time-l 36/44 600
- *   .rp-h2 20/30 600  .rp-row 16/24 500  .rp-body 16/26  .rp-small 14/22  .rp-button 16/22 600
- *   .rp-caption 12/18 500  .rp-overline 13/18 500
+ *   .rp-greeting 24/36 (Tiro)  .rp-h1 28/40 (Tiro)  .rp-time-xl 56/64 600  .rp-time-l 36/44 600
+ *   .rp-h2 20/30 600  .rp-row 16/24 500  .rp-body 16/26  .rp-small 14/22  .rp-button 16/24 600
+ *   .rp-caption 13/20 500 (no 12px Bengali)  .rp-overline 13/20 500
+ *   .rp-reading 17/30 and .rp-reading-small 15/26 (Noto Serif Bengali; reading text only)
+ *   Line heights checked against Noto Sans Bengali / Tiro Bangla ink bounds for stacked conjuncts and vowel signs
+ *   (e.g. ক্ষ্ম্য, স্ত্রী, রুপূ): every role keeps the ink inside its line box, so `truncate` never clips a glyph.
  * Colour utilities (Tailwind key -> CSS var; use as bg-/text-/border-/from-/ring- + key):
  *   rp-page (bg-page)  rp-surface (bg-surface)  rp-live (bg-live)  rp-accent-tint (bg-accent-tint)
  *   rp-inverse (bg-inverse)  rp-gold-tint (bg-gold-tint)  rp-ink (text-primary)  rp-muted (text-secondary)
@@ -20,26 +32,60 @@
  *   border-input = Light 3.20 page/3.43 surface, Night 4.04/3.35.
  * Hero gradients: --rp-hero-sehri / -day / -iftar / -night (top to bottom) for the Prayer Hero.
  */
-@import "@fontsource/hind-siliguri/bengali-400.css";
-@import "@fontsource/hind-siliguri/bengali-500.css";
-@import "@fontsource/hind-siliguri/bengali-600.css";
-@import "@fontsource/hind-siliguri/latin-400.css";
-@import "@fontsource/hind-siliguri/latin-500.css";
-@import "@fontsource/hind-siliguri/latin-600.css";
+@import "@fontsource/noto-sans-bengali/bengali-400.css";
+@import "@fontsource/noto-sans-bengali/bengali-500.css";
+@import "@fontsource/noto-sans-bengali/bengali-600.css";
+@import "@fontsource/noto-sans-bengali/bengali-700.css";
+@import "@fontsource/noto-sans-bengali/latin-400.css";
+@import "@fontsource/noto-sans-bengali/latin-500.css";
+@import "@fontsource/noto-sans-bengali/latin-600.css";
+@import "@fontsource/noto-sans-bengali/latin-700.css";
+@import "@fontsource/noto-serif-bengali/bengali-400.css";
+@import "@fontsource/noto-serif-bengali/bengali-500.css";
+@import "@fontsource/noto-serif-bengali/latin-400.css";
+@import "@fontsource/noto-serif-bengali/latin-500.css";
 @import "@fontsource/tiro-bangla/bengali-400.css";
 @import "@fontsource/tiro-bangla/latin-400.css";
+@import "@fontsource/noto-naskh-arabic/arabic-400.css";
+@import "@fontsource/noto-naskh-arabic/arabic-500.css";
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+
+/*
+ * Metric-matched fallbacks for the swap period, so text does not jump when the web fonts arrive. Values measured
+ * against Arial at 100px: Noto Sans (latin) is 8.8% wider, ascent 0.92em, descent 0.41em; Noto Serif
+ * (latin) is 20.1% wider than Times New Roman, ascent 1.09em, descent 0.50em.
+ * ascent/descent overrides are divided by size-adjust because the browser scales them by it.
+ */
+@font-face {
+  font-family: "RP Sans Fallback";
+  src: local("Arial"), local("Roboto"), local("Helvetica Neue");
+  size-adjust: 108.8%;
+  ascent-override: 84.6%;
+  descent-override: 37.7%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: "RP Serif Fallback";
+  src: local("Times New Roman"), local("Noto Serif"), local("Georgia");
+  size-adjust: 120.1%;
+  ascent-override: 90.8%;
+  descent-override: 41.6%;
+  line-gap-override: 0%;
+}
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-rp-sans);
   --font-display: var(--font-rp-display);
-  --font-mono: var(--font-geist-mono);
+  --font-serif: var(--font-rp-scripture);
+  --font-reading: var(--font-rp-scripture);
+  --font-arabic: var(--font-rp-arabic);
+  --font-mono: var(--font-rp-mono);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -102,9 +148,12 @@
 }
 
 :root {
-  --font-geist-sans: "Hind Siliguri", "Noto Sans Bengali", "Noto Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-  --font-rp-display: "Tiro Bangla", "Hind Siliguri", "Noto Serif Bengali", serif;
-  --font-geist-mono: "Fira Code", "JetBrains Mono", "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  /* "RP Sans Fallback" (below) stands in with Noto's metrics while the web font swaps in. */
+  --font-rp-sans: "Noto Sans Bengali", "RP Sans Fallback", "Kalpurush", "SolaimanLipi", "Noto Sans", system-ui, sans-serif;
+  --font-rp-scripture: "Noto Serif Bengali", "RP Serif Fallback", "Kalpurush", "SolaimanLipi", "Noto Serif", Georgia, serif;
+  --font-rp-display: "Tiro Bangla", "Noto Serif Bengali", "Kalpurush", "SolaimanLipi", Georgia, serif;
+  --font-rp-arabic: "Noto Naskh Arabic", "Geeza Pro", "Traditional Arabic", "Arabic Typesetting", "Kalpurush", "SolaimanLipi", serif;
+  --font-rp-mono: "Fira Code", "JetBrains Mono", "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
   /* Primitives */
   --rp-mist-0: #FFFFFF;
@@ -240,7 +289,7 @@
 }
 
 @layer utilities {
-  .rp-greeting { font-family: var(--font-rp-display); font-size: 24px; line-height: 34px; font-weight: 400; }
+  .rp-greeting { font-family: var(--font-rp-display); font-size: 24px; line-height: 36px; font-weight: 400; }
   .rp-h1 { font-family: var(--font-rp-display); font-size: 28px; line-height: 40px; font-weight: 400; }
   .rp-time-xl { font-size: 56px; line-height: 64px; font-weight: 600; }
   .rp-time-l { font-size: 36px; line-height: 44px; font-weight: 600; }
@@ -248,9 +297,12 @@
   .rp-row { font-size: 16px; line-height: 24px; font-weight: 500; }
   .rp-body { font-size: 16px; line-height: 26px; font-weight: 400; }
   .rp-small { font-size: 14px; line-height: 22px; font-weight: 400; }
-  .rp-button { font-size: 16px; line-height: 22px; font-weight: 600; }
-  .rp-caption { font-size: 12px; line-height: 18px; font-weight: 500; }
-  .rp-overline { font-size: 13px; line-height: 18px; font-weight: 500; }
+  .rp-button { font-size: 16px; line-height: 24px; font-weight: 600; }
+  .rp-caption { font-size: 13px; line-height: 20px; font-weight: 500; }
+  /* Reading text (ayah translations, hadith, dua meanings, niyyah) in Noto Serif Bengali, 400/500 only. */
+  .rp-reading { font-family: var(--font-rp-scripture); font-size: 17px; line-height: 30px; font-weight: 400; }
+  .rp-reading-small { font-family: var(--font-rp-scripture); font-size: 15px; line-height: 26px; font-weight: 400; }
+  .rp-overline { font-size: 13px; line-height: 20px; font-weight: 500; }
 }
 
 @layer base {
