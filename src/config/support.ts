@@ -1,8 +1,9 @@
 // Sadaqah & contribute page configuration (design system v2, Task 10).
 //
 // The FOUNDER fills this file in. Nothing here is a secret: personal bKash/Nagad numbers are meant to be shown to
-// donors. No payment is processed in the app and no payment SDK is used; the page only shows a number to copy and
-// links out. Leave a value `null` and the matching control stays disabled or hidden ("শীঘ্রই চালু হবে").
+// donors. bKash/Nagad are never processed in the app: the page only shows a number to copy. Card donations go
+// through Stripe Checkout (hosted by Stripe; no card data touches the app) and only when `stripeEnabled` is on.
+// Leave a value `null` and the matching control stays disabled or hidden ("শীঘ্রই চালু হবে").
 
 export type CostKey = "server" | "push" | "translation";
 
@@ -11,7 +12,12 @@ export interface SupportConfig {
   bkashNumber: string | null;
   /** Personal Nagad number for Send Money. `null` until configured. */
   nagadNumber: string | null;
-  /** Card donation page for the diaspora (e.g. an Open Collective URL). `null` until configured. */
+  /**
+   * Card donations through Stripe Checkout (docs/donations.md). Build-time flag VITE_STRIPE_DONATIONS_ENABLED="true";
+   * off by default, and off in production until the founder flips it after the go-live checklist.
+   */
+  stripeEnabled: boolean;
+  /** External card donation page (e.g. an Open Collective URL), used only while `stripeEnabled` is off. */
   cardUrl: string | null;
   /** Public page listing every transaction. The "receipt" row is hidden while this is `null`. */
   ledgerUrl: string | null;
@@ -28,6 +34,7 @@ export interface SupportConfig {
 export const SUPPORT_CONFIG: SupportConfig = {
   bkashNumber: null,
   nagadNumber: null,
+  stripeEnabled: import.meta.env.VITE_STRIPE_DONATIONS_ENABLED === "true",
   cardUrl: null,
   ledgerUrl: null,
   repoUrl: "https://github.com/tahmidbintaslim/Ramadan-Planner",

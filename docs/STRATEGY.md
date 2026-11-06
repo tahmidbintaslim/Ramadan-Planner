@@ -1,5 +1,7 @@
 # Ramadan Planner: freemium strategy (draft, 2026-11-02)
 
+> **Superseded.** The Free/Plus plan was dropped: everything is free and supported by optional donations (see `PRODUCT.md` and `docs/donations.md`). The subscription, entitlement and Plus-limit code and the never-applied `005_billing.sql` tables described below were removed on the `stripe-donations` branch. Kept for the research only.
+
 Status: research synthesis, awaiting founder decisions. Not a spec. Sources: four read-only research passes (market, marketing, pricing/Stripe, product audit). Figures marked *(est.)* are unsourced or unverified and must be checked before use.
 
 ## 1. Decisions
