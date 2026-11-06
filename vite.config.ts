@@ -32,6 +32,25 @@ export default defineConfig(({ mode }) => {
     // Resolves the "@/*" alias from tsconfig.json.
     resolve: { tsconfigPaths: true },
     define,
+    environments: {
+      client: {
+        build: {
+          rolldownOptions: {
+            output: {
+              // Route code splitting left 50-60 tiny shared chunks per page (each lucide icon, helper and hook its
+              // own file): on Slow 4G every extra request costs a round trip. Modules shared by two or more chunks
+              // are merged into one vendor and one app chunk; route-only code stays in its route's chunk.
+              codeSplitting: {
+                groups: [
+                  { name: "vendor", test: /node_modules[\\/]/, minShareCount: 2, priority: 2 },
+                  { name: "app", test: /[\\/]src[\\/]/, minShareCount: 2, priority: 1 },
+                ],
+              },
+            },
+          },
+        },
+      },
+    },
     plugins: [
       nitro({
         // Node server builds (no NITRO_PRESET, or node-server/node-cluster/...): pre-compress the static assets (JS, CSS, fonts) as .br/.gz, served
