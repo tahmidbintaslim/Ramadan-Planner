@@ -35,7 +35,7 @@ test.describe("timetable (mobile)", () => {
     await mockTimetable(page);
     await page.reload({ waitUntil: "load" });
 
-    await expect(page.getByRole("heading", { level: 1, name: "রমজানের সময়সূচি" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "সেহরি ও ইফতারের সময়সূচি" })).toBeVisible();
     await expect(page.getByTestId("timetable-caption")).toContainText("(আনুমানিক)");
 
     // Day 15 is today: the middle decade is selected and the row is highlighted.

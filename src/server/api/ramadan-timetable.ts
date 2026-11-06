@@ -14,11 +14,16 @@ export function handleRamadanTimetable(request: Request): Promise<Response> {
 async function run(request: Request): Promise<Response> {
   const { searchParams } = new URL(request.url);
 
-  const timezone = searchParams.get("tz") ?? DHAKA_DEFAULTS.timezone;
+  let timezone = searchParams.get("tz") ?? DHAKA_DEFAULTS.timezone;
   try {
     new Intl.DateTimeFormat("en", { timeZone: timezone });
   } catch {
     return json({ error: "Invalid timezone" }, { status: 400 });
+  }
+  // A zone with no default city and no coordinates (e.g. "UTC") would pair Dhaka's sun times with another zone's
+  // clock; fall back to Dhaka as a whole instead.
+  if (!searchParams.has("lat") && !searchParams.has("lng") && !TIMEZONE_DEFAULT_COORDS[timezone]) {
+    timezone = DHAKA_DEFAULTS.timezone;
   }
 
   // Prefer explicit coordinates, otherwise use timezone-based defaults where available
