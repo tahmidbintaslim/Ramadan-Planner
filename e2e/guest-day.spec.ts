@@ -49,7 +49,10 @@ test("a guest's Fajr tick at 05:30 in Dhaka is still there at 06:30", async ({ p
     return r.fulfill({ json: RAMADAN });
   });
 
+  // The Home asks for the day's times; the salah tracker lives on /plan.
   await visit(page, "/today");
+  await page.locator("li[data-prayer]").first().waitFor();
+  await visit(page, "/plan");
   const fajr = page.locator("button[aria-pressed]").filter({ hasText: /^(ফজর|Fajr)$/ });
   await expect(fajr).toHaveCount(1);
   await fajr.click();
@@ -68,7 +71,7 @@ test("a guest's Fajr tick at 05:30 in Dhaka is still there at 06:30", async ({ p
   await page.clock.fastForward("01:00:00");
   await expect(fajr).toHaveAttribute("aria-pressed", "true");
   // ...and so does a fresh load.
-  await visit(page, "/today");
+  await visit(page, "/plan");
   await expect(fajr).toHaveAttribute("aria-pressed", "true");
   expect(await page.evaluate(() => new Date().toISOString())).toMatch(/^2027-02-20T00:3/);
 

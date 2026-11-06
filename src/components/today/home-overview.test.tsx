@@ -350,9 +350,9 @@ describe("today's plan preview (a small link; tracking lives on /plan)", () => {
     expect(screen.getByTestId("plan-preview-next")).toHaveTextContent("এরপর: সেহরি খান");
   });
 
-  it("an empty plan shows ০/০ and invites a choice, like /plan", async () => {
+  it("an empty plan shows no ০/০ count and invites a choice", async () => {
     await renderInRouter(<PlanPreview state={planState()} />);
-    expect(screen.getByRole("heading")).toHaveTextContent("আজকের আমল · ০/০");
+    expect(screen.getByRole("heading")).toHaveTextContent(/^আজকের আমল$/);
     expect(screen.getByTestId("plan-preview-next")).toHaveTextContent("আজকের আমল বেছে নিন");
   });
 

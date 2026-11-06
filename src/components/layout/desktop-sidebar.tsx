@@ -53,7 +53,8 @@ export function DesktopSidebar() {
         <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
           <CrescentIcon size={20} aria-hidden />
         </span>
-        <span className="rp-h2 truncate text-rp-ink">{tCommon("appName")}</span>
+        {/* The full name, wrapping to a second line if needed (it was cut to "Ramadan Pla…"). */}
+        <span className="rp-h2 min-w-0 text-rp-ink">{tCommon("appName")}</span>
       </Link>
 
       <nav aria-label={t("mainNav")} className="flex-1 overflow-y-auto px-3 pb-4">

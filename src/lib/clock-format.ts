@@ -3,8 +3,8 @@
 // 12-hour is the default (it is how Bangladesh reads the clock, in Bengali and in English). The choice is made in
 // /settings and kept on this device (localStorage), for guests and signed-in users alike; nothing goes to a server.
 //   en 12h: "5:55 PM"      en 24h: "17:55"
-//   bn 12h: "৫:৫৫", and "রাত ১২:০৫" between 00:00 and 04:00, the only hours a bare 12-hour time is ambiguous
-//           next to sehri/fajr (is "৩:৩০" before dawn or in the afternoon?)
+//   bn 12h: always with the Bangladeshi day period before the time (BN_DAY_PERIODS): "ভোর ৪:৫৭", "দুপুর ১২:১৪",
+//           "বিকাল ৪:১৮", "সন্ধ্যা ৫:৫৮", "রাত ৭:১২", so a bare "৪:৫৭" can never be read as afternoon
 //   bn 24h: "১৭:৫৫"
 import { toBengaliDigits } from "@/lib/prayer-phase";
 
@@ -14,8 +14,30 @@ export const DEFAULT_CLOCK_FORMAT: ClockFormat = "12h";
 export const CLOCK_FORMAT_KEY = "rp_clock_format";
 /** Fired on window after a change, so every mounted clock re-renders at once. */
 export const CLOCK_FORMAT_EVENT = "rp:clock-format";
-/** The Bengali day-period word shown before a 12-hour time from 00:00 to 03:59. */
+/** The Bengali day-period word for the night (20:00/19:00 to 03:59). */
 export const BN_NIGHT_PERIOD = "রাত";
+
+/**
+ * Bangladeshi day periods for bn 12-hour times, as [from minute of the day, word], in order. Boundaries (founder to
+ * confirm): ভোর 04:00, সকাল 06:00, দুপুর 12:00, বিকাল 15:00, সন্ধ্যা 17:30, রাত 19:00 (until 03:59).
+ */
+export const BN_DAY_PERIODS: ReadonlyArray<readonly [number, string]> = [
+  [0, BN_NIGHT_PERIOD],
+  [4 * 60, "ভোর"],
+  [6 * 60, "সকাল"],
+  [12 * 60, "দুপুর"],
+  [15 * 60, "বিকাল"],
+  [17 * 60 + 30, "সন্ধ্যা"],
+  [19 * 60, BN_NIGHT_PERIOD],
+];
+
+/** The Bengali day period of a wall-clock time (hour 0-23). */
+export function bnDayPeriod(hour: number, minute: number): string {
+  const m = (hour % 24) * 60 + minute;
+  let word = BN_NIGHT_PERIOD;
+  for (const [from, w] of BN_DAY_PERIODS) if (m >= from) word = w;
+  return word;
+}
 
 export function parseClockFormat(raw: unknown): ClockFormat {
   return raw === "24h" || raw === "12h" ? raw : DEFAULT_CLOCK_FORMAT;
@@ -55,7 +77,7 @@ export function subscribeClockFormat(onChange: () => void): () => void {
 export interface ClockParts {
   /** "5:55", "17:55", "৫:৫৫" (locale digits). */
   time: string;
-  /** "AM"/"PM" (en 12h), "রাত" (bn 12h, 00:00-03:59), otherwise null. */
+  /** "AM"/"PM" (en 12h), the Bangladeshi day period (bn 12h: ভোর, সকাল, দুপুর, বিকাল, সন্ধ্যা, রাত), null in 24h. */
   period: string | null;
   /** Where the period goes: after the time in English, before it in Bengali. */
   periodFirst: boolean;
@@ -74,7 +96,7 @@ export function clockParts(hour: number, minute: number, locale: string, format:
   } else {
     time = `${hour % 12 || 12}:${mm}`;
     if (!bn) period = hour < 12 ? "AM" : "PM";
-    else if (hour < 4) period = BN_NIGHT_PERIOD;
+    else period = bnDayPeriod(hour, minute);
   }
   return { time: bn ? toBengaliDigits(time) : time, period, periodFirst: bn };
 }

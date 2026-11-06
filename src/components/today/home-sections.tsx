@@ -126,7 +126,8 @@ export function PlanPreview({ state, className }: { state: PlanPreviewState; cla
   const t = useTranslations("home");
   const locale = useLocale();
   const next = planDisplayOrder(state.rows).find((row) => !row.done);
-  const showCount = state.ready && !(state.error && state.rows.length === 0);
+  // No count for an empty or failed list ("০/০" reads as a score of nothing).
+  const showCount = state.ready && state.total > 0;
 
   return (
     <section aria-labelledby="home-plan" data-testid="plan-preview" className={cn("flex flex-col gap-2", className)}>

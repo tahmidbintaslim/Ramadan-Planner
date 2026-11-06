@@ -154,7 +154,7 @@ describe("last ten nights", () => {
     expect(within(hero).getByText("আজ রাতের তাহাজ্জুদ")).toBeInTheDocument();
     // 18:06 -> 04:58 = 10h52m; two thirds = 7h15m -> 01:21.
     expect(screen.getByTestId("tahajjud-time")).toHaveTextContent("১:২১");
-    expect(within(hero).getByText("সেহরি শেষ ৪:৪৮")).toBeInTheDocument();
+    expect(within(hero).getByText("সেহরি শেষ ভোর ৪:৪৮")).toBeInTheDocument();
     expect(within(hero).getByText("২৭ রমজান ১৪৪৮")).toBeInTheDocument();
     expect(within(hero).getByText(/প্রস্তাবিত: রাতের শেষ তৃতীয়াংশ/)).toBeInTheDocument();
   });

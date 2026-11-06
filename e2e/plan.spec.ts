@@ -61,7 +61,9 @@ test.describe("day plan (mobile)", () => {
 
     const progress = page.getByTestId("plan-progress");
     await expect(progress).toBeVisible();
-    await expect(progress.getByRole("img")).toHaveText("০/০");
+    // An empty list shows the checklist sign, not "০/০".
+    await expect(progress.getByRole("img")).toHaveAccessibleName("আজকের আমল বেছে নিন");
+    await expect(page.getByTestId("plan-progress-empty")).toBeVisible();
 
     await page.getByRole("button", { name: "প্রস্তাবিত আমল যোগ করুন" }).click();
     for (const overline of ["সেহরি থেকে যোহর", "যোহর থেকে ইফতার", "ইফতারের পর"]) {
@@ -149,7 +151,7 @@ test.describe("last ten nights (mobile, night)", () => {
     await expect(hero).toContainText("আজ রাতের তাহাজ্জুদ");
     // 18:06 -> 04:58 next morning: the last third starts at 01:21 (after midnight, so bn 12-hour says রাত).
     await expect(page.getByTestId("tahajjud-time")).toHaveText("রাত ১:২১");
-    await expect(hero).toContainText("সেহরি শেষ ৪:৪৮");
+    await expect(hero).toContainText("সেহরি শেষ ভোর ৪:৪৮");
 
     const rows = page.locator("li[data-night]");
     await expect(rows).toHaveCount(5);
@@ -216,7 +218,7 @@ test.describe("Home plan preview matches /plan", () => {
     await mockRamadan(page, 12, dhakaToday(12));
     await visit(page, "/today");
     const preview = page.getByTestId("plan-preview");
-    await expect(preview.getByRole("heading", { level: 2 })).toHaveText("আজকের আমল · ০/০");
+    await expect(preview.getByRole("heading", { level: 2 })).toHaveText("আজকের আমল");
     await expect(preview.getByTestId("plan-preview-next")).toHaveText("আজকের আমল বেছে নিন");
 
     await visit(page, "/plan");
