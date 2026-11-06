@@ -196,11 +196,11 @@ export function QadrDuaCard() {
       <h2 id="qadr-dua-title" className="rp-row font-semibold">
         {t("items.qadrDua")}
       </h2>
-      <p lang="ar" dir="rtl" className="text-[22px] leading-[40px]">
+      <p lang="ar" dir="rtl" className="font-arabic text-[24px] leading-[48px]">
         {QADR_DUA_ARABIC}
       </p>
-      <p className="rp-small italic text-rp-ink">{t("qadrDuaTranslit")}</p>
-      <p className="rp-small text-rp-ink">{t("qadrDuaMeaning")}</p>
+      <p className="rp-reading-small text-rp-ink">{t("qadrDuaTranslit")}</p>
+      <p className="rp-reading-small text-rp-ink">{t("qadrDuaMeaning")}</p>
       <p className="rp-caption text-rp-muted">{t("qadrDuaSource")}</p>
     </section>
   );

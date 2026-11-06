@@ -288,7 +288,7 @@ export function QuranSurahList() {
                       {formatLocalizedNumber(surah.totalAyah, locale)} {t("ayahs")}
                     </span>
                   </span>
-                  <span className="font-arabic shrink-0 text-[18px] text-rp-ink" dir="rtl" lang="ar">
+                  <span className="font-arabic shrink-0 text-[20px] leading-[32px] text-rp-ink" dir="rtl" lang="ar">
                     {surah.nameArabic}
                   </span>
                   <ChevronRightIcon size={20} aria-hidden="true" className="shrink-0 text-rp-muted" />

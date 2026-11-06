@@ -220,7 +220,7 @@ export function PrayerHero({
             href={locationHref}
             data-testid="hero-location"
             aria-label={t("locationChange", { district })}
-            className="rp-caption relative inline-flex min-w-0 items-center gap-1.5 rounded-rp-full bg-white/14 px-3 py-1.5 outline-none transition-colors before:absolute before:-inset-x-1 before:-inset-y-[9px] before:content-[''] hover:bg-white/22 focus-visible:ring-[3px] focus-visible:ring-white/70"
+            className="rp-caption inline-flex min-h-[48px] min-w-0 items-center gap-1.5 rounded-rp-full bg-white/14 px-4 py-2 outline-none transition-colors hover:bg-white/22 focus-visible:ring-[3px] focus-visible:ring-white/70"
           >
             <PinIcon size={16} />
             <span aria-hidden="true" className="truncate">
@@ -284,7 +284,7 @@ export function PrayerHero({
             <span className="rp-time-xl tabular-nums" suppressHydrationWarning>
               {time}
             </span>
-            <span className="rp-caption text-white/90" suppressHydrationWarning>
+            <span className="rp-caption tabular-nums text-white/90" suppressHydrationWarning>
               {remaining}
             </span>
           </div>
