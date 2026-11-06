@@ -89,8 +89,8 @@ function LocationSheetBody({
         </SheetPrimitive.Close>
       </div>
       <SheetDescription className="sr-only">{t("subtitle")}</SheetDescription>
-      <LocationPickerFields picker={picker} className="px-4 pt-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))] regular:px-8 regular:pb-8" />
-      <div className="hidden px-8 pb-8 regular:block">
+      <LocationPickerFields picker={picker} className="px-4 pt-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))] regular:px-8 regular:pb-4" />
+      <div className="hidden bg-rp-page px-8 pt-2 pb-8 regular:sticky regular:bottom-0 regular:block">
         <button
           type="button"
           onClick={done}

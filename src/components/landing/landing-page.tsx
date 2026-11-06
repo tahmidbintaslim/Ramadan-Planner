@@ -16,6 +16,7 @@ import { useDistrictLabel } from "@/components/layout/app-header";
 import { useLiveTimes } from "@/components/today/use-live-times";
 import { districtOf, hijriLabelOf } from "@/components/today/home-overview";
 import { useClockFormat } from "@/hooks/use-clock-format";
+import { useStoredLocation } from "@/hooks/use-stored-location";
 import { getPrayerPhase, type PhaseTimings } from "@/lib/prayer-phase";
 import { needsOnboarding, subscribeStoredLocation } from "@/lib/user-location";
 import { cn } from "@/lib/utils";
@@ -103,7 +104,12 @@ export function LandingPage({ serverYear = new Date().getFullYear(), initialNow 
   const { home, phaseTimings, timeZone, now } = useLiveTimes(initialNow);
   const chosen = useDistrictLabel();
   const timings = home.timings;
-  const place = chosen ?? (timings ? districtOf(timings.location) : districtName(districtById(DEFAULT_DISTRICT_ID)!, locale));
+  // The chosen district, else Dhaka (the times' fallback) in the UI language; a device position outside the
+  // districts takes the API's label.
+  const stored = useStoredLocation();
+  const place =
+    chosen ??
+    (stored && timings ? districtOf(timings.location) : districtName(districtById(DEFAULT_DISTRICT_ID)!, locale));
   const hijri = timings ? hijriLabelOf(timings, locale, (v) => tHome("hijri", v)) : undefined;
   const fresh = !home.cached && timings?.source;
   const source = tPrayer(fresh ? "source" : "sampleSource", {
@@ -139,7 +145,7 @@ export function LandingPage({ serverYear = new Date().getFullYear(), initialNow 
 
       <main
         id="main-content"
-        className="mx-auto flex min-h-dvh w-full max-w-[1296px] flex-1 flex-col medium:min-h-0 medium:px-6 medium:py-12 regular:grid regular:grid-cols-[minmax(0,1fr)_minmax(0,560px)] regular:items-center regular:gap-12 regular:px-12 regular:py-16"
+        className="mx-auto flex min-h-dvh w-full max-w-[1296px] flex-1 flex-col medium:min-h-0 medium:px-6 medium:py-12 regular:grid regular:min-h-[calc(100dvh-65px)] regular:grid-cols-[minmax(0,1fr)_minmax(0,600px)] regular:items-center regular:gap-12 regular:px-12 regular:py-16"
       >
         <section
           aria-labelledby="hero-title"
@@ -159,7 +165,7 @@ export function LandingPage({ serverYear = new Date().getFullYear(), initialNow 
           <h1 id="hero-title" className="rp-h1 medium:rp-display-l">
             {t("heroTitle")}
           </h1>
-          <p className="rp-body max-w-[560px] medium:text-rp-muted regular:rp-greeting regular:font-normal">
+          <p className="rp-body max-w-[560px] medium:max-w-[720px] medium:text-rp-muted regular:rp-greeting regular:font-normal">
             {t("heroSubtitle")} <span className="hidden medium:inline">{t("heroNote")}</span>
           </p>
           <div className="mt-4 hidden gap-4 medium:flex">

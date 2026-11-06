@@ -179,7 +179,8 @@ export function PlanPreview({ state, className }: { state: PlanPreviewState; cla
         })}
         {shown.length === 0 ? (
           <li className="flex min-h-[52px] items-center gap-4 px-4 py-3 text-rp-muted">
-            <PlanIcon size={24} className="shrink-0 text-rp-icon" />
+            {/* Before the list is known the row only holds its place. */}
+            {state.ready ? <PlanIcon size={24} className="shrink-0 text-rp-icon" /> : null}
             <span className="rp-row min-w-0 flex-1" data-testid="plan-preview-next">
               {nextText}
             </span>
