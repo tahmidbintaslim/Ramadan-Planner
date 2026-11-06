@@ -65,21 +65,57 @@ test.describe("mobile Home", () => {
     for (const href of ["/quran", "/duas", "/tasbih", "/zakat"]) {
       await expect(page.locator(`main a[href="${href}"]`).first()).toBeVisible();
     }
-    // Mobile order: hero, pair, phase card, prayers, tiles, plan.
+    // Mobile order: phase + next prayer, Sehri/Iftar, the five prayers, one contextual card, today's plan link, tiles.
     const top = (sel: string) => page.locator(sel).first().evaluate((el) => el.getBoundingClientRect().top);
     const order = [
       await top('[data-phase]'),
       await top('[data-testid="pair-iftar"]'),
-      await top('[data-testid="phase-card"]'),
       await top("li[data-prayer]"),
-      await top('main a[href="/quran"]'),
+      await top('[data-testid="phase-card"]'),
       await top('[data-testid="plan-preview"]'),
+      await top('main a[href="/quran"]'),
     ];
+    const heroHeight = await page.locator("[data-phase]").first().evaluate((el) => el.getBoundingClientRect().height);
+    expect(heroHeight).toBeGreaterThanOrEqual(220);
+    expect(heroHeight).toBeLessThanOrEqual(255);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
     // The sadaqah card never shows in the day before the last ten nights.
     await expect(page.getByTestId("support-card")).toHaveCount(0);
     expect(appErrors()).toEqual([]);
     expect(consoleEntries.filter((e) => HYDRATION.test(e.text))).toEqual([]);
+  });
+
+  test("all five prayers are above the bottom nav on first load at 390x844", async ({ page }) => {
+    await mockHome(page, "13:00");
+    await visit(page, "/today");
+    await expect(page.locator("li[data-prayer]")).toHaveCount(5);
+    await page.waitForTimeout(500); // fonts swapped in
+    const ishaBottom = await page.locator('li[data-prayer="isha"]').evaluate((el) => el.getBoundingClientRect().bottom);
+    const navTop = await page
+      .getByRole("navigation", { name: /প্রধান নেভিগেশন|Main navigation/ })
+      .first()
+      .evaluate((el) => el.getBoundingClientRect().top);
+    expect(await page.evaluate(() => window.scrollY)).toBe(0);
+    expect(ishaBottom).toBeLessThan(navTop);
+  });
+
+  test("the Home is focused: one sourced devotional card, no trackers, checklist or journal", async ({ page }) => {
+    await mockHome(page, "13:00");
+    await visit(page, "/today");
+    await expect(page.locator("li[data-prayer]")).toHaveCount(5);
+    // Outside the sehri/iftar moments the one devotional card is the day's ayah, with its reference.
+    await expect(page.getByTestId("phase-card")).toHaveCount(0);
+    const ayah = page.getByTestId("daily-ayah");
+    await expect(ayah).toHaveCount(1);
+    await expect(ayah.locator('[lang="ar"]')).toHaveClass(/font-arabic/);
+    await expect(ayah).toContainText(/সূরা|Surah/);
+    const main = page.locator("main");
+    for (const gone of ["নামাজ ট্র্যাকার", "কুরআন খতম", "দৈনিক আমলের তালিকা", "রমজান ডায়েরি", "আজকের আমল ও ট্র্যাকার", "দিনের হাদিস"]) {
+      await expect(main).not.toContainText(gone);
+    }
+    // The prayers appear once (the list), the plan once (the preview).
+    await expect(page.getByRole("heading", { name: /নামাজের সময়|Prayer Times/ })).toHaveCount(1);
+    await expect(page.getByTestId("plan-preview")).toHaveCount(1);
   });
 
   test("the bottom nav does not cover the end of the Home page", async ({ page }) => {
@@ -106,7 +142,7 @@ test.describe("mobile Home", () => {
   test("a prayer bell creates a guest reminder rule that survives a reload", async ({ page }) => {
     await mockHome(page, "13:00");
     await visit(page, "/today");
-    const bell = page.getByRole("button", { name: /^(আসর রিমাইন্ডার|Asr reminder)$/ });
+    const bell = page.getByRole("button", { name: /^(আসর নামাজের রিমাইন্ডার|Asr prayer reminder)$/ });
     await expect(bell).toHaveAttribute("aria-pressed", "false");
     await bell.click();
     await expect(bell).toHaveAttribute("aria-pressed", "true");
@@ -115,7 +151,7 @@ test.describe("mobile Home", () => {
       expect.objectContaining({ type: "asr", offsetMinutes: -15, channels: ["push"], enabled: true }),
     ]);
     await page.reload({ waitUntil: "load" });
-    await expect(page.getByRole("button", { name: /^(আসর রিমাইন্ডার|Asr reminder)$/ })).toHaveAttribute(
+    await expect(page.getByRole("button", { name: /^(আসর নামাজের রিমাইন্ডার|Asr prayer reminder)$/ })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
@@ -133,7 +169,7 @@ test.describe("mobile Home", () => {
     });
     await mockHome(page, "13:00");
     await visit(page, "/today");
-    await expect(page.getByRole("button", { name: /^(এশা রিমাইন্ডার|ইশা রিমাইন্ডার|Isha reminder)$/ })).toHaveAttribute(
+    await expect(page.getByRole("button", { name: /^(এশা নামাজের রিমাইন্ডার|ইশা নামাজের রিমাইন্ডার|Isha prayer reminder)$/ })).toHaveAttribute(
       "aria-pressed",
       "true",
     );

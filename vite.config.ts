@@ -3,6 +3,7 @@ import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { nitro } from "nitro/vite";
+import { securityHeaders } from "./src/config/security-headers";
 
 // Public keys the client bundle reads from import.meta.env.VITE_*. Deployments that still only define the
 // Next.js-era names (NEXT_PUBLIC_*) get them mapped here at build time, so a missing rename in the Vercel
@@ -37,6 +38,9 @@ export default defineConfig(({ mode }) => {
         // when the browser accepts them. Vercel compresses on its CDN, so its build skips this. HTML responses
         // are rendered per request and stay uncompressed on the Node server.
         compressPublicAssets: isNodeServerBuild(env) ? { gzip: true, brotli: true } : false,
+        // Node server builds (local, e2e) send the same security headers that vercel.json sets on Vercel, so
+        // tests see production behaviour. Vercel builds leave them to vercel.json (one source per platform).
+        ...(isNodeServerBuild(env) ? { routeRules: { "/**": { headers: securityHeaders() } } } : {}),
       }),
       tailwindcss(),
       tanstackStart(),

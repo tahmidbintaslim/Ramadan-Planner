@@ -15,6 +15,8 @@ describe("shipped config", () => {
   it("starts with nothing configured: payments disabled, no tax claim, repo set", () => {
     expect(configuredWallets(SUPPORT_CONFIG)).toEqual([]);
     expect(SUPPORT_CONFIG.cardUrl).toBeNull();
+    // Card donations stay off unless VITE_STRIPE_DONATIONS_ENABLED is "true" at build time.
+    expect(SUPPORT_CONFIG.stripeEnabled).toBe(false);
     expect(SUPPORT_CONFIG.ledgerUrl).toBeNull();
     expect(SUPPORT_CONFIG.taxDeductible).toBe(false);
     expect(SUPPORT_CONFIG.repoUrl).toBe("https://github.com/tahmidbintaslim/Ramadan-Planner");

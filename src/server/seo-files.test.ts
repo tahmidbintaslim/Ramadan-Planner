@@ -14,8 +14,9 @@ function oldRobots(baseUrl: string) {
   return ["User-agent: *", "Allow: /", "Disallow: /api/", `Sitemap: ${baseUrl}/sitemap.xml`].join("\n") + "\n";
 }
 function oldSitemap(baseUrl: string) {
-  // /timetable and /support are new in design system v2 (Tasks 8 and 10).
-  const staticPages = ["/", "/quran", "/hadith", "/timetable", "/support"];
+  // /timetable and /support are new in design system v2 (Tasks 8 and 10), /duas in the Home design fixes; /hadith is
+  // switched off (src/config/features.ts) until it works.
+  const staticPages = ["/", "/quran", "/timetable", "/support", "/duas"];
   const urls: string[] = [];
   for (const p of staticPages) urls.push(`<url><loc>${baseUrl}${p}</loc></url>`);
   for (let i = 1; i <= 114; i++) urls.push(`<url><loc>${baseUrl}/quran/${i}</loc></url>`);
@@ -60,13 +61,13 @@ describe("sitemap content", () => {
   it("lists the public pages and surahs 1..114 exactly once", () => {
     expect(locs).toHaveLength(5 + 114);
     expect(new Set(locs).size).toBe(locs.length);
-    expect(locs).toEqual(expect.arrayContaining(["/", "/quran", "/hadith", "/timetable", "/support", "/quran/1", "/quran/114"]));
+    expect(locs).toEqual(expect.arrayContaining(["/", "/quran", "/timetable", "/support", "/duas", "/quran/1", "/quran/114"]));
     expect(locs).not.toContain("/quran/0");
     expect(locs).not.toContain("/quran/115");
   });
 
   it("never lists API, auth, admin, or other signed-in-only routes", () => {
-    const forbidden = ["/api", "/sign-in", "/sign-up", "/signup", "/login", "/forgot", "/admin", "/dashboard", "/books", "/duas", "/quiz", "/tasbih", "/zakat"];
+    const forbidden = ["/api", "/sign-in", "/sign-up", "/signup", "/login", "/forgot", "/admin", "/dashboard", "/books", "/quiz", "/hadith", "/tasbih", "/zakat"];
     for (const f of forbidden) expect(locs.some((l) => l.startsWith(f))).toBe(false);
   });
 

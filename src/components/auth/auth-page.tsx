@@ -1,15 +1,30 @@
 import type { ReactNode } from "react";
-import { FloatingQuickNav } from "@/components/shared/floating-quick-nav";
+import { useTranslations } from "@/i18n/use-intl";
+import { Link } from "@/components/shared/link";
+import { CrescentIcon } from "@/components/icons/islamic-icons";
+import { TextThemeButton } from "@/components/shared/accessibility-sidebar";
 
-// Port of the old src/app/(auth)/layout.tsx wrapper (rendered by the pathless `_auth` layout route).
+// Port of the old src/app/(auth)/layout.tsx wrapper (rendered by the pathless `_auth` layout route). A slim header
+// links home and opens "লেখা ও থিম" (text size and theme); there are no floating buttons over the form.
 export function AuthPage({ children }: { children: ReactNode }) {
+  const t = useTranslations("common");
   return (
-    <>
-      {/* pb-24 keeps the end of a tall form scrollable above the floating accessibility button. */}
-      <main id="main-content" className="min-h-screen flex items-center justify-center bg-background px-4 pt-10 pb-24">
+    <div className="min-h-screen bg-background">
+      <header className="mx-auto flex w-full max-w-md items-center justify-between gap-3 px-4 pt-4">
+        <Link
+          href="/"
+          className="flex min-h-12 items-center gap-2.5 rounded-rp-full pr-2 outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
+        >
+          <span aria-hidden="true" className="flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground">
+            <CrescentIcon size={20} />
+          </span>
+          <span className="font-display text-[18px] leading-[28px] text-rp-ink">{t("appName")}</span>
+        </Link>
+        <TextThemeButton compact />
+      </header>
+      <main id="main-content" className="flex items-center justify-center px-4 pt-6 pb-10">
         <div className="w-full max-w-md">{children}</div>
       </main>
-      <FloatingQuickNav />
-    </>
+    </div>
   );
 }

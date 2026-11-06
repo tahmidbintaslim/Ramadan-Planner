@@ -4,9 +4,10 @@ import { SectionHeader } from "@/components/design/section-header";
 import { Link } from "@/components/shared/link";
 import { buttonVariants } from "@/components/ui/button";
 import {
-  CheckIcon,
+  ChevronRightIcon,
   DuaIcon,
-  LanternIcon,
+  HeartIcon,
+  PlanIcon,
   QuranIcon,
   TasbihIcon,
   ZakatIcon,
@@ -15,6 +16,8 @@ import {
 import { formatLocalizedNumber } from "@/lib/locale-number";
 import { IFTAR_WINDOW_MS, type PhaseTimings, type PrayerPhase } from "@/lib/prayer-phase";
 import { cn } from "@/lib/utils";
+import { isHiddenPath } from "@/config/features";
+import { DuaCard } from "@/components/duas/dua-card";
 import { planDisplayOrder, type PlanWindow } from "@/components/plan/plan-logic";
 
 // ── Phase card: Sehri niyyah / Iftar dua ──────────────
@@ -42,38 +45,27 @@ export function phaseCardKind(
 }
 
 export function PhaseCard({ kind, className }: { kind: PhaseCardKind; className?: string }) {
-  const t = useTranslations("home");
-  const titleId = `phase-card-${kind}`;
   return (
-    <section
-      aria-labelledby={titleId}
-      data-testid="phase-card"
-      data-kind={kind}
-      className={cn("flex flex-col gap-2 rounded-rp-lg bg-rp-surface p-5 text-rp-ink shadow-rp-soft", className)}
-    >
-      <h2 id={titleId} className="rp-row flex items-center gap-2 font-semibold">
-        <DuaIcon size={24} className="text-rp-accent" />
-        {t(kind === "niyyah" ? "niyyahTitle" : "iftarDuaTitle")}
-      </h2>
-      <p className="font-reading text-[20px] leading-[34px] font-medium">{t(kind === "niyyah" ? "niyyahText" : "iftarDuaText")}</p>
-      <p className="rp-reading-small text-rp-muted">{t(kind === "niyyah" ? "niyyahMeaning" : "iftarDuaMeaning")}</p>
-      <p className="rp-caption text-rp-gold-text">{t(kind === "niyyah" ? "niyyahSource" : "iftarDuaSource")}</p>
-    </section>
+    <div data-testid="phase-card" data-kind={kind} className={className}>
+      <DuaCard id={kind === "niyyah" ? "niyyah" : "iftar"} icon={<DuaIcon size={24} className="text-rp-accent" />} />
+    </div>
   );
 }
 
 // ── Feature tiles ─────────────────────────────────────
 
-export const FEATURE_TILES: ReadonlyArray<{
+// Only features that are on (src/config/features.ts) get a tile.
+type FeatureTile = {
   key: "tileQuran" | "tileDuas" | "tileTasbih" | "tileZakat";
   href: string;
   Icon: ComponentType<IconProps>;
-}> = [
+};
+export const FEATURE_TILES: ReadonlyArray<FeatureTile> = ([
   { key: "tileQuran", href: "/quran", Icon: QuranIcon },
   { key: "tileDuas", href: "/duas", Icon: DuaIcon },
   { key: "tileTasbih", href: "/tasbih", Icon: TasbihIcon },
   { key: "tileZakat", href: "/zakat", Icon: ZakatIcon },
-];
+] as FeatureTile[]).filter((tile) => !isHiddenPath(tile.href));
 
 export function FeatureTiles({ className }: { className?: string }) {
   const t = useTranslations("home");
@@ -126,78 +118,45 @@ export interface PlanPreviewState {
   error?: boolean;
 }
 
+/**
+ * Today's plan on the Home: one small link row (title with the same count as /plan, and the next deed still open),
+ * never the checklist itself: ticking and tracking live on /plan only.
+ */
 export function PlanPreview({ state, className }: { state: PlanPreviewState; className?: string }) {
   const t = useTranslations("home");
   const locale = useLocale();
-  const items = planDisplayOrder(state.rows).slice(0, PLAN_PREVIEW_COUNT);
+  const next = planDisplayOrder(state.rows).find((row) => !row.done);
+  // No count for an empty or failed list ("০/০" reads as a score of nothing).
+  const showCount = state.ready && state.total > 0;
 
   return (
-    <section aria-labelledby="home-plan" data-testid="plan-preview" className={cn("flex flex-col gap-3", className)}>
-      <SectionHeader
-        title={
-          <span id="home-plan">
+    <section aria-labelledby="home-plan" data-testid="plan-preview" className={cn("flex flex-col gap-2", className)}>
+      <Link
+        href={PLAN_HREF}
+        aria-label={t("planAllLabel")}
+        className="flex min-h-14 items-center gap-3 rounded-rp-lg bg-rp-surface px-4 py-3 text-rp-ink shadow-rp-soft outline-none transition-colors hover:bg-rp-accent-tint/60 focus-visible:ring-[3px] focus-visible:ring-ring"
+      >
+        <span aria-hidden="true" className="flex size-10 shrink-0 items-center justify-center rounded-rp-full bg-rp-accent-tint text-rp-accent">
+          <PlanIcon size={22} />
+        </span>
+        <span className="flex min-w-0 flex-1 flex-col">
+          <h2 id="home-plan" className="rp-row font-semibold">
             {/* No count after a failed load with nothing to show: "০/০" would read as an empty plan. */}
-            {state.ready && !(state.error && state.rows.length === 0)
-              ? t("planTitle", {
-                  done: formatLocalizedNumber(state.done, locale),
-                  total: formatLocalizedNumber(state.total, locale),
-                })
+            {showCount
+              ? t("planTitle", { done: formatLocalizedNumber(state.done, locale), total: formatLocalizedNumber(state.total, locale) })
               : t("planTitleNoCount")}
+          </h2>
+          <span className="rp-small truncate text-rp-muted" data-testid="plan-preview-next">
+            {!state.ready ? " " : next ? t("planNext", { title: next.title }) : state.rows.length > 0 ? t("planAllDone") : t("planEmpty")}
           </span>
-        }
-        action={
-          <Link href={PLAN_HREF} aria-label={t("planAllLabel")}>
-            {t("planAll")}
-          </Link>
-        }
-      />
+        </span>
+        <ChevronRightIcon size={20} className="shrink-0 text-rp-muted" />
+      </Link>
       {state.error ? (
         <p role="alert" data-testid="plan-preview-error" className="rp-small rounded-rp-md bg-destructive/10 px-4 py-3 text-destructive">
-          {t("planError")}{" "}
-          <Link href={PLAN_HREF} className="inline-flex min-h-[44px] items-center font-semibold underline underline-offset-4">
-            {t("planErrorAction")}
-          </Link>
+          {t("planError")}
         </p>
       ) : null}
-      {!state.ready ? (
-        <div aria-hidden="true" className="min-h-[72px] rounded-rp-lg bg-rp-surface shadow-rp-soft" />
-      ) : items.length === 0 ? (
-        state.error ? null : (
-        <div data-testid="plan-preview-empty" className="flex flex-col items-start gap-2 rounded-rp-lg bg-rp-surface p-5 shadow-rp-soft">
-          <p className="rp-small text-rp-muted">{t("planEmpty")}</p>
-          <Link href={PLAN_HREF} className={cn(buttonVariants({ variant: "soft" }))}>
-            {t("planEmptyAction")}
-          </Link>
-        </div>
-        )
-      ) : (
-        <ul className="flex flex-col gap-3">
-          {items.map((row) => (
-            <li key={row.id}>
-              <button
-                type="button"
-                role="checkbox"
-                aria-checked={row.done}
-                disabled={state.pending.has(row.id)}
-                onClick={() => state.toggleRow(row, !row.done)}
-                data-testid={`plan-item-${row.id}`}
-                className="flex min-h-[72px] w-full items-center gap-4 rounded-rp-lg bg-rp-surface px-4 py-3 text-left text-rp-ink shadow-rp-soft outline-none focus-visible:ring-[3px] focus-visible:ring-ring disabled:opacity-60"
-              >
-                <span
-                  aria-hidden="true"
-                  className={cn(
-                    "flex size-7 shrink-0 items-center justify-center rounded-rp-full border-2",
-                    row.done ? "border-rp-done bg-rp-done text-rp-surface" : "border-rp-input",
-                  )}
-                >
-                  {row.done ? <CheckIcon size={16} strokeWidth={2.4} /> : null}
-                </span>
-                <span className={cn("rp-row", row.done && "text-rp-muted")}>{row.title}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
     </section>
   );
 }
@@ -227,7 +186,7 @@ export function SupportCard({
       className={cn("flex items-start gap-4 rounded-rp-lg bg-rp-gold-tint p-5 text-rp-ink shadow-rp-soft", className)}
     >
       <span className="flex size-11 shrink-0 items-center justify-center rounded-rp-full bg-rp-surface text-rp-gold-text">
-        <LanternIcon size={24} />
+        <HeartIcon size={24} />
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <h2 id="home-support" className="rp-row font-semibold">

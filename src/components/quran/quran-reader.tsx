@@ -370,7 +370,7 @@ export function QuranReader({ surahNumber }: QuranReaderProps) {
               ? (surah.nameBengali || surah.nameEnglish)
               : surah.nameEnglish}
           </h1>
-          <p className="font-arabic text-[24px] leading-[48px]" dir="rtl" lang="ar">
+          <p className="font-quran text-[24px] leading-[48px]" dir="rtl" lang="ar">
             {surah.nameArabicLong || surah.nameArabic}
           </p>
           <p className="text-sm text-muted-foreground">
@@ -555,7 +555,7 @@ export function QuranReader({ surahNumber }: QuranReaderProps) {
       {/* Bismillah (for all surahs except At-Tawba #9) */}
       {surahNumber !== 9 && surahNumber !== 1 && (
         <div className="text-center py-4">
-          <p className="font-arabic text-[28px] leading-[56px] text-primary" dir="rtl" lang="ar">
+          <p className="font-quran text-[28px] leading-[56px] text-primary" dir="rtl" lang="ar">
             بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ
           </p>
           <p className="text-sm text-muted-foreground mt-1">{t("bismillah")}</p>
@@ -619,7 +619,7 @@ export function QuranReader({ surahNumber }: QuranReaderProps) {
               <CardContent className="space-y-3">
                 {/* Arabic text */}
                 <p
-                  className="font-arabic text-right text-[28px] leading-[56px]"
+                  className="font-quran text-right text-[28px] leading-[56px]"
                   dir="rtl"
                   lang="ar"
                 >

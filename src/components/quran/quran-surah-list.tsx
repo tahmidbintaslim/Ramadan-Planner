@@ -146,7 +146,7 @@ function LastReadCard({ surah, lastRead: saved }: { surah: SurahInfo | undefined
       <MihrabArch className="pointer-events-none absolute -right-4 bottom-0 h-full w-auto text-white" />
       <div className="relative flex items-start gap-4">
         <span className="flex size-14 shrink-0 items-center justify-center rounded-full bg-white/10 text-rp-gold">
-          <QuranIcon size={56} strokeWidth={1.4} />
+          <QuranIcon size={56} />
         </span>
         <div className="min-w-0 space-y-1">
           <p className="rp-caption text-white">{t("lastRead")}</p>
@@ -288,7 +288,7 @@ export function QuranSurahList() {
                       {formatLocalizedNumber(surah.totalAyah, locale)} {t("ayahs")}
                     </span>
                   </span>
-                  <span className="font-arabic shrink-0 text-[20px] leading-[32px] text-rp-ink" dir="rtl" lang="ar">
+                  <span className="font-quran shrink-0 text-[20px] leading-[32px] text-rp-ink" dir="rtl" lang="ar">
                     {surah.nameArabic}
                   </span>
                   <ChevronRightIcon size={20} aria-hidden="true" className="shrink-0 text-rp-muted" />

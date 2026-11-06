@@ -70,7 +70,7 @@ export function useKnownTimings(enabled: boolean): KnownTimings | null {
     const cached = readKnownTimings();
     if (cached && cached.date === todayISOInZone(new Date(), cached.timezone)) return;
     const controller = new AbortController();
-    fetch(`/api/timings?${new URLSearchParams({ tz })}`, { signal: controller.signal })
+    fetch(`/api/timings?${new URLSearchParams({ tz, date: todayISOInZone(new Date(), tz) })}`, { signal: controller.signal })
       .then((res) => (res.ok ? (res.json() as Promise<TimingData>) : null))
       .then((data) => {
         if (data?.prayerTimes) rememberTimings({ prayerTimes: data.prayerTimes, timezone: data.timezone || tz }, "tz");
@@ -95,7 +95,7 @@ export function useRamadanDay(): number | null {
     const current = safeParse(readRaw(RAMADAN_DAY_KEY)) as { date?: string } | null;
     if (current?.date === today) return;
     const controller = new AbortController();
-    fetch(`/api/ramadan?${new URLSearchParams({ tz })}`, { signal: controller.signal })
+    fetch(`/api/ramadan?${new URLSearchParams({ tz, date: today })}`, { signal: controller.signal })
       .then((res) => (res.ok ? (res.json() as Promise<{ phase?: string; currentDay?: number | null }>) : null))
       .then((data) => {
         if (!data) return;

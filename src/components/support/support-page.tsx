@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
+import { X } from "lucide-react";
 import { useLocale, useTranslations } from "@/i18n/use-intl";
 import { Link } from "@/components/shared/link";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,7 @@ import {
   ChevronRightIcon,
   CodeIcon,
   DuaIcon,
-  LanternIcon,
+  HeartIcon,
   MosqueIcon,
   ShareIcon,
 } from "@/components/icons/islamic-icons";
@@ -31,7 +32,9 @@ import {
   safeHttpUrl,
   type SupportConfig,
 } from "@/config/support";
+import { CardDonation } from "./card-donation";
 import { PaymentSheet, type Frequency } from "./payment-sheet";
+import { TransparencyCard } from "./transparency-card";
 
 type Selection = number | "other";
 
@@ -61,7 +64,49 @@ function ContributeRow({
   );
 }
 
-export function SupportPage({ config = SUPPORT_CONFIG }: { config?: SupportConfig }) {
+export type DonationResult = "success" | "cancel";
+
+/** Gentle, dismissible note after returning from Stripe Checkout. Shown only on /support, never as a pop-up. */
+function DonationBanner({ result, monthly, onClose }: { result: DonationResult; monthly: boolean; onClose: () => void }) {
+  const t = useTranslations("supportPage.banner");
+  const success = result === "success";
+  return (
+    <div
+      role="status"
+      data-testid={success ? "donation-success" : "donation-cancel"}
+      className={
+        success
+          ? "flex items-start gap-3 rounded-rp-md border border-rp-rule bg-rp-accent-tint p-4"
+          : "flex items-start gap-3 rounded-rp-md border border-rp-rule bg-rp-surface p-4"
+      }
+    >
+      <div className="min-w-0 flex-1 space-y-1">
+        <p className="rp-row text-rp-ink">{success ? t("successTitle") : t("cancelTitle")}</p>
+        <p className="rp-small text-rp-ink">{success ? t("successText") : t("cancelText")}</p>
+        {success && monthly ? <p className="rp-small text-rp-muted">{t("successMonthly")}</p> : null}
+      </div>
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label={t("close")}
+        className="-m-2 flex size-11 shrink-0 items-center justify-center rounded-full text-rp-muted outline-none hover:bg-rp-accent-tint focus-visible:ring-[3px] focus-visible:ring-ring"
+      >
+        <X size={20} aria-hidden="true" />
+      </button>
+    </div>
+  );
+}
+
+export function SupportPage({
+  config = SUPPORT_CONFIG,
+  donationResult,
+  donationMonthly = false,
+}: {
+  config?: SupportConfig;
+  /** From ?donation=success|cancel on the Stripe return URL. */
+  donationResult?: DonationResult;
+  donationMonthly?: boolean;
+}) {
   const t = useTranslations("supportPage");
   const locale = useLocale();
   const num = (n: number, opts?: Intl.NumberFormatOptions) => formatLocalizedNumber(n, locale, opts);
@@ -70,9 +115,11 @@ export function SupportPage({ config = SUPPORT_CONFIG }: { config?: SupportConfi
   const [custom, setCustom] = useState("");
   const [frequency, setFrequency] = useState<Frequency>("once");
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [bannerOpen, setBannerOpen] = useState(true);
 
   const wallets = configuredWallets(config);
-  const cardUrl = safeHttpUrl(config.cardUrl);
+  const stripeEnabled = config.stripeEnabled;
+  const cardUrl = stripeEnabled ? null : safeHttpUrl(config.cardUrl);
   const ledgerUrl = safeHttpUrl(config.ledgerUrl);
   const repoUrl = safeHttpUrl(config.repoUrl);
   const mosqueHref = mailtoHref(config.contactEmail, t("mosqueSubject"));
@@ -117,11 +164,15 @@ export function SupportPage({ config = SUPPORT_CONFIG }: { config?: SupportConfi
     <div className="mx-auto w-full max-w-2xl space-y-4">
       <h1 className="rp-h1 text-rp-ink">{t("title")}</h1>
 
+      {donationResult && bannerOpen ? (
+        <DonationBanner result={donationResult} monthly={donationMonthly} onClose={() => setBannerOpen(false)} />
+      ) : null}
+
       <Card
         data-testid="support-intro"
         className="flex-row items-center gap-4 bg-linear-to-br from-rp-gold-tint to-rp-page px-5"
       >
-        <LanternIcon size={64} strokeWidth={1.3} className="shrink-0 text-rp-gold" />
+        <HeartIcon size={56} className="shrink-0 text-rp-gold-text" />
         <div className="min-w-0 space-y-1">
           <h2 className="rp-h2 text-rp-ink">{t("introTitle")}</h2>
           <p className="rp-small text-rp-ink">{t("introText")}</p>
@@ -129,7 +180,7 @@ export function SupportPage({ config = SUPPORT_CONFIG }: { config?: SupportConfi
       </Card>
 
       <Card className="gap-0 overflow-hidden py-0" data-testid="cost-ledger">
-        <p className="rp-overline px-4 pb-1 pt-4 text-rp-muted">{t("ledgerTitle")}</p>
+        <h2 className="rp-h2 px-4 pb-1 pt-4 text-rp-ink">{t("ledgerTitle")}</h2>
         <ul className="divide-y divide-rp-rule">
           {COST_KEYS.map((key) => (
             <li key={key} className="flex min-h-14 items-center justify-between gap-3 px-4">
@@ -151,7 +202,9 @@ export function SupportPage({ config = SUPPORT_CONFIG }: { config?: SupportConfi
         </ul>
       </Card>
 
-      <Card className="px-5" data-testid="give-card">
+      {stripeEnabled ? <TransparencyCard /> : null}
+
+      <Card className="px-5" data-testid="give-card" data-stripe-enabled={stripeEnabled}>
         <h2 className="rp-h2 text-rp-ink">{t("giveTitle")}</h2>
 
         <div className="space-y-2">
@@ -214,7 +267,7 @@ export function SupportPage({ config = SUPPORT_CONFIG }: { config?: SupportConfi
           <Button size="lg" className="w-full" disabled={walletDisabled} onClick={() => setSheetOpen(true)} data-testid="wallet-button">
             {walletLabel}
           </Button>
-          {cardUrl ? (
+          {stripeEnabled ? null : cardUrl ? (
             <Button asChild variant="outline" size="lg" className="w-full">
               <a href={cardUrl} target="_blank" rel="noopener noreferrer" data-testid="card-button">
                 {t("cardButton")}
@@ -232,6 +285,8 @@ export function SupportPage({ config = SUPPORT_CONFIG }: { config?: SupportConfi
           {t("voluntaryNote")} {config.taxDeductible ? t("taxYes") : t("taxNo")}
         </p>
       </Card>
+
+      {stripeEnabled ? <CardDonation /> : null}
 
       <Card className="gap-0 overflow-hidden py-0" data-testid="contribute-card">
         <h2 className="rp-h2 px-4 pb-2 pt-4 text-rp-ink">{t("contributeTitle")}</h2>
@@ -265,6 +320,19 @@ export function SupportPage({ config = SUPPORT_CONFIG }: { config?: SupportConfi
             </button>
           </li>
         </ul>
+        <p className="rp-caption border-t border-rp-rule px-4 py-3 text-rp-muted" data-testid="credits">
+          {t("creditsIcons")}{" "}
+          <a
+            href="https://hugeicons.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex min-h-6 items-center font-semibold text-rp-accent underline-offset-4 hover:underline"
+          >
+            Hugeicons
+            <span className="sr-only"> ({t("opensNewTab")})</span>
+          </a>{" "}
+          {t("creditsLicence")}
+        </p>
       </Card>
 
       <PaymentSheet open={sheetOpen} onOpenChange={setSheetOpen} wallets={wallets} amount={amount ?? DEFAULT_AMOUNT} frequency={frequency} />

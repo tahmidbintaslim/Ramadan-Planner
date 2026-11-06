@@ -11,12 +11,12 @@ export interface ChecklistRowItem {
   meta?: string;
 }
 
-/** Overline above a group of checklist cards (accent 13/18 500). */
-export function ChecklistOverline({ id, children }: { id?: string; children: ReactNode }) {
+/** Heading above a group of checklist cards (rp-h2, like every other section heading). */
+export function ChecklistOverline({ id, children, as: Heading = "h2" }: { id?: string; children: ReactNode; as?: "h2" | "h3" }) {
   return (
-    <h2 id={id} className="rp-overline text-rp-accent">
+    <Heading id={id} className={Heading === "h2" ? "rp-h2 text-rp-ink" : "rp-row font-semibold text-rp-ink"}>
       {children}
-    </h2>
+    </Heading>
   );
 }
 
@@ -65,7 +65,7 @@ export function ChecklistCards({
                 item.done ? "border-rp-done bg-rp-done text-rp-surface" : "border-rp-input",
               )}
             >
-              {item.done ? <CheckIcon size={16} strokeWidth={2.4} /> : null}
+              {item.done ? <CheckIcon size={16} /> : null}
             </span>
             <span className="flex min-w-0 flex-col">
               <span className={cn("rp-row break-words", item.done && "text-rp-muted")}>{item.title}</span>

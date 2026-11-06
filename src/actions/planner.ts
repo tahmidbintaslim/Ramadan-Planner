@@ -71,7 +71,7 @@ async function callAuthed<T>(
 const getDailyLogFn = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator(daySchema)
-  .handler(({ data, context }) => getDailyLogImpl(context.userId, data.day));
+  .handler(({ data, context }) => getDailyLogImpl(context.userId, data.day, data.date));
 
 const saveDailyLogFn = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
@@ -146,13 +146,16 @@ const updateUserProfileFn = createServerFn({ method: "POST" })
 
 // Exported wrappers: unchanged names, arguments and return types.
 
+/** `todayISO` is the user's local date (YYYY-MM-DD); it picks the Ramadan year the day belongs to. */
 export async function getDailyLogAction(
   day: number,
+  todayISO?: string,
 ): Promise<ActionResult<DailyLogDTO | null>> {
-  if (!daySchema.safeParse({ day }).success) {
+  const data = todayISO === undefined ? { day } : { day, date: todayISO };
+  if (!daySchema.safeParse(data).success) {
     return { ok: false, error: "invalid_day" };
   }
-  return callAuthed(() => getDailyLogFn({ data: { day } }));
+  return callAuthed(() => getDailyLogFn({ data }));
 }
 
 export async function saveDailyLogAction(

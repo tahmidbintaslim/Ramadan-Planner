@@ -28,6 +28,7 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { useAuth } from "@/components/providers/auth-provider";
 import { needsOnboarding } from "@/lib/user-location";
 import { cn } from "@/lib/utils";
+import { isHiddenPath } from "@/config/features";
 
 type LandingKey = Parameters<ReturnType<typeof useTranslations<"landing">>>[0];
 
@@ -38,7 +39,7 @@ const FEATURES: ReadonlyArray<{ title: LandingKey; desc: LandingKey; href: strin
   { title: "tileQuranTitle", desc: "tileQuranDesc", href: "/quran", Icon: QuranIcon },
   { title: "tileRemindersTitle", desc: "tileRemindersDesc", href: "/reminders", Icon: BellIcon },
   { title: "tileTasbihTitle", desc: "tileTasbihDesc", href: "/tasbih", Icon: TasbihIcon },
-];
+].filter((f) => !isHiddenPath(f.href)); // src/config/features.ts decides what is shown
 
 const PROMISES: ReadonlyArray<{ title: LandingKey; desc: LandingKey; Icon: ComponentType<IconProps> }> = [
   { title: "promiseFreeTitle", desc: "promiseFreeDesc", Icon: HeartIcon },
@@ -136,8 +137,7 @@ export function LandingPage({ serverYear = new Date().getFullYear() }: { serverY
           <MihrabArch className="pointer-events-none absolute bottom-0 right-[-40px] -z-10 h-[340px] w-[340px] text-rp-accent sm:right-6 lg:right-[38%]" />
           <div className="grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14">
             <div className="flex flex-col gap-5">
-              <CrescentIcon size={40} strokeWidth={1.4} className="text-rp-gold-text" />
-              <p className="rp-overline text-rp-accent">{t("heroOverline")}</p>
+              <CrescentIcon size={40} className="text-rp-gold-text" />
               <h1 id="hero-title" className="font-display text-[34px] leading-[48px] text-rp-ink sm:text-[44px] sm:leading-[60px]">
                 {t("heroTitle")}
               </h1>
@@ -202,7 +202,7 @@ export function LandingPage({ serverYear = new Date().getFullYear() }: { serverY
         >
           <GirihPattern opacity={0.06} className="-z-10 text-rp-gold-text" />
           <div className="flex gap-4">
-            <LanternIcon size={48} strokeWidth={1.3} className="shrink-0 text-rp-gold-text" />
+            <LanternIcon size={48} className="shrink-0 text-rp-gold-text" />
             <div className="flex flex-col gap-1">
               <h2 id="support-teaser-title" className="rp-h2 text-rp-ink">
                 {t("supportTitle")}

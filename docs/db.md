@@ -49,7 +49,8 @@ Known schema gap: `supabase/migrations` and parts of `schema.prisma` still point
 ### calendar_links (owner only, scoped in code)
 
 - id, user_id
-- google_tokens (AES-256-GCM encrypted jsonb), ics_secret
+- google_tokens (AES-256-GCM encrypted jsonb)
+- ics_secret_hash (unique; hex SHA-256 of the ICS feed secret, migration 008), ics_secret (deprecated legacy plaintext, NULL for rows the app writes)
 - created_at, updated_at
 
 ### announcements (admin managed)

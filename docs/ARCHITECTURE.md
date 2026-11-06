@@ -16,9 +16,8 @@
 ## Data
 
 - One PostgreSQL database, hosted on Supabase.
-- Prisma 7 with the `pg` adapter (`src/lib/prisma.ts`) for daily content, Quran, hadith, announcements, admin, push subscriptions and delivery logs, and calendar links.
-- `supabase-js` with the service role key (`src/lib/supabase/server.ts`), on the server only, for planner data in `src/server/planner-impl.ts`: daily logs, prayer goals, plan tasks, reminder rules and profile settings.
-- The service role bypasses row-level security, so user isolation comes from application code: every server query filters by the signed-in user's ID. See [SECURITY_PRIVACY.md](SECURITY_PRIVACY.md).
+- Prisma 7 with the `pg` adapter (`src/lib/prisma.ts`), on the server only, for everything: daily content, Quran, hadith, announcements, admin, push subscriptions and delivery logs, calendar links, and the planner data in `src/server/planner-impl.ts` (daily logs, prayer goals, plan tasks, reminder rules and profile settings). The Supabase Data API (REST) is not used.
+- Prisma connects as the database owner and bypasses row-level security, so user isolation comes from application code: every server query filters by the signed-in user's ID. See [SECURITY_PRIVACY.md](SECURITY_PRIVACY.md).
 - Guests use the same screens with data in `localStorage` (`src/hooks/use-guest-data.ts`).
 
 ## Content vs user data

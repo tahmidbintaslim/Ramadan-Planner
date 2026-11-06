@@ -21,7 +21,7 @@ describe("homeRequestUrls", () => {
     const urls = homeRequestUrls("Asia/Dhaka", "2027-02-28", { lat: 23.810331, lng: 90.412521 });
     expect(urls.today).toBe("/api/timings?tz=Asia%2FDhaka&lat=23.81&lng=90.41&date=2027-02-28");
     expect(urls.tomorrow).toBe("/api/timings?tz=Asia%2FDhaka&lat=23.81&lng=90.41&date=2027-03-01");
-    expect(urls.ramadan).toBe("/api/ramadan?tz=Asia%2FDhaka&lat=23.81&lng=90.41&day=2027-02-28");
+    expect(urls.ramadan).toBe("/api/ramadan?tz=Asia%2FDhaka&lat=23.81&lng=90.41&date=2027-02-28");
     expect(homeRequestUrls("Asia/Dhaka", "2027-02-20").today).toBe("/api/timings?tz=Asia%2FDhaka&date=2027-02-20");
   });
 
@@ -45,14 +45,14 @@ describe("useHomeTimings", () => {
     const first = fetchMock.mock.calls.map(([u]) => u);
     expect(first.some((u) => u.startsWith("/api/timings") && u.includes("date=2027-02-20"))).toBe(true);
     expect(first.some((u) => u.startsWith("/api/timings") && u.includes("date=2027-02-21"))).toBe(true);
-    expect(first.some((u) => u.startsWith("/api/ramadan") && u.includes("day=2027-02-20"))).toBe(true);
+    expect(first.some((u) => u.startsWith("/api/ramadan") && u.includes("date=2027-02-20"))).toBe(true);
     expect(result.current.tomorrow?.prayerTimes.sehri).toBe("04:57");
 
     fetchMock.mockClear();
     rerender({ day: "2027-02-21" });
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
     const second = fetchMock.mock.calls.map(([u]) => u);
-    expect(second.filter((u) => u.includes("date=2027-02-21") || u.includes("day=2027-02-21"))).toHaveLength(2);
+    expect(second.filter((u) => u.includes("date=2027-02-21"))).toHaveLength(2);
     expect(second.some((u) => u.includes("date=2027-02-22"))).toBe(true);
     expect(second.some((u) => u.includes("2027-02-20"))).toBe(false);
   });

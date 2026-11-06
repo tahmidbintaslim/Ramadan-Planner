@@ -69,7 +69,7 @@ describe("formatting", () => {
     expect(formatRange({ start: "2030-12-28", end: "2031-01-26" }, "en")).toBe("28 December 2030 – 26 January 2031");
   });
   it("converts times to 12-hour with locale digits", () => {
-    expect(formatClock("17:55", "bn")).toBe("৫:৫৫");
+    expect(formatClock("17:55", "bn")).toBe("সন্ধ্যা ৫:৫৫");
     expect(formatClock("04:50", "en")).toBe("4:50 AM");
     expect(formatClock("12:05", "en")).toBe("12:05 PM");
     expect(formatClock("00:30", "en")).toBe("12:30 AM");

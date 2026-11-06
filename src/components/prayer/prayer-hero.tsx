@@ -46,7 +46,8 @@ const GRADIENT: Record<PrayerPhase, string> = {
   night: "var(--rp-hero-night)",
 };
 
-const RING_SIZE = 196;
+// The ring geometry (viewBox units): drawn at 92px on phones and 184px from 1024px.
+const RING_SIZE = 184;
 const RING_STROKE = 6;
 const RING_R = (RING_SIZE - RING_STROKE) / 2;
 const RING_C = 2 * Math.PI * RING_R;
@@ -186,8 +187,9 @@ export function PrayerHero({
   const sourceLine = sample ? t("sampleSource", { source }) : t("source", { source });
 
   // Screen readers hear the countdown at most once a minute (the clock ticks every 30 s).
-  const liveText = t("liveRemaining", { label, time, remaining });
-  // State adjusted during render (no effect): React re-renders once with the new announcement.
+  // Screen readers hear the target (label and time) only when it changes, at most once a minute: never the
+  // ticking countdown.
+  const liveText = `${label} · ${time}`;
   const [announced, setAnnounced] = useState<Announcement>(() => ({
     text: liveText,
     minute: Math.floor(now.getTime() / MINUTE_MS),
@@ -200,32 +202,33 @@ export function PrayerHero({
       aria-label={t("heroLabel")}
       data-phase={r.phase}
       className={cn(
-        "relative isolate flex min-h-[300px] flex-col overflow-hidden rounded-rp-xl p-5 text-white",
+        // Mobile: a compact card (about 240px) where the prayer name and time lead and a small ring shows progress;
+        // from 1024px the large centred ring with the time inside it.
+        "relative isolate flex flex-col overflow-hidden rounded-rp-xl p-4 text-white lg:min-h-[300px] lg:p-5",
         className,
       )}
       style={{ backgroundImage: GRADIENT[r.phase] }}
     >
       <GirihPattern opacity={0.07} className="-z-10 text-white" />
-      <MihrabArch className="pointer-events-none absolute bottom-0 left-1/2 -z-10 h-[300px] w-[300px] max-w-full -translate-x-1/2 text-white" />
+      <MihrabArch className="pointer-events-none absolute bottom-0 left-1/2 -z-10 h-[220px] w-[220px] max-w-full -translate-x-1/2 text-white lg:h-[300px] lg:w-[300px]" />
       {nightSky ? (
         <>
           <Stars />
           <CrescentIcon
             data-testid="hero-crescent"
             size={28}
-            className="absolute top-14 right-5 text-rp-gold"
+            className="absolute top-14 right-5 hidden text-rp-gold lg:block"
           />
         </>
       ) : null}
 
       <div className="flex items-center justify-between gap-3">
         {locationHref ? (
-          // The visible pill stays small; the ::before box gives it a 48px hit area.
           <Link
             href={locationHref}
             data-testid="hero-location"
             aria-label={t("locationChange", { district })}
-            className="rp-caption inline-flex min-h-[48px] min-w-0 items-center gap-1.5 rounded-rp-full bg-white/14 px-4 py-2 outline-none transition-colors hover:bg-white/22 focus-visible:ring-[3px] focus-visible:ring-white/70"
+            className="rp-caption inline-flex min-h-[44px] min-w-0 items-center gap-1.5 rounded-rp-full bg-white/14 px-4 py-2 outline-none transition-colors hover:bg-white/22 focus-visible:ring-[3px] focus-visible:ring-white/70"
           >
             <PinIcon size={16} />
             <span aria-hidden="true" className="truncate">
@@ -244,15 +247,32 @@ export function PrayerHero({
         {hijriLabel ? <span className="rp-caption shrink-0 text-white/85">{hijriLabel}</span> : null}
       </div>
 
-      <div className="flex flex-1 items-center justify-center py-4">
-        <div className="relative" style={{ width: RING_SIZE, height: RING_SIZE }}>
+      <div className="relative flex flex-1 items-center justify-between gap-3 py-2 lg:justify-center lg:py-4">
+        <div className="flex min-w-0 flex-col lg:absolute lg:inset-0 lg:items-center lg:justify-center lg:text-center">
+          <span className="rp-row font-semibold text-white lg:text-[14px] lg:leading-[22px] lg:font-normal lg:text-white/90">{label}</span>
+          {/* Phone, and English everywhere: the day period sits on the time's line ("4:18 PM" fits the ring). A Bengali
+              period goes before the time and is a whole word, so inside the desktop ring it gets its own line above
+              the time and "বিকাল ৪:১৮" never runs into the ring. */}
+          <span
+            className={cn("rp-time-xl whitespace-nowrap tabular-nums", clock.periodFirst && "hidden max-lg:inline")}
+            suppressHydrationWarning
+          >
+            <ClockTime parts={clock} />
+          </span>
+          <span className={cn("hidden flex-col items-center", clock.periodFirst && "lg:flex")} suppressHydrationWarning>
+            {clock.period ? <span className="rp-row">{clock.period}</span> : null}
+            <span className="rp-time-xl whitespace-nowrap tabular-nums">{clock.time}</span>
+          </span>
+          <span className="rp-caption tabular-nums text-white/90" suppressHydrationWarning>
+            {remaining}
+          </span>
+        </div>
+        <div className="relative size-[92px] shrink-0 lg:size-[184px]">
           <svg
             aria-hidden="true"
             focusable="false"
-            width={RING_SIZE}
-            height={RING_SIZE}
             viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}
-            className="-rotate-90"
+            className="size-full -rotate-90"
           >
             <circle
               data-testid="hero-ring-scrim"
@@ -284,15 +304,14 @@ export function PrayerHero({
               className="transition-[stroke-dashoffset] duration-700 ease-out motion-reduce:transition-none"
             />
           </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-            <span className="rp-small text-white/90">{label}</span>
-            <span className="rp-time-xl tabular-nums" suppressHydrationWarning>
-              <ClockTime parts={clock} />
-            </span>
-            <span className="rp-caption tabular-nums text-white/90" suppressHydrationWarning>
-              {remaining}
-            </span>
-          </div>
+          {/* Phone: the ring's centre carries a quiet crescent at night, the percent by day. */}
+          <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center lg:hidden">
+            {nightSky ? (
+              <CrescentIcon size={28} className="text-rp-gold" />
+            ) : (
+              <span className="rp-caption tabular-nums text-white/90">{isBnLocale(locale) ? toBengaliDigits(percent) : percent}%</span>
+            )}
+          </span>
           <span
             role="progressbar"
             aria-label={t("progress")}
@@ -308,7 +327,7 @@ export function PrayerHero({
       <p className="text-center">
         <span
           data-testid="hero-source"
-          className="rp-caption inline-block rounded-rp-full px-3 py-1 text-white/90"
+          className="rp-caption inline-block rounded-rp-full px-3 py-0.5 text-white/90"
           style={{ backgroundColor: scrim(HERO_SOURCE_PILL_ALPHA) }}
         >
           {sourceLine}

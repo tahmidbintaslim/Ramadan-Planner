@@ -11,7 +11,7 @@ export const Route = createFileRoute("/_auth/sign-up/$")({
   }),
   component: () => (
     <ClerkGate mode="signUp">
-      <SignUp path="/sign-up" routing="path" signInUrl="/sign-in" forceRedirectUrl="/dashboard" />
+      <SignUp path="/sign-up" routing="path" signInUrl="/sign-in" forceRedirectUrl="/today" />
     </ClerkGate>
   ),
 });

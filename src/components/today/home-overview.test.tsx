@@ -159,7 +159,9 @@ describe("HomeOverview phase card", () => {
     let card = phaseCard();
     expect(card).toHaveAttribute("data-kind", "iftarDua");
     expect(within(card!).getByRole("heading", { name: "ইফতারের দোয়া" })).toBeInTheDocument();
-    expect(within(card!).getByText("ইফতারের সময় পড়ুন · সূত্র: আবু দাউদ ২৩৫৭")).toHaveClass("text-rp-gold-text");
+    expect(within(card!).getByText("সূত্র: আবু দাউদ ২৩৫৭")).toHaveClass("text-rp-gold-text");
+    // Arabic first, in the Arabic face, then the transliteration and meaning (the /duas order).
+    expect(within(card!).getByText(/ذَهَبَ الظَّمَأُ/)).toHaveClass("font-arabic");
     cleanup();
     await renderHome("18:30");
     card = phaseCard();
@@ -171,7 +173,7 @@ describe("HomeOverview phase card", () => {
 
   it("uses the English caption in en", async () => {
     await renderHome("17:30", {}, "en");
-    expect(within(phaseCard()!).getByText("Recite when breaking the fast · Abu Dawud 2357")).toBeInTheDocument();
+    expect(within(phaseCard()!).getByText("Source: Abu Dawud 2357")).toBeInTheDocument();
   });
 
   it("shows no phase card in the day or late at night", async () => {
@@ -241,7 +243,7 @@ describe("HomeOverview core", () => {
   it("wires the prayer bells to onToggleReminder", async () => {
     const onToggleReminder = vi.fn();
     await renderHome("13:00", { onToggleReminder, reminders: { fajr: true } });
-    const fajrBell = screen.getByRole("button", { name: "ফজর রিমাইন্ডার" });
+    const fajrBell = screen.getByRole("button", { name: "ফজর নামাজের রিমাইন্ডার" });
     expect(fajrBell).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(fajrBell);
     expect(onToggleReminder).toHaveBeenCalledWith("fajr", false);
@@ -326,12 +328,12 @@ describe("feature tiles", () => {
     const section = screen.getByRole("region", { name: "রমজানের সঙ্গী" });
     const links = within(section).getAllByRole("link");
     expect(links.map((a) => a.getAttribute("href"))).toEqual(["/quran", "/duas", "/tasbih", "/zakat"]);
-    expect(links.map((a) => a.textContent)).toEqual(["কুরআন", "দোয়া", "তাসবিহ", "যাকাত"]);
+    expect(links.map((a) => a.textContent)).toEqual(["কুরআন", "দোয়া ও যিকির", "তাসবিহ", "যাকাত হিসাব"]);
     expect(FEATURE_TILES).toHaveLength(4);
   });
 });
 
-describe("today's plan preview", () => {
+describe("today's plan preview (a small link; tracking lives on /plan)", () => {
   const rows = [
     row("a", "কুরআন পড়ুন", true, "dhuhrToIftar"),
     row("b", "তারাবি", false, "afterIftar"),
@@ -339,40 +341,30 @@ describe("today's plan preview", () => {
     row("d", "ফজর", true, "sehriToDhuhr"),
   ];
 
-  it("shows the first three /plan rows in window order, the /plan count and an 'all' link", async () => {
-    const state = planState(rows);
-    await renderInRouter(<PlanPreview state={state} />);
-    const section = screen.getByRole("region", { name: /আজকের পরিকল্পনা/ });
-    expect(within(section).getByRole("heading")).toHaveTextContent("আজকের পরিকল্পনা · ২/৪");
-    const boxes = within(section).getAllByRole("checkbox");
-    expect(boxes.map((b) => b.textContent)).toEqual(["সেহরি খান", "ফজর", "কুরআন পড়ুন"]);
-    expect(boxes.map((b) => b.getAttribute("aria-checked"))).toEqual(["false", "true", "true"]);
-    expect(within(section).getByRole("link", { name: "আজকের সব পরিকল্পনা দেখুন" })).toHaveAttribute("href", "/plan");
-    fireEvent.click(boxes[0]);
-    expect(state.toggleRow).toHaveBeenCalledWith(rows[2], true);
+  it("is one link to /plan with the /plan count and the next open deed, no checkboxes", async () => {
+    await renderInRouter(<PlanPreview state={planState(rows)} />);
+    const section = screen.getByTestId("plan-preview");
+    expect(within(section).getByRole("heading")).toHaveTextContent("আজকের আমল · ২/৪");
+    expect(within(section).queryAllByRole("checkbox")).toHaveLength(0);
+    expect(within(section).getByRole("link", { name: "আজকের আমল খুলুন" })).toHaveAttribute("href", "/plan");
+    expect(screen.getByTestId("plan-preview-next")).toHaveTextContent("এরপর: সেহরি খান");
   });
 
-  it("an empty plan shows ০/০ and a link to set it up, like /plan", async () => {
+  it("an empty plan shows no ০/০ count and invites a choice", async () => {
     await renderInRouter(<PlanPreview state={planState()} />);
-    expect(screen.getByRole("heading")).toHaveTextContent("আজকের পরিকল্পনা · ০/০");
-    expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
-    expect(screen.getByTestId("plan-preview-empty")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "পরিকল্পনা সাজান" })).toHaveAttribute("href", "/plan");
+    expect(screen.getByRole("heading")).toHaveTextContent(/^আজকের আমল$/);
+    expect(screen.getByTestId("plan-preview-next")).toHaveTextContent("আজকের আমল বেছে নিন");
   });
 
-  it("a failed load or save shows an error with a way to the plan, not the empty-plan prompt", async () => {
+  it("a failed load shows an error and no ০/০ count", async () => {
     await renderInRouter(<PlanPreview state={planState([], { error: true })} />);
     expect(screen.getByRole("alert")).toHaveTextContent("আজকের পরিকল্পনা এখন লোড বা সংরক্ষণ করা যায়নি।");
-    expect(screen.getByRole("link", { name: "পরিকল্পনায় আবার চেষ্টা করুন" })).toHaveAttribute("href", "/plan");
-    expect(screen.queryByTestId("plan-preview-empty")).toBeNull();
-    // A failed load must not read as an empty "০/০" plan.
-    expect(screen.getByRole("heading")).toHaveTextContent(/^আজকের পরিকল্পনা$/);
+    expect(screen.getByRole("heading")).toHaveTextContent(/^আজকের আমল$/);
   });
 
   it("shows no count before the list is known, and English labels in en", async () => {
     await renderInRouter(<PlanPreview state={planState(rows, { ready: false })} />, "en");
-    expect(screen.getByRole("heading")).toHaveTextContent(/^Today's plan$/);
-    expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
+    expect(screen.getByRole("heading")).toHaveTextContent(/^Today's amal$/);
   });
 });
 

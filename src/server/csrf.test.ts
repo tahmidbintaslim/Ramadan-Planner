@@ -97,6 +97,9 @@ describe("start.ts CSRF middleware", () => {
     ["POST", "/api/announcements"],
     ["PATCH", "/api/announcements/44444444-4444-4444-8444-444444444444"],
     ["DELETE", "/api/announcements/44444444-4444-4444-8444-444444444444"],
+    // Donation checkout and portal: same-origin calls from /support, never exempt.
+    ["POST", "/api/donations/checkout"],
+    ["POST", "/api/donations/portal"],
     // Spelling variants the router may still match must not slip past the check.
     ["POST", "/API/push/subscribe"],
     ["POST", "/api/push/subscribe/"],
@@ -136,8 +139,8 @@ describe("start.ts CSRF middleware", () => {
     }
   });
 
-  it("exempts the secret-authenticated cron route and the Stripe webhook (POST, cross-site, no cookie)", async () => {
-    for (const path of ["/api/push/dispatch", "/api/stripe/webhook", "/api/push/dispatch/"]) {
+  it("exempts the secret-authenticated cron route (POST, cross-site, no cookie)", async () => {
+    for (const path of ["/api/push/dispatch", "/api/push/dispatch/"]) {
       for (const headers of [
         { Origin: "https://stripe.com" },
         { "Sec-Fetch-Site": "cross-site" },
@@ -150,12 +153,20 @@ describe("start.ts CSRF middleware", () => {
     }
   });
 
-  it("the exemption list is exactly the cron route and the Stripe webhook", () => {
+  it("the exemption list is exactly the cron route and the signature-verified Stripe webhook", () => {
     expect([...CSRF_EXEMPT_PATHS].sort()).toEqual(["/api/push/dispatch", "/api/stripe/webhook"]);
   });
 
+  it("donation checkout and portal stay origin-checked", async () => {
+    for (const path of ["/api/donations/checkout", "/api/donations/portal"]) {
+      await expectRejected(
+        await runCsrf("router", `${ORIGIN}${path}`, { method: "POST", headers: { Origin: "https://evil.example" }, body: "{}" }),
+      );
+    }
+  });
+
   it("an exemption is exact: neighbours and spelling variants of exempt paths are still checked", async () => {
-    for (const path of ["/api/push/dispatch/x", "/api/push/dispatchx", "/API/push/dispatch", "/api/stripe/webhook2", "/api/stripe"]) {
+    for (const path of ["/api/push/dispatch/x", "/api/push/dispatchx", "/API/push/dispatch", "/api/stripe/webhook/x", "/api/stripe/webhookx", "/api/stripe"]) {
       await expectRejected(
         await runCsrf("router", `${ORIGIN}${path}`, { method: "POST", headers: { Origin: "https://evil.example" }, body: "{}" }),
       );

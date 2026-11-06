@@ -12,7 +12,10 @@ const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 export const CSRF_EXEMPT_PATHS: ReadonlySet<string> = new Set([
   // Cron/scheduler entry point: shared-secret auth (Bearer CRON_SECRET / x-cron-secret), no session.
   "/api/push/dispatch",
-  // Stripe webhook (billing Part C): verified by the `stripe-signature` HMAC, no session.
+  // Stripe donation webhook (src/server/api/stripe-webhook.ts): Stripe POSTs it cross-site with no cookies;
+  // the `stripe-signature` HMAC over the raw body (STRIPE_WEBHOOK_SECRET) authenticates it, no session.
+  // POST /api/donations/checkout and /api/donations/portal are NOT exempt: they are same-origin calls from
+  // /support and stay origin-checked.
   "/api/stripe/webhook",
 ]);
 

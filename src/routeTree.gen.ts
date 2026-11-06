@@ -12,13 +12,13 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AuthRouteImport } from './routes/_auth'
+import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ForgotRouteImport } from './routes/forgot'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as WelcomeRouteImport } from './routes/welcome'
 import { Route as AppBooksRouteImport } from './routes/_app.books'
-import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppDuasRouteImport } from './routes/_app.duas'
 import { Route as AppPlanRouteImport } from './routes/_app.plan'
 import { Route as AppQuizRouteImport } from './routes/_app.quiz'
@@ -43,8 +43,12 @@ import { Route as AuthSignInSplatRouteImport } from './routes/_auth.sign-in.$'
 import { Route as AuthSignUpSplatRouteImport } from './routes/_auth.sign-up.$'
 import { Route as ApiAnnouncementsIndexRouteImport } from './routes/api/announcements.index'
 import { Route as ApiAnnouncementsIdRouteImport } from './routes/api/announcements.$id'
+import { Route as ApiDonationsCheckoutRouteImport } from './routes/api/donations.checkout'
+import { Route as ApiDonationsPortalRouteImport } from './routes/api/donations.portal'
+import { Route as ApiDonationsSummaryRouteImport } from './routes/api/donations.summary'
 import { Route as ApiPushDispatchRouteImport } from './routes/api/push.dispatch'
 import { Route as ApiPushSubscribeRouteImport } from './routes/api/push.subscribe'
+import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe.webhook'
 import { Route as AppHadithEditionIndexRouteImport } from './routes/_app.hadith.$edition.index'
 import { Route as AppHadithEditionChapterRouteImport } from './routes/_app.hadith.$edition.$chapter'
 import { Route as ApiCalendarGoogleCallbackRouteImport } from './routes/api/calendar.google.callback'
@@ -62,6 +66,11 @@ const AppRoute = AppRouteImport.update({
 } as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/_auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ForgotRoute = ForgotRouteImport.update({
@@ -92,11 +101,6 @@ const WelcomeRoute = WelcomeRouteImport.update({
 const AppBooksRoute = AppBooksRouteImport.update({
   id: '/books',
   path: '/books',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppDashboardRoute = AppDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
   getParentRoute: () => AppRoute,
 } as any)
 const AppDuasRoute = AppDuasRouteImport.update({
@@ -219,6 +223,21 @@ const ApiAnnouncementsIdRoute = ApiAnnouncementsIdRouteImport.update({
   path: '/api/announcements/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiDonationsCheckoutRoute = ApiDonationsCheckoutRouteImport.update({
+  id: '/api/donations/checkout',
+  path: '/api/donations/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDonationsPortalRoute = ApiDonationsPortalRouteImport.update({
+  id: '/api/donations/portal',
+  path: '/api/donations/portal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDonationsSummaryRoute = ApiDonationsSummaryRouteImport.update({
+  id: '/api/donations/summary',
+  path: '/api/donations/summary',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPushDispatchRoute = ApiPushDispatchRouteImport.update({
   id: '/api/push/dispatch',
   path: '/api/push/dispatch',
@@ -227,6 +246,11 @@ const ApiPushDispatchRoute = ApiPushDispatchRouteImport.update({
 const ApiPushSubscribeRoute = ApiPushSubscribeRouteImport.update({
   id: '/api/push/subscribe',
   path: '/api/push/subscribe',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiStripeWebhookRoute = ApiStripeWebhookRouteImport.update({
+  id: '/api/stripe/webhook',
+  path: '/api/stripe/webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppHadithEditionIndexRoute = AppHadithEditionIndexRouteImport.update({
@@ -259,13 +283,13 @@ const ApiCalendarIcsSecretRoute = ApiCalendarIcsSecretRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/dashboard': typeof DashboardRoute
   '/forgot': typeof ForgotRoute
   '/login': typeof LoginRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/welcome': typeof WelcomeRoute
   '/books': typeof AppBooksRoute
-  '/dashboard': typeof AppDashboardRoute
   '/duas': typeof AppDuasRoute
   '/plan': typeof AppPlanRoute
   '/quiz': typeof AppQuizRoute
@@ -287,8 +311,12 @@ export interface FileRoutesByFullPath {
   '/sign-in/$': typeof AuthSignInSplatRoute
   '/sign-up/$': typeof AuthSignUpSplatRoute
   '/api/announcements/$id': typeof ApiAnnouncementsIdRoute
+  '/api/donations/checkout': typeof ApiDonationsCheckoutRoute
+  '/api/donations/portal': typeof ApiDonationsPortalRoute
+  '/api/donations/summary': typeof ApiDonationsSummaryRoute
   '/api/push/dispatch': typeof ApiPushDispatchRoute
   '/api/push/subscribe': typeof ApiPushSubscribeRoute
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/hadith/': typeof AppHadithIndexRoute
   '/quran/': typeof AppQuranIndexRoute
   '/api/announcements/': typeof ApiAnnouncementsIndexRoute
@@ -300,13 +328,13 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/dashboard': typeof DashboardRoute
   '/forgot': typeof ForgotRoute
   '/login': typeof LoginRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/welcome': typeof WelcomeRoute
   '/books': typeof AppBooksRoute
-  '/dashboard': typeof AppDashboardRoute
   '/duas': typeof AppDuasRoute
   '/plan': typeof AppPlanRoute
   '/quiz': typeof AppQuizRoute
@@ -328,8 +356,12 @@ export interface FileRoutesByTo {
   '/sign-in/$': typeof AuthSignInSplatRoute
   '/sign-up/$': typeof AuthSignUpSplatRoute
   '/api/announcements/$id': typeof ApiAnnouncementsIdRoute
+  '/api/donations/checkout': typeof ApiDonationsCheckoutRoute
+  '/api/donations/portal': typeof ApiDonationsPortalRoute
+  '/api/donations/summary': typeof ApiDonationsSummaryRoute
   '/api/push/dispatch': typeof ApiPushDispatchRoute
   '/api/push/subscribe': typeof ApiPushSubscribeRoute
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/hadith': typeof AppHadithIndexRoute
   '/quran': typeof AppQuranIndexRoute
   '/api/announcements': typeof ApiAnnouncementsIndexRoute
@@ -344,13 +376,13 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/_auth': typeof AuthRouteWithChildren
+  '/dashboard': typeof DashboardRoute
   '/forgot': typeof ForgotRoute
   '/login': typeof LoginRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/welcome': typeof WelcomeRoute
   '/_app/books': typeof AppBooksRoute
-  '/_app/dashboard': typeof AppDashboardRoute
   '/_app/duas': typeof AppDuasRoute
   '/_app/plan': typeof AppPlanRoute
   '/_app/quiz': typeof AppQuizRoute
@@ -372,8 +404,12 @@ export interface FileRoutesById {
   '/_auth/sign-in/$': typeof AuthSignInSplatRoute
   '/_auth/sign-up/$': typeof AuthSignUpSplatRoute
   '/api/announcements/$id': typeof ApiAnnouncementsIdRoute
+  '/api/donations/checkout': typeof ApiDonationsCheckoutRoute
+  '/api/donations/portal': typeof ApiDonationsPortalRoute
+  '/api/donations/summary': typeof ApiDonationsSummaryRoute
   '/api/push/dispatch': typeof ApiPushDispatchRoute
   '/api/push/subscribe': typeof ApiPushSubscribeRoute
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/_app/hadith/': typeof AppHadithIndexRoute
   '/_app/quran/': typeof AppQuranIndexRoute
   '/api/announcements/': typeof ApiAnnouncementsIndexRoute
@@ -387,13 +423,13 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/dashboard'
     | '/forgot'
     | '/login'
     | '/robots.txt'
     | '/sitemap.xml'
     | '/welcome'
     | '/books'
-    | '/dashboard'
     | '/duas'
     | '/plan'
     | '/quiz'
@@ -415,8 +451,12 @@ export interface FileRouteTypes {
     | '/sign-in/$'
     | '/sign-up/$'
     | '/api/announcements/$id'
+    | '/api/donations/checkout'
+    | '/api/donations/portal'
+    | '/api/donations/summary'
     | '/api/push/dispatch'
     | '/api/push/subscribe'
+    | '/api/stripe/webhook'
     | '/hadith/'
     | '/quran/'
     | '/api/announcements/'
@@ -428,13 +468,13 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/dashboard'
     | '/forgot'
     | '/login'
     | '/robots.txt'
     | '/sitemap.xml'
     | '/welcome'
     | '/books'
-    | '/dashboard'
     | '/duas'
     | '/plan'
     | '/quiz'
@@ -456,8 +496,12 @@ export interface FileRouteTypes {
     | '/sign-in/$'
     | '/sign-up/$'
     | '/api/announcements/$id'
+    | '/api/donations/checkout'
+    | '/api/donations/portal'
+    | '/api/donations/summary'
     | '/api/push/dispatch'
     | '/api/push/subscribe'
+    | '/api/stripe/webhook'
     | '/hadith'
     | '/quran'
     | '/api/announcements'
@@ -471,13 +515,13 @@ export interface FileRouteTypes {
     | '/'
     | '/_app'
     | '/_auth'
+    | '/dashboard'
     | '/forgot'
     | '/login'
     | '/robots.txt'
     | '/sitemap.xml'
     | '/welcome'
     | '/_app/books'
-    | '/_app/dashboard'
     | '/_app/duas'
     | '/_app/plan'
     | '/_app/quiz'
@@ -499,8 +543,12 @@ export interface FileRouteTypes {
     | '/_auth/sign-in/$'
     | '/_auth/sign-up/$'
     | '/api/announcements/$id'
+    | '/api/donations/checkout'
+    | '/api/donations/portal'
+    | '/api/donations/summary'
     | '/api/push/dispatch'
     | '/api/push/subscribe'
+    | '/api/stripe/webhook'
     | '/_app/hadith/'
     | '/_app/quran/'
     | '/api/announcements/'
@@ -515,6 +563,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
+  DashboardRoute: typeof DashboardRoute
   ForgotRoute: typeof ForgotRoute
   LoginRoute: typeof LoginRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
@@ -526,8 +575,12 @@ export interface RootRouteChildren {
   ApiRamadanTimetableRoute: typeof ApiRamadanTimetableRoute
   ApiTimingsRoute: typeof ApiTimingsRoute
   ApiAnnouncementsIdRoute: typeof ApiAnnouncementsIdRoute
+  ApiDonationsCheckoutRoute: typeof ApiDonationsCheckoutRoute
+  ApiDonationsPortalRoute: typeof ApiDonationsPortalRoute
+  ApiDonationsSummaryRoute: typeof ApiDonationsSummaryRoute
   ApiPushDispatchRoute: typeof ApiPushDispatchRoute
   ApiPushSubscribeRoute: typeof ApiPushSubscribeRoute
+  ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
   ApiAnnouncementsIndexRoute: typeof ApiAnnouncementsIndexRoute
   ApiCalendarGoogleCallbackRoute: typeof ApiCalendarGoogleCallbackRoute
   ApiCalendarGoogleConnectRoute: typeof ApiCalendarGoogleConnectRoute
@@ -555,6 +608,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/forgot': {
@@ -597,13 +657,6 @@ declare module '@tanstack/react-router' {
       path: '/books'
       fullPath: '/books'
       preLoaderRoute: typeof AppBooksRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/dashboard': {
-      id: '/_app/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof AppDashboardRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/duas': {
@@ -774,6 +827,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAnnouncementsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/donations/checkout': {
+      id: '/api/donations/checkout'
+      path: '/api/donations/checkout'
+      fullPath: '/api/donations/checkout'
+      preLoaderRoute: typeof ApiDonationsCheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/donations/portal': {
+      id: '/api/donations/portal'
+      path: '/api/donations/portal'
+      fullPath: '/api/donations/portal'
+      preLoaderRoute: typeof ApiDonationsPortalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/donations/summary': {
+      id: '/api/donations/summary'
+      path: '/api/donations/summary'
+      fullPath: '/api/donations/summary'
+      preLoaderRoute: typeof ApiDonationsSummaryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/push/dispatch': {
       id: '/api/push/dispatch'
       path: '/api/push/dispatch'
@@ -786,6 +860,13 @@ declare module '@tanstack/react-router' {
       path: '/api/push/subscribe'
       fullPath: '/api/push/subscribe'
       preLoaderRoute: typeof ApiPushSubscribeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/stripe/webhook': {
+      id: '/api/stripe/webhook'
+      path: '/api/stripe/webhook'
+      fullPath: '/api/stripe/webhook'
+      preLoaderRoute: typeof ApiStripeWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/hadith/$edition/': {
@@ -828,7 +909,6 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteChildren {
   AppBooksRoute: typeof AppBooksRoute
-  AppDashboardRoute: typeof AppDashboardRoute
   AppDuasRoute: typeof AppDuasRoute
   AppPlanRoute: typeof AppPlanRoute
   AppQuizRoute: typeof AppQuizRoute
@@ -849,7 +929,6 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppBooksRoute: AppBooksRoute,
-  AppDashboardRoute: AppDashboardRoute,
   AppDuasRoute: AppDuasRoute,
   AppPlanRoute: AppPlanRoute,
   AppQuizRoute: AppQuizRoute,
@@ -888,6 +967,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
+  DashboardRoute: DashboardRoute,
   ForgotRoute: ForgotRoute,
   LoginRoute: LoginRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
@@ -899,8 +979,12 @@ const rootRouteChildren: RootRouteChildren = {
   ApiRamadanTimetableRoute: ApiRamadanTimetableRoute,
   ApiTimingsRoute: ApiTimingsRoute,
   ApiAnnouncementsIdRoute: ApiAnnouncementsIdRoute,
+  ApiDonationsCheckoutRoute: ApiDonationsCheckoutRoute,
+  ApiDonationsPortalRoute: ApiDonationsPortalRoute,
+  ApiDonationsSummaryRoute: ApiDonationsSummaryRoute,
   ApiPushDispatchRoute: ApiPushDispatchRoute,
   ApiPushSubscribeRoute: ApiPushSubscribeRoute,
+  ApiStripeWebhookRoute: ApiStripeWebhookRoute,
   ApiAnnouncementsIndexRoute: ApiAnnouncementsIndexRoute,
   ApiCalendarGoogleCallbackRoute: ApiCalendarGoogleCallbackRoute,
   ApiCalendarGoogleConnectRoute: ApiCalendarGoogleConnectRoute,

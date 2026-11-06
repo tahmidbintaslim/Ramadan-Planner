@@ -12,12 +12,18 @@ test.describe("mobile shell", () => {
     await expect(nav).toBeVisible();
     await expect(nav.locator('a[href="/today"]')).toHaveAttribute("aria-current", "page");
     await expect(nav.locator('a[href="/plan"]')).not.toHaveAttribute("aria-current", "page");
+    // Every tab keeps its text label next to the icon.
+    await expect(nav.locator(":scope > ul > li")).toHaveText(["আজ", "সময়সূচি", "আমল", "কুরআন", "আরও"]);
 
     await nav.getByRole("button", { name: /আরও|More/ }).click();
     const sheet = page.getByRole("dialog");
     await expect(sheet).toBeVisible();
-    for (const href of ["/duas", "/tasbih", "/zakat", "/hadith", "/reminders", "/settings", "/books", "/quiz", "/dashboard"]) {
+    for (const href of ["/duas", "/tasbih", "/zakat", "/reminders", "/support", "/settings"]) {
       await expect(sheet.locator(`a[href="${href}"]`)).toBeVisible();
+    }
+    // Switched off (src/config/features.ts) or retired: never listed.
+    for (const href of ["/hadith", "/books", "/quiz", "/dashboard"]) {
+      await expect(sheet.locator(`a[href="${href}"]`)).toHaveCount(0);
     }
     await sheet.locator('a[href="/duas"]').click();
     await page.waitForURL("**/duas");
@@ -90,7 +96,8 @@ test("desktop side nav replaces the bottom nav and marks the active item", async
 });
 
 test.describe("accessibility panel", () => {
-  const A11Y = /^(অ্যাক্সেসিবিলিটি|Accessibility)$/;
+  // "লেখা ও থিম" (text size and theme), with the অ/Aa icon: the old wheelchair icon read as a symbol, not a control.
+  const A11Y = /^(লেখা ও থিম|Text & Theme)$/;
 
   test.describe("mobile", () => {
     test.use({ viewport: { width: 390, height: 844 } });
@@ -124,18 +131,24 @@ test.describe("accessibility panel", () => {
       await expect.poll(() => page.evaluate(() => document.documentElement.style.fontSize)).toBe("105%");
     });
 
-    test("onboarding has its own accessibility entry instead of the floating button", async ({ page }) => {
+    test("onboarding has one labelled text & theme button in the sky, off the language line", async ({ page }) => {
       await visit(page, "/welcome");
       const entries = page.getByRole("button", { name: A11Y });
       await expect(entries).toHaveCount(1);
+      await expect(entries).toHaveText(A11Y);
       await expect(entries).not.toHaveCSS("position", "fixed");
+      const languageRow = page.getByRole("button", { name: /Continue in English|বাংলায় দেখুন|English|বাংলা/ }).last().locator("..");
+      await expect(languageRow.getByRole("button", { name: A11Y })).toHaveCount(0);
       await entries.click();
       await expect(page.getByRole("dialog", { name: A11Y })).toBeVisible();
     });
 
-    test("other pages outside the shell keep the floating button", async ({ page }) => {
+    test("the auth pages have no floating buttons; the header opens text & theme", async ({ page }) => {
       await visit(page, "/sign-in");
-      await expect(page.getByRole("button", { name: A11Y })).toBeVisible();
+      const trigger = page.getByRole("banner").getByRole("button", { name: A11Y });
+      await expect(trigger).toBeVisible();
+      await expect(trigger).not.toHaveCSS("position", "fixed");
+      expect(await page.evaluate(() => [...document.querySelectorAll("button, a")].filter((el) => getComputedStyle(el).position === "fixed").length)).toBe(0);
     });
   });
 

@@ -4,6 +4,7 @@ import { useItemNotes } from "./plan-item-meta";
 import { defaultTitlesByKey } from "./default-titles";
 import {
   DAY_DEFAULTS,
+  LEGACY_DEFAULTS,
   NIGHT_DEFAULTS,
   bnOrdinal,
   buildPlanRows,
@@ -16,7 +17,7 @@ import { usePlanItems } from "./use-plan-items";
 import { useQuranProgress } from "./use-plan-context";
 
 const DEFAULT_WINDOWS: Record<string, PlanWindow> = Object.fromEntries(
-  [...DAY_DEFAULTS, ...NIGHT_DEFAULTS].map((d) => [d.key, d.window]),
+  [...DAY_DEFAULTS, ...LEGACY_DEFAULTS, ...NIGHT_DEFAULTS].map((d) => [d.key, d.window]),
 );
 
 export type TodayPlanRow = PlanRowSource & { title: string };
@@ -48,7 +49,6 @@ export function useTodayPlan(todayISO: string, eveningISO: string | null = null)
   const rows: TodayPlanRow[] = buildPlanRows({
     tasks: plan.tasks,
     goals: plan.goals,
-    isGuest: plan.isGuest,
     notes,
     titlesByKey,
     defaultWindows: DEFAULT_WINDOWS,
@@ -62,14 +62,14 @@ export function useTodayPlan(todayISO: string, eveningISO: string | null = null)
   }));
   const done = rows.filter((r) => r.done).length;
 
-  /** Ticks or unticks a row for its day (goal ticks remember the day on this device when signed in). */
+  /** Ticks or unticks a row for its day (goal records have no date field: the tick day is kept in the item note). */
   const toggleRow = (row: Pick<PlanRowSource, "id" | "kind" | "scopeISO">, next: boolean) => {
     if (!plan.ready || plan.pending.has(row.id)) return;
-    if (row.kind !== "goal" || plan.isGuest) {
+    if (row.kind !== "goal") {
       plan.toggle(row.kind, row.id, next, row.scopeISO);
       return;
     }
-    // Signed-in goal ticks keep their day in the item note; a failed save restores the previous day.
+    // Goal ticks keep their day in the item note; a failed save restores the previous day.
     const previous = notes[row.id]?.doneOn;
     remember(row.id, { doneOn: row.scopeISO });
     plan.toggle(row.kind, row.id, next, row.scopeISO, (ok) => {

@@ -188,7 +188,7 @@ describe("custom amount", () => {
   it("works in English with ASCII digits", () => {
     setup(configured, "en");
     expect(screen.getByTestId("wallet-button")).toHaveTextContent("Give ৳100 via bKash / Nagad");
-    expect(screen.getByRole("heading", { level: 1, name: "Sadaqah & contribute" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Sadaqah & Support" })).toBeInTheDocument();
   });
 });
 

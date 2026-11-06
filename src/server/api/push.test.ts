@@ -9,7 +9,7 @@ const m = vi.hoisted(() => ({
   prisma: {
     userProfile: { findMany: vi.fn() },
     pushDeliveryLog: { create: vi.fn() },
-    pushSubscription: { delete: vi.fn(), deleteMany: vi.fn(), create: vi.fn() },
+    pushSubscription: { delete: vi.fn(), deleteMany: vi.fn(), create: vi.fn(), findMany: vi.fn() },
   },
   webpush: { setVapidDetails: vi.fn(), sendNotification: vi.fn() },
   fetchPrayerTimes: vi.fn(),
@@ -44,6 +44,8 @@ beforeEach(() => {
   vi.stubEnv("VAPID_SUBJECT", "mailto:test@example.com");
   vi.stubEnv("PUSH_DISPATCH_DEBUG", "1");
   m.prisma.userProfile.findMany.mockResolvedValue([]);
+  m.prisma.pushSubscription.findMany.mockResolvedValue([]);
+  m.prisma.pushSubscription.deleteMany.mockReset().mockResolvedValue({ count: 0 });
 });
 afterEach(() => vi.unstubAllEnvs());
 
@@ -163,7 +165,7 @@ describe("dispatch outcomes", () => {
           longitude: 90.4,
           locationLabel: "Dhaka",
           reminderRules: [{ id: "r1", type: "fajr", label: null, offsetMinutes: 0, channels: ["push"] }],
-          pushSubscriptions: [{ id: "s1", endpoint: "https://push.example/1", keys: { p256dh: "p", auth: "a" } }],
+          pushSubscriptions: [{ id: "s1", endpoint: "https://fcm.googleapis.com/fcm/send/1", keys: { p256dh: "p", auth: "a" } }],
         },
       ]);
       m.fetchPrayerTimes.mockResolvedValue({
@@ -174,7 +176,7 @@ describe("dispatch outcomes", () => {
       const res = await handlePushDispatchGet(get(auth));
       expect(await res.json()).toEqual({ ok: true, checked: 1, delivered: 1, skippedUsers: 0 });
       expect(m.webpush.sendNotification).toHaveBeenCalledWith(
-        { endpoint: "https://push.example/1", keys: { p256dh: "p", auth: "a" } },
+        { endpoint: "https://fcm.googleapis.com/fcm/send/1", keys: { p256dh: "p", auth: "a" } },
         JSON.stringify({ title: "Ramadan Planner", body: "Fajr • Dhaka" }),
       );
     } finally {
@@ -185,7 +187,7 @@ describe("dispatch outcomes", () => {
 
 describe("POST /api/push/subscribe", () => {
   const url = "https://app.example/api/push/subscribe";
-  const sub = { endpoint: "https://push.example/abc", keys: { p256dh: "p", auth: "a" } };
+  const sub = { endpoint: "https://fcm.googleapis.com/fcm/send/abc", keys: { p256dh: "p", auth: "a" } };
   const req = (body: unknown) => new Request(url, { method: "POST", body: JSON.stringify(body) });
 
   it("signed out -> 401 { ok:false, error:'Unauthorized' }, no DB writes", async () => {
@@ -223,5 +225,115 @@ describe("POST /api/push/subscribe", () => {
     const res = await handlePushSubscribe(req(sub), { getUserId: async () => USER });
     expect(res.status).toBe(500);
     expect(await res.json()).toEqual({ ok: false, error: "internal_error" });
+  });
+});
+
+describe("POST /api/push/subscribe: SSRF and size limits", () => {
+  const url = "https://app.example/api/push/subscribe";
+  const req = (body: unknown) => new Request(url, { method: "POST", body: JSON.stringify(body) });
+  const keys = { p256dh: "p", auth: "a" };
+  const subscribe = (body: unknown) => handlePushSubscribe(req(body), { getUserId: async () => USER });
+
+  it("accepts the browser push services", async () => {
+    for (const endpoint of [
+      "https://fcm.googleapis.com/fcm/send/x",
+      "https://updates.push.services.mozilla.com/wpush/v2/x",
+      "https://wns2-par02p.notify.windows.com/w/?token=x",
+      "https://web.push.apple.com/QK/x",
+      "https://api.push.apple.com/3/device/x",
+    ]) {
+      expect((await subscribe({ endpoint, keys })).status, endpoint).toBe(200);
+    }
+  });
+
+  it("rejects non-https, unknown hosts, internal targets, look-alikes, ports and credentials (400, no write)", async () => {
+    for (const endpoint of [
+      "http://fcm.googleapis.com/fcm/send/x",
+      "https://push.example/abc",
+      "https://169.254.169.254/latest/meta-data",
+      "https://localhost/x",
+      "https://127.0.0.1/x",
+      "https://fcm.googleapis.com.evil.example/x",
+      "https://evilfcm.googleapis.com/x",
+      "https://notify.windows.com/x",
+      "https://push.apple.com/x",
+      "https://fcm.googleapis.com:8443/x",
+      "https://user:pw@fcm.googleapis.com/x",
+      "ftp://fcm.googleapis.com/x",
+      `https://fcm.googleapis.com/${"a".repeat(2100)}`,
+    ]) {
+      const res = await subscribe({ endpoint, keys });
+      expect(res.status, endpoint).toBe(400);
+    }
+    expect(m.prisma.pushSubscription.create).not.toHaveBeenCalled();
+  });
+
+  it("caps key lengths: p256dh <= 200, auth <= 100", async () => {
+    const endpoint = "https://fcm.googleapis.com/fcm/send/x";
+    expect((await subscribe({ endpoint, keys: { p256dh: "p".repeat(200), auth: "a".repeat(100) } })).status).toBe(200);
+    expect((await subscribe({ endpoint, keys: { p256dh: "p".repeat(201), auth: "a" } })).status).toBe(400);
+    expect((await subscribe({ endpoint, keys: { p256dh: "p", auth: "a".repeat(101) } })).status).toBe(400);
+    expect(m.prisma.pushSubscription.create).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps at most 10 subscriptions per user, pruning the oldest", async () => {
+    m.prisma.pushSubscription.findMany.mockResolvedValue([{ id: "old-1" }, { id: "old-2" }]);
+    const res = await subscribe({ endpoint: "https://fcm.googleapis.com/fcm/send/x", keys });
+    expect(res.status).toBe(200);
+    expect(m.prisma.pushSubscription.findMany).toHaveBeenCalledWith({
+      where: { userId: USER },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      skip: 10,
+      select: { id: true },
+    });
+    expect(m.prisma.pushSubscription.deleteMany).toHaveBeenLastCalledWith({
+      where: { userId: USER, id: { in: ["old-1", "old-2"] } },
+    });
+  });
+
+  it("does not prune when the user is within the cap", async () => {
+    await subscribe({ endpoint: "https://fcm.googleapis.com/fcm/send/x", keys });
+    expect(m.prisma.pushSubscription.deleteMany).toHaveBeenCalledTimes(1); // only the same-endpoint replace
+  });
+});
+
+describe("dispatch re-validates stored subscriptions", () => {
+  it("never sends to a stored endpoint outside the allowlist or with oversized keys, and removes those rows", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-03-01T00:01:00.000Z")); // 06:01 in Dhaka
+    try {
+      m.prisma.userProfile.findMany.mockResolvedValue([
+        {
+          id: USER,
+          timezone: "Asia/Dhaka",
+          latitude: 23.8,
+          longitude: 90.4,
+          locationLabel: "Dhaka",
+          reminderRules: [{ id: "r1", type: "fajr", label: null, offsetMinutes: 0, channels: ["push"] }],
+          pushSubscriptions: [
+            { id: "bad-host", endpoint: "https://169.254.169.254/latest", keys: { p256dh: "p", auth: "a" } },
+            { id: "bad-scheme", endpoint: "http://fcm.googleapis.com/x", keys: { p256dh: "p", auth: "a" } },
+            { id: "bad-keys", endpoint: "https://fcm.googleapis.com/x", keys: { p256dh: "p".repeat(201), auth: "a" } },
+            { id: "good", endpoint: "https://fcm.googleapis.com/fcm/send/ok", keys: { p256dh: "p", auth: "a" } },
+          ],
+        },
+      ]);
+      m.fetchPrayerTimes.mockResolvedValue({
+        prayerTimes: { sehri: "04:40", iftar: "18:00", fajr: "06:00", dhuhr: "12:00", asr: "15:30", maghrib: "18:00", isha: "19:30" },
+      });
+      m.prisma.pushDeliveryLog.create.mockResolvedValue({});
+      m.webpush.sendNotification.mockResolvedValue({});
+      const res = await handlePushDispatchGet(get({ Authorization: `Bearer ${CRON}` }));
+      expect(await res.json()).toEqual({ ok: true, checked: 1, delivered: 1, skippedUsers: 0 });
+      expect(m.webpush.sendNotification).toHaveBeenCalledTimes(1);
+      expect(m.webpush.sendNotification.mock.calls[0][0].endpoint).toBe("https://fcm.googleapis.com/fcm/send/ok");
+      expect(m.prisma.pushDeliveryLog.create).toHaveBeenCalledTimes(1);
+      expect(m.prisma.pushSubscription.deleteMany).toHaveBeenCalledWith({
+        where: { id: { in: ["bad-host", "bad-scheme", "bad-keys"] } },
+      });
+      expect(logs.join("\n")).not.toContain("169.254.169.254");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

@@ -14,6 +14,7 @@ import {
   toAlAdhanDate,
   type DayPrayerTimes,
 } from "@/lib/push-schedule";
+import { isAllowedPushEndpoint, validPushKeys } from "@/lib/push-endpoint";
 import { guarded, json } from "./http";
 
 function displayName(type: string): string {
@@ -113,6 +114,7 @@ export async function dispatchDueReminders(now: Date) {
   let delivered = 0;
   let checked = 0;
   let skippedUsers = 0;
+  const invalidSubscriptions = new Set<string>();
 
   for (const user of users) {
     if (user.pushSubscriptions.length === 0) continue;
@@ -153,6 +155,14 @@ export async function dispatchDueReminders(now: Date) {
       checked += 1;
 
       for (const subscription of user.pushSubscriptions) {
+        // Re-validate before any outbound request: rows stored before the allowlist existed (or written by
+        // another path) must not make the server POST to an arbitrary host (SSRF).
+        const pushKeys = validPushKeys(subscription.keys);
+        if (!isAllowedPushEndpoint(subscription.endpoint) || !pushKeys) {
+          invalidSubscriptions.add(subscription.id);
+          continue;
+        }
+
         try {
           await prisma.pushDeliveryLog.create({
             data: {
@@ -171,10 +181,7 @@ export async function dispatchDueReminders(now: Date) {
           throw error;
         }
 
-        const pushKeys = subscription.keys as Record<string, unknown>;
-        const p256dh = typeof pushKeys.p256dh === "string" ? pushKeys.p256dh : "";
-        const auth = typeof pushKeys.auth === "string" ? pushKeys.auth : "";
-        if (!p256dh || !auth) continue;
+        const { p256dh, auth } = pushKeys;
 
         const payload = JSON.stringify({
           title: "Ramadan Planner",
@@ -204,6 +211,12 @@ export async function dispatchDueReminders(now: Date) {
         }
       }
     }
+  }
+
+  if (invalidSubscriptions.size > 0) {
+    // Never sendable (host not allowed, not https, or bad keys): drop them. Endpoints are not logged.
+    await prisma.pushSubscription.deleteMany({ where: { id: { in: [...invalidSubscriptions] } } });
+    console.warn(`[push/dispatch] removed ${invalidSubscriptions.size} invalid push subscription(s)`);
   }
 
   return { checked, delivered, skippedUsers };

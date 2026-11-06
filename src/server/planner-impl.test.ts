@@ -1,47 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// A tiny fake of the supabase-js query builder: records every chain (table + calls) and answers each
-// awaited chain with the next queued result. No network, no database.
-type Op = [string, ...unknown[]];
-interface Chain {
-  table: string;
-  ops: Op[];
-}
-interface QueryResult {
-  data: unknown;
-  error: unknown;
-}
+// Prisma is mocked (no database): each test queues the model method results it needs and checks the calls.
+const m = vi.hoisted(() => ({
+  prisma: {
+    dailyLog: { findUnique: vi.fn(), upsert: vi.fn() },
+    prayerGoal: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), deleteMany: vi.fn() },
+    planTask: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), deleteMany: vi.fn() },
+    reminderRule: { findMany: vi.fn(), create: vi.fn(), update: vi.fn(), deleteMany: vi.fn() },
+    userProfile: { findUnique: vi.fn(), upsert: vi.fn() },
+  },
+}));
 
-const fake = vi.hoisted(() => {
-  const state = { chains: [] as Chain[], results: [] as QueryResult[] };
-  const client = {
-    from(table: string) {
-      const chain: Chain = { table, ops: [] };
-      state.chains.push(chain);
-      const next = () => Promise.resolve(state.results.shift() ?? { data: null, error: null });
-      const builder: Record<string, unknown> = {};
-      for (const m of ["select", "eq", "order", "limit", "insert", "update", "upsert", "delete"]) {
-        builder[m] = (...args: unknown[]) => {
-          chain.ops.push([m, ...args]);
-          return builder;
-        };
-      }
-      for (const m of ["maybeSingle", "single"]) {
-        builder[m] = () => {
-          chain.ops.push([m]);
-          return next();
-        };
-      }
-      builder.then = (onFulfilled: (v: QueryResult) => unknown, onRejected?: (e: unknown) => unknown) =>
-        next().then(onFulfilled, onRejected);
-      return builder;
-    },
-  };
-  return { state, client };
-});
+vi.mock("@/lib/prisma", () => ({ prisma: m.prisma }));
 
-vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn(async () => fake.client) }));
-
+import { clerkIdToUuid } from "@/lib/auth/uuid";
 import {
   createPlanTaskImpl,
   createPrayerGoalImpl,
@@ -61,40 +33,47 @@ import {
   updateUserProfileImpl,
 } from "./planner-impl";
 
-const USER = "db99edd8-fa85-5bc2-95ec-a499147bb210";
-const OTHER = "a39f6e52-2892-5520-97d5-9ece2f1c9841";
+// Real Clerk-derived ids (the auth middleware passes clerkIdToUuid(clerkUserId)): the mapping is unchanged.
+const USER = clerkIdToUuid("user_alice");
+const OTHER = clerkIdToUuid("user_bob");
 const ID = "11111111-1111-4111-8111-111111111111";
-const DB_ERROR = { message: "boom", code: "XX000" };
+const DB_ERROR = new Error("boom");
 
-const queue = (...results: QueryResult[]) => fake.state.results.push(...results);
-const chains = () => fake.state.chains;
-const opsOf = (chain: Chain, name: string) => chain.ops.filter((op) => op[0] === name);
-
-/**
- * Data isolation: every chain must be scoped to USER, by an `.eq("user_id", USER)` filter or, for writes,
- * by `user_id: USER` in the payload (user_profiles uses its primary key `id`). Nothing may name OTHER.
- */
-function expectScopedToUser(chain: Chain) {
-  const ownerColumn = chain.table === "user_profiles" ? "id" : "user_id";
-  const writes = [...opsOf(chain, "insert"), ...opsOf(chain, "upsert")];
-  if (writes.length > 0) {
-    for (const [, payload] of writes) {
-      expect((payload as Record<string, unknown>)[ownerColumn], `${chain.table} write owner`).toBe(USER);
-    }
-  } else {
-    expect(chain.ops, `${chain.table} must filter by ${ownerColumn}`).toContainEqual(["eq", ownerColumn, USER]);
-  }
-  expect(JSON.stringify(chain.ops)).not.toContain(OTHER);
-}
+type Fn = ReturnType<typeof vi.fn>;
+const allCalls = () =>
+  Object.entries(m.prisma).flatMap(([model, fns]) =>
+    Object.entries(fns as Record<string, Fn>).flatMap(([name, fn]) =>
+      fn.mock.calls.map((call) => ({ model, name, args: call[0] as Record<string, unknown> })),
+    ),
+  );
 
 beforeEach(() => {
-  fake.state.chains.length = 0;
-  fake.state.results.length = 0;
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  for (const model of Object.values(m.prisma)) for (const fn of Object.values(model as Record<string, Fn>)) fn.mockReset();
 });
 
+/**
+ * Data isolation: every Prisma call is keyed by USER (user_profiles by its primary key `id`, daily logs by the
+ * (user, ramadan year, day) key, everything else by `userId`), every create carries USER, and nothing names OTHER.
+ */
 afterEach(() => {
-  // Applies to every test below: whatever queries ran were all scoped to USER.
-  for (const chain of chains()) expectScopedToUser(chain);
+  for (const { model, name, args } of allCalls()) {
+    const where = args.where as Record<string, unknown> | undefined;
+    if (model === "userProfile") {
+      expect(where?.id, `${model}.${name} where.id`).toBe(USER);
+    } else if (model === "dailyLog") {
+      const key = where?.userId_ramadanYear_day as Record<string, unknown> | undefined;
+      expect(key?.userId, `${model}.${name} where key`).toBe(USER);
+    } else if (where) {
+      expect(where.userId, `${model}.${name} where.userId`).toBe(USER);
+    }
+    const create = (args.create ?? args.data) as Record<string, unknown> | undefined;
+    if (name === "create" || name === "upsert") {
+      expect(create?.[model === "userProfile" ? "id" : "userId"], `${model}.${name} owner`).toBe(USER);
+    }
+    expect(JSON.stringify(args)).not.toContain(OTHER);
+  }
+  vi.restoreAllMocks();
 });
 
 describe("daily logs", () => {
@@ -102,14 +81,14 @@ describe("daily logs", () => {
     id: "log-1",
     day: 3,
     prayers: { fajr: true },
-    quran_para: 2,
-    quran_surah: "Al-Baqarah",
-    quran_ayah: 10,
-    quran_pages: 0,
+    quranPara: 2,
+    quranSurah: "Al-Baqarah",
+    quranAyah: 10,
+    quranPages: 0,
     checklist: ["a", 5],
-    journal_text: "r",
-    my_dua: "d",
-    day_task_done: true,
+    journalText: "r",
+    myDua: "d",
+    dayTaskDone: true,
   };
   const dto = {
     id: "log-1",
@@ -121,143 +100,238 @@ describe("daily logs", () => {
     dayTaskDone: true,
   };
 
-  it("getDailyLog: returns the normalized DTO for the user's row", async () => {
-    queue({ data: row, error: null });
-    await expect(getDailyLogImpl(USER, 3)).resolves.toEqual({ ok: true, data: dto });
-    expect(chains()).toHaveLength(1);
-    expect(chains()[0].table).toBe("daily_logs");
-    expect(chains()[0].ops).toContainEqual(["eq", "day", 3]);
+  it("getDailyLog: the user's row for this Ramadan (Hijri year of the client's local date)", async () => {
+    m.prisma.dailyLog.findUnique.mockResolvedValue(row);
+    await expect(getDailyLogImpl(USER, 3, "2027-02-20")).resolves.toEqual({ ok: true, data: dto });
+    expect(m.prisma.dailyLog.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { userId_ramadanYear_day: { userId: USER, ramadanYear: 1448, day: 3 } } }),
+    );
+    // A date in the next Ramadan reads that year's row, not this one.
+    await getDailyLogImpl(USER, 3, "2028-02-10");
+    expect(m.prisma.dailyLog.findUnique.mock.calls[1][0].where.userId_ramadanYear_day.ramadanYear).toBe(1449);
+    expect(m.prisma.userProfile.findUnique).not.toHaveBeenCalled();
   });
 
-  it("getDailyLog: null when there is no row; invalid_day; load_failed", async () => {
-    queue({ data: null, error: null });
-    await expect(getDailyLogImpl(USER, 1)).resolves.toEqual({ ok: true, data: null });
+  it("getDailyLog: without a date, uses today in the profile's time zone", async () => {
+    vi.useFakeTimers();
+    try {
+      // 2026-03-01 20:30 UTC is already 2 March in Dhaka; both are in Ramadan 1447.
+      vi.setSystemTime(new Date("2026-03-01T20:30:00Z"));
+      m.prisma.userProfile.findUnique.mockResolvedValue({ timezone: "Asia/Dhaka" });
+      m.prisma.dailyLog.findUnique.mockResolvedValue(null);
+      await expect(getDailyLogImpl(USER, 12)).resolves.toEqual({ ok: true, data: null });
+      expect(m.prisma.userProfile.findUnique).toHaveBeenCalledWith({ where: { id: USER }, select: { timezone: true } });
+      expect(m.prisma.dailyLog.findUnique.mock.calls[0][0].where.userId_ramadanYear_day).toEqual({
+        userId: USER,
+        ramadanYear: 1447,
+        day: 12,
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("getDailyLog: invalid_day (and a bad date); load_failed", async () => {
     await expect(getDailyLogImpl(USER, 31)).resolves.toEqual({ ok: false, error: "invalid_day" });
     await expect(getDailyLogImpl(USER, 1.5)).resolves.toEqual({ ok: false, error: "invalid_day" });
-    queue({ data: null, error: DB_ERROR });
-    await expect(getDailyLogImpl(USER, 2)).resolves.toEqual({ ok: false, error: "load_failed" });
-    expect(chains()).toHaveLength(2); // the invalid calls never queried
+    await expect(getDailyLogImpl(USER, 2, "02-03-2027")).resolves.toEqual({ ok: false, error: "invalid_day" });
+    expect(allCalls()).toHaveLength(0); // the invalid calls never queried
+    m.prisma.dailyLog.findUnique.mockRejectedValue(DB_ERROR);
+    await expect(getDailyLogImpl(USER, 2, "2027-02-10")).resolves.toEqual({ ok: false, error: "load_failed" });
   });
 
-  it("saveDailyLog: upserts with user_id and merges unspecified fields from the existing row", async () => {
-    queue({ data: row, error: null }, { data: { ...row, prayers: { fajr: true, isha: true } }, error: null });
-    const result = await saveDailyLogImpl(USER, { day: 3, prayers: { fajr: true, isha: true } });
+  it("saveDailyLog: upserts the user's row with the local log date and merges unspecified fields", async () => {
+    m.prisma.dailyLog.findUnique.mockResolvedValue(row);
+    m.prisma.dailyLog.upsert.mockResolvedValue({ ...row, prayers: { fajr: true, isha: true } });
+    const result = await saveDailyLogImpl(USER, { day: 3, logDate: "2027-02-12", prayers: { fajr: true, isha: true } });
     expect(result).toEqual({ ok: true, data: { ...dto, prayers: { fajr: true, isha: true } } });
-    expect(chains()).toHaveLength(2);
-    const [, payload, options] = opsOf(chains()[1], "upsert")[0];
-    expect(payload).toMatchObject({
-      user_id: USER,
-      day: 3,
+    const args = m.prisma.dailyLog.upsert.mock.calls[0][0];
+    expect(args.where).toEqual({ userId_ramadanYear_day: { userId: USER, ramadanYear: 1448, day: 3 } });
+    const fields = {
+      logDate: new Date("2027-02-12T00:00:00.000Z"),
       prayers: { fajr: true, isha: true },
       checklist: ["a", 5],
-      quran_para: 2,
-      quran_surah: "Al-Baqarah",
-      journal_text: "r",
-      my_dua: "d",
-      day_task_done: true,
-    });
-    expect(options).toEqual({ onConflict: "user_id,day" });
+      quranPara: 2,
+      quranSurah: "Al-Baqarah",
+      quranAyah: 10,
+      quranPages: 0,
+      journalText: "r",
+      myDua: "d",
+      dayTaskDone: true,
+    };
+    expect(args.update).toEqual(fields);
+    expect(args.create).toEqual({ userId: USER, ramadanYear: 1448, day: 3, ...fields });
   });
 
-  it("saveDailyLog: invalid_input and save_failed", async () => {
-    await expect(saveDailyLogImpl(USER, { day: 0 })).resolves.toEqual({ ok: false, error: "invalid_input" });
-    expect(chains()).toHaveLength(0);
-    queue({ data: null, error: null }, { data: null, error: DB_ERROR });
-    await expect(saveDailyLogImpl(USER, { day: 4 })).resolves.toEqual({ ok: false, error: "save_failed" });
+  it("saveDailyLog: a new row parses the quran counts and trims the surah", async () => {
+    m.prisma.dailyLog.findUnique.mockResolvedValue(null);
+    m.prisma.dailyLog.upsert.mockResolvedValue(row);
+    await saveDailyLogImpl(USER, {
+      day: 5,
+      logDate: "2027-02-14",
+      quran: { para: "3", surah: " Yasin ", ayah: "x", pages: "-4" },
+      journal: { reflection: "ok", myDua: "rabbi" },
+    });
+    expect(m.prisma.dailyLog.upsert.mock.calls[0][0].create).toMatchObject({
+      userId: USER,
+      day: 5,
+      quranPara: 3,
+      quranSurah: "Yasin",
+      quranAyah: 0,
+      quranPages: 0,
+      prayers: {},
+      checklist: [],
+      journalText: "ok",
+      myDua: "rabbi",
+      dayTaskDone: false,
+    });
+  });
+
+  it("saveDailyLog: input limits", async () => {
+    const big = "x".repeat(5001);
+    const bad = [
+      { day: 0 },
+      { day: 1, logDate: "12-02-2027" },
+      { day: 1, prayers: { fajr: true, lunch: true } },
+      { day: 1, checklist: Array.from({ length: 51 }, (_, i) => `k${i}`) },
+      { day: 1, checklist: ["y".repeat(201)] },
+      { day: 1, journal: { reflection: big, myDua: "" } },
+      { day: 1, journal: { reflection: "", myDua: big } },
+      { day: 1, quran: { para: "1", surah: "s".repeat(501), ayah: "", pages: "" } },
+    ];
+    for (const input of bad) {
+      await expect(saveDailyLogImpl(USER, input as never), JSON.stringify(input).slice(0, 80)).resolves.toEqual({
+        ok: false,
+        error: "invalid_input",
+      });
+    }
+    expect(allCalls()).toHaveLength(0);
+    // The limits themselves are allowed (taraweeh/tahajjud are tracked too).
+    m.prisma.dailyLog.findUnique.mockResolvedValue(null);
+    m.prisma.dailyLog.upsert.mockResolvedValue(row);
+    const ok = await saveDailyLogImpl(USER, {
+      day: 1,
+      logDate: "2027-02-08",
+      prayers: { fajr: true, taraweeh: true, tahajjud: false },
+      checklist: Array.from({ length: 50 }, () => "y".repeat(200)),
+      journal: { reflection: "x".repeat(5000), myDua: "x".repeat(5000) },
+    });
+    expect(ok.ok).toBe(true);
+  });
+
+  it("saveDailyLog: save_failed when Prisma throws", async () => {
+    m.prisma.dailyLog.findUnique.mockResolvedValue(null);
+    m.prisma.dailyLog.upsert.mockRejectedValue(DB_ERROR);
+    await expect(saveDailyLogImpl(USER, { day: 4, logDate: "2027-02-11" })).resolves.toEqual({
+      ok: false,
+      error: "save_failed",
+    });
   });
 });
 
 describe("prayer goals", () => {
-  const row = { id: ID, title: "Tahajjud", target_count: 10, target_unit: "nights", is_completed: false, sort_order: 2 };
+  const row = { id: ID, title: "Tahajjud", targetCount: 10, targetUnit: "nights", isCompleted: false, sortOrder: 2 };
   const dto = { id: ID, title: "Tahajjud", targetCount: 10, targetUnit: "nights", isCompleted: false, sortOrder: 2 };
 
   it("list: maps rows, ordered; load_failed on error", async () => {
-    queue({ data: [row], error: null });
+    m.prisma.prayerGoal.findMany.mockResolvedValueOnce([row]);
     await expect(listPrayerGoalsImpl(USER)).resolves.toEqual({ ok: true, data: [dto] });
-    expect(chains()[0].ops).toContainEqual(["order", "sort_order", { ascending: true }]);
-    queue({ data: null, error: DB_ERROR });
+    expect(m.prisma.prayerGoal.findMany.mock.calls[0][0].orderBy).toEqual([{ sortOrder: "asc" }, { createdAt: "asc" }]);
+    m.prisma.prayerGoal.findMany.mockRejectedValueOnce(DB_ERROR);
     await expect(listPrayerGoalsImpl(USER)).resolves.toEqual({ ok: false, error: "load_failed" });
   });
 
-  it("create: next sort order, inserts with user_id; invalid_input; save_failed", async () => {
-    queue({ data: { sort_order: 1 }, error: null }, { data: row, error: null });
+  it("create: next sort order, creates with userId; invalid_input; save_failed", async () => {
+    m.prisma.prayerGoal.findFirst.mockResolvedValueOnce({ sortOrder: 1 });
+    m.prisma.prayerGoal.create.mockResolvedValueOnce(row);
     await expect(
       createPrayerGoalImpl(USER, { title: " Tahajjud ", targetCount: 10, targetUnit: "nights" }),
     ).resolves.toEqual({ ok: true, data: dto });
-    expect(opsOf(chains()[1], "insert")[0][1]).toEqual({
-      user_id: USER,
+    expect(m.prisma.prayerGoal.create.mock.calls[0][0].data).toEqual({
+      userId: USER,
       title: "Tahajjud",
-      target_count: 10,
-      target_unit: "nights",
-      sort_order: 2,
+      targetCount: 10,
+      targetUnit: "nights",
+      sortOrder: 2,
     });
     await expect(
       createPrayerGoalImpl(USER, { title: "", targetCount: 10, targetUnit: "nights" }),
     ).resolves.toEqual({ ok: false, error: "invalid_input" });
-    queue({ data: null, error: null }, { data: null, error: DB_ERROR });
+    m.prisma.prayerGoal.findFirst.mockResolvedValueOnce(null);
+    m.prisma.prayerGoal.create.mockRejectedValueOnce(DB_ERROR);
     await expect(
       createPrayerGoalImpl(USER, { title: "x", targetCount: 1, targetUnit: "times" }),
     ).resolves.toEqual({ ok: false, error: "save_failed" });
-    expect(opsOf(chains()[3], "insert")[0][1]).toMatchObject({ user_id: USER, sort_order: 0 });
+    expect(m.prisma.prayerGoal.create.mock.calls[1][0].data).toMatchObject({ userId: USER, sortOrder: 0 });
   });
 
-  it("update: filters by id AND user_id; invalid_input; save_failed", async () => {
-    queue({ data: { ...row, is_completed: true }, error: null });
+  it("update: keyed by id AND userId; invalid_input; save_failed", async () => {
+    m.prisma.prayerGoal.update.mockResolvedValueOnce({ ...row, isCompleted: true });
     const input = { id: ID, title: "Tahajjud", targetCount: 10, targetUnit: "nights", isCompleted: true };
     await expect(updatePrayerGoalImpl(USER, input)).resolves.toEqual({ ok: true, data: { ...dto, isCompleted: true } });
-    expect(chains()[0].ops).toContainEqual(["eq", "id", ID]);
+    expect(m.prisma.prayerGoal.update.mock.calls[0][0].where).toEqual({ id: ID, userId: USER });
     await expect(updatePrayerGoalImpl(USER, { ...input, id: "nope" })).resolves.toEqual({ ok: false, error: "invalid_input" });
-    queue({ data: null, error: DB_ERROR });
+    m.prisma.prayerGoal.update.mockRejectedValueOnce(DB_ERROR); // e.g. P2025: not this user's goal
     await expect(updatePrayerGoalImpl(USER, input)).resolves.toEqual({ ok: false, error: "save_failed" });
   });
 
-  it("delete: filters by id AND user_id; invalid_input; delete_failed", async () => {
-    queue({ data: null, error: null });
+  it("delete: keyed by id AND userId; invalid_input; delete_failed", async () => {
+    m.prisma.prayerGoal.deleteMany.mockResolvedValueOnce({ count: 1 });
     await expect(deletePrayerGoalImpl(USER, ID)).resolves.toEqual({ ok: true, data: null });
-    expect(chains()[0].ops).toEqual([["delete"], ["eq", "id", ID], ["eq", "user_id", USER]]);
+    expect(m.prisma.prayerGoal.deleteMany).toHaveBeenCalledWith({ where: { id: ID, userId: USER } });
     await expect(deletePrayerGoalImpl(USER, "nope")).resolves.toEqual({ ok: false, error: "invalid_input" });
-    queue({ data: null, error: DB_ERROR });
+    m.prisma.prayerGoal.deleteMany.mockRejectedValueOnce(DB_ERROR);
     await expect(deletePrayerGoalImpl(USER, ID)).resolves.toEqual({ ok: false, error: "delete_failed" });
   });
 });
 
 describe("plan tasks", () => {
-  const row = { id: ID, title: "Zakat", is_done: false, due_date: null, sort_order: 0 };
+  const row = { id: ID, title: "Zakat", isDone: false, dueDate: null, sortOrder: 0 };
   const dto = { id: ID, title: "Zakat", isDone: false, dueDate: null, sortOrder: 0 };
 
-  it("list: maps rows; load_failed", async () => {
-    queue({ data: [row, { ...row, due_date: "2027-03-01", sort_order: 1 }], error: null });
+  it("list: maps rows (date column to YYYY-MM-DD); load_failed", async () => {
+    m.prisma.planTask.findMany.mockResolvedValueOnce([row, { ...row, dueDate: new Date("2027-03-01T00:00:00Z"), sortOrder: 1 }]);
     await expect(listPlanTasksImpl(USER)).resolves.toEqual({
       ok: true,
       data: [dto, { ...dto, dueDate: "2027-03-01", sortOrder: 1 }],
     });
-    queue({ data: null, error: DB_ERROR });
+    m.prisma.planTask.findMany.mockRejectedValueOnce(DB_ERROR);
     await expect(listPlanTasksImpl(USER)).resolves.toEqual({ ok: false, error: "load_failed" });
   });
 
-  it("create: inserts with user_id; invalid_input; save_failed", async () => {
-    queue({ data: null, error: null }, { data: row, error: null });
+  it("create: creates with userId; invalid_input; save_failed", async () => {
+    m.prisma.planTask.findFirst.mockResolvedValueOnce(null);
+    m.prisma.planTask.create.mockResolvedValueOnce(row);
     await expect(createPlanTaskImpl(USER, { title: "Zakat" })).resolves.toEqual({ ok: true, data: dto });
-    expect(opsOf(chains()[1], "insert")[0][1]).toEqual({ user_id: USER, title: "Zakat", sort_order: 0 });
+    expect(m.prisma.planTask.create.mock.calls[0][0].data).toEqual({ userId: USER, title: "Zakat", sortOrder: 0 });
     await expect(createPlanTaskImpl(USER, { title: "   " })).resolves.toEqual({ ok: false, error: "invalid_input" });
-    queue({ data: { sort_order: 4 }, error: null }, { data: null, error: DB_ERROR });
+    m.prisma.planTask.findFirst.mockResolvedValueOnce({ sortOrder: 4 });
+    m.prisma.planTask.create.mockRejectedValueOnce(DB_ERROR);
     await expect(createPlanTaskImpl(USER, { title: "x" })).resolves.toEqual({ ok: false, error: "save_failed" });
+    expect(m.prisma.planTask.create.mock.calls[1][0].data).toMatchObject({ sortOrder: 5 });
   });
 
-  it("update: filters by id AND user_id; invalid_input; save_failed", async () => {
-    queue({ data: { ...row, is_done: true }, error: null });
+  it("update: keyed by id AND userId; dueDate only when given; invalid_input; save_failed", async () => {
+    m.prisma.planTask.update.mockResolvedValueOnce({ ...row, isDone: true });
     await expect(updatePlanTaskImpl(USER, { id: ID, title: "Zakat", isDone: true })).resolves.toEqual({
       ok: true,
       data: { ...dto, isDone: true },
     });
-    expect(chains()[0].ops).toContainEqual(["eq", "id", ID]);
-    expect(opsOf(chains()[0], "update")[0][1]).not.toHaveProperty("due_date");
-    queue({ data: { ...row, is_done: true, due_date: "2027-03-01" }, error: null });
+    const first = m.prisma.planTask.update.mock.calls[0][0];
+    expect(first.where).toEqual({ id: ID, userId: USER });
+    expect(first.data).not.toHaveProperty("dueDate");
+    m.prisma.planTask.update.mockResolvedValueOnce({ ...row, isDone: true, dueDate: new Date("2027-03-01T00:00:00Z") });
     await expect(updatePlanTaskImpl(USER, { id: ID, title: "Zakat", isDone: true, dueDate: "2027-03-01" })).resolves.toEqual({
       ok: true,
       data: { ...dto, isDone: true, dueDate: "2027-03-01" },
     });
-    expect(opsOf(chains()[1], "update")[0][1]).toMatchObject({ is_done: true, due_date: "2027-03-01" });
+    expect(m.prisma.planTask.update.mock.calls[1][0].data).toMatchObject({
+      isDone: true,
+      dueDate: new Date("2027-03-01T00:00:00.000Z"),
+    });
+    m.prisma.planTask.update.mockResolvedValueOnce(row);
+    await updatePlanTaskImpl(USER, { id: ID, title: "Zakat", isDone: false, dueDate: null });
+    expect(m.prisma.planTask.update.mock.calls[2][0].data).toMatchObject({ dueDate: null });
     await expect(updatePlanTaskImpl(USER, { id: ID, title: "a", isDone: true, dueDate: "03-01-2027" })).resolves.toEqual({
       ok: false,
       error: "invalid_input",
@@ -266,43 +340,43 @@ describe("plan tasks", () => {
       ok: false,
       error: "invalid_input",
     });
-    queue({ data: null, error: DB_ERROR });
+    m.prisma.planTask.update.mockRejectedValueOnce(DB_ERROR);
     await expect(updatePlanTaskImpl(USER, { id: ID, title: "a", isDone: false })).resolves.toEqual({
       ok: false,
       error: "save_failed",
     });
   });
 
-  it("delete: filters by id AND user_id; invalid_input; delete_failed", async () => {
-    queue({ data: null, error: null });
+  it("delete: keyed by id AND userId; invalid_input; delete_failed", async () => {
+    m.prisma.planTask.deleteMany.mockResolvedValueOnce({ count: 0 });
     await expect(deletePlanTaskImpl(USER, ID)).resolves.toEqual({ ok: true, data: null });
-    expect(chains()[0].ops).toEqual([["delete"], ["eq", "id", ID], ["eq", "user_id", USER]]);
+    expect(m.prisma.planTask.deleteMany).toHaveBeenCalledWith({ where: { id: ID, userId: USER } });
     await expect(deletePlanTaskImpl(USER, "")).resolves.toEqual({ ok: false, error: "invalid_input" });
-    queue({ data: null, error: DB_ERROR });
+    m.prisma.planTask.deleteMany.mockRejectedValueOnce(DB_ERROR);
     await expect(deletePlanTaskImpl(USER, ID)).resolves.toEqual({ ok: false, error: "delete_failed" });
   });
 });
 
 describe("reminder rules", () => {
-  const row = { id: ID, type: "iftar", label: "Iftar", offset_minutes: -10, channels: ["push", "sms"], enabled: true };
+  const row = { id: ID, type: "iftar", label: "Iftar", offsetMinutes: -10, channels: ["push", "sms"], enabled: true };
   const dto = { id: ID, type: "iftar", label: "Iftar", offsetMinutes: -10, channels: ["push"], enabled: true };
   const input = { type: "iftar" as const, label: "Iftar", offsetMinutes: -10, channels: ["push" as const], enabled: true };
 
   it("list: maps rows (unknown channels dropped); load_failed", async () => {
-    queue({ data: [row], error: null });
+    m.prisma.reminderRule.findMany.mockResolvedValueOnce([row]);
     await expect(listReminderRulesImpl(USER)).resolves.toEqual({ ok: true, data: [dto] });
-    queue({ data: null, error: DB_ERROR });
+    m.prisma.reminderRule.findMany.mockRejectedValueOnce(DB_ERROR);
     await expect(listReminderRulesImpl(USER)).resolves.toEqual({ ok: false, error: "load_failed" });
   });
 
-  it("create: inserts with user_id; invalid_input; save_failed", async () => {
-    queue({ data: row, error: null });
+  it("create: creates with userId; invalid_input; save_failed", async () => {
+    m.prisma.reminderRule.create.mockResolvedValueOnce(row);
     await expect(createReminderRuleImpl(USER, input)).resolves.toEqual({ ok: true, data: dto });
-    expect(opsOf(chains()[0], "insert")[0][1]).toEqual({
-      user_id: USER,
+    expect(m.prisma.reminderRule.create.mock.calls[0][0].data).toEqual({
+      userId: USER,
       type: "iftar",
       label: "Iftar",
-      offset_minutes: -10,
+      offsetMinutes: -10,
       channels: ["push"],
       enabled: true,
     });
@@ -310,43 +384,34 @@ describe("reminder rules", () => {
       ok: false,
       error: "invalid_input",
     });
-    queue({ data: null, error: DB_ERROR });
+    m.prisma.reminderRule.create.mockRejectedValueOnce(DB_ERROR);
     await expect(createReminderRuleImpl(USER, input)).resolves.toEqual({ ok: false, error: "save_failed" });
   });
 
-  it("update: filters by id AND user_id; invalid_input; save_failed", async () => {
-    queue({ data: row, error: null });
+  it("update: keyed by id AND userId; invalid_input; save_failed", async () => {
+    m.prisma.reminderRule.update.mockResolvedValueOnce(row);
     await expect(updateReminderRuleImpl(USER, { id: ID, ...input })).resolves.toEqual({ ok: true, data: dto });
-    expect(chains()[0].ops).toContainEqual(["eq", "id", ID]);
+    expect(m.prisma.reminderRule.update.mock.calls[0][0].where).toEqual({ id: ID, userId: USER });
     await expect(updateReminderRuleImpl(USER, { id: ID, ...input, offsetMinutes: 721 })).resolves.toEqual({
       ok: false,
       error: "invalid_input",
     });
-    queue({ data: null, error: DB_ERROR });
+    m.prisma.reminderRule.update.mockRejectedValueOnce(DB_ERROR);
     await expect(updateReminderRuleImpl(USER, { id: ID, ...input })).resolves.toEqual({ ok: false, error: "save_failed" });
   });
 
-  it("delete: filters by id AND user_id; invalid_input; delete_failed", async () => {
-    queue({ data: null, error: null });
+  it("delete: keyed by id AND userId; invalid_input; delete_failed", async () => {
+    m.prisma.reminderRule.deleteMany.mockResolvedValueOnce({ count: 1 });
     await expect(deleteReminderRuleImpl(USER, ID)).resolves.toEqual({ ok: true, data: null });
-    expect(chains()[0].ops).toEqual([["delete"], ["eq", "id", ID], ["eq", "user_id", USER]]);
+    expect(m.prisma.reminderRule.deleteMany).toHaveBeenCalledWith({ where: { id: ID, userId: USER } });
     await expect(deleteReminderRuleImpl(USER, "x")).resolves.toEqual({ ok: false, error: "invalid_input" });
-    queue({ data: null, error: DB_ERROR });
+    m.prisma.reminderRule.deleteMany.mockRejectedValueOnce(DB_ERROR);
     await expect(deleteReminderRuleImpl(USER, ID)).resolves.toEqual({ ok: false, error: "delete_failed" });
   });
 });
 
 describe("user profile", () => {
   const row = {
-    id: USER,
-    display_name: "Rafi",
-    locale: "en",
-    timezone: "Europe/London",
-    latitude: 51.5,
-    longitude: -0.12,
-    location_label: "London",
-  };
-  const dto = {
     id: USER,
     displayName: "Rafi",
     locale: "en",
@@ -355,11 +420,12 @@ describe("user profile", () => {
     longitude: -0.12,
     locationLabel: "London",
   };
+  const dto = { ...row };
 
-  it("get: maps the row; defaults when missing; load_failed", async () => {
-    queue({ data: row, error: null });
+  it("get: maps the row; defaults (with the Dhaka location label) when missing; load_failed", async () => {
+    m.prisma.userProfile.findUnique.mockResolvedValueOnce(row);
     await expect(getUserProfileImpl(USER)).resolves.toEqual({ ok: true, data: dto });
-    queue({ data: null, error: null });
+    m.prisma.userProfile.findUnique.mockResolvedValueOnce(null);
     await expect(getUserProfileImpl(USER)).resolves.toEqual({
       ok: true,
       data: {
@@ -372,29 +438,29 @@ describe("user profile", () => {
         locationLabel: "ঢাকা, বাংলাদেশ",
       },
     });
-    queue({ data: null, error: DB_ERROR });
+    m.prisma.userProfile.findUnique.mockResolvedValueOnce({ ...row, locale: "fr", locationLabel: null, timezone: null });
+    await expect(getUserProfileImpl(USER)).resolves.toEqual({
+      ok: true,
+      data: { ...dto, locale: "bn", locationLabel: "ঢাকা, বাংলাদেশ", timezone: "Asia/Dhaka" },
+    });
+    m.prisma.userProfile.findUnique.mockRejectedValueOnce(DB_ERROR);
     await expect(getUserProfileImpl(USER)).resolves.toEqual({ ok: false, error: "load_failed" });
   });
 
-  it("update: upserts the user's own row (id = userId); invalid_input; save_failed", async () => {
-    const input = { displayName: "Rafi", timezone: "Europe/London", locationLabel: "London", latitude: 51.5, longitude: -0.12 };
-    queue({ data: row, error: null });
+  it("update: upserts the user's own row (id = userId), coordinates rounded to 2 decimals; invalid_input; save_failed", async () => {
+    const input = { displayName: "Rafi", timezone: "Europe/London", locationLabel: "London", latitude: 51.50735, longitude: -0.12776 };
+    m.prisma.userProfile.upsert.mockResolvedValueOnce(row);
     await expect(updateUserProfileImpl(USER, input)).resolves.toEqual({ ok: true, data: dto });
-    const [, payload, options] = opsOf(chains()[0], "upsert")[0];
-    expect(payload).toEqual({
-      id: USER,
-      display_name: "Rafi",
-      timezone: "Europe/London",
-      latitude: 51.5,
-      longitude: -0.12,
-      location_label: "London",
-    });
-    expect(options).toEqual({ onConflict: "id" });
+    const args = m.prisma.userProfile.upsert.mock.calls[0][0];
+    const fields = { displayName: "Rafi", timezone: "Europe/London", latitude: 51.51, longitude: -0.13, locationLabel: "London" };
+    expect(args.where).toEqual({ id: USER });
+    expect(args.create).toEqual({ id: USER, ...fields });
+    expect(args.update).toEqual(fields);
     await expect(updateUserProfileImpl(USER, { ...input, latitude: 91 })).resolves.toEqual({
       ok: false,
       error: "invalid_input",
     });
-    queue({ data: null, error: DB_ERROR });
+    m.prisma.userProfile.upsert.mockRejectedValueOnce(DB_ERROR);
     await expect(updateUserProfileImpl(USER, input)).resolves.toEqual({ ok: false, error: "save_failed" });
   });
 });

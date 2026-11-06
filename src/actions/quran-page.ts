@@ -7,7 +7,8 @@ import type { SurahPageData } from "@/server/quran-impl";
 export type { SurahPageData } from "@/server/quran-impl";
 
 const getSurahPageDataFn = createServerFn({ method: "GET" })
-  .validator((surahNumber: unknown) => surahNumber as number)
+  // Not a number -> NaN, which the Impl rejects (null) like any number outside 1..114.
+  .validator((surahNumber: unknown) => (typeof surahNumber === "number" ? surahNumber : Number.NaN))
   .handler(({ data }) => getSurahPageDataImpl(data));
 
 /** `null` when `surahNumber` is not an integer in 1..114. */

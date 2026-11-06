@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useLocale, useTranslations } from "@/i18n/use-intl";
+import { useClockFormat } from "@/hooks/use-clock-format";
+import { formatDateTime } from "@/lib/clock-format";
 import {
   deleteAnnouncementAction,
   listAdminAnnouncementsAction,
@@ -49,7 +51,8 @@ export function AnnouncementsAdminContent() {
   const [error, setError] = useState<string | null>(null);
   const [adminUsers, setAdminUsers] = useState<Array<{ userId: string; createdAt: string }>>([]);
   const [newAdminUserId, setNewAdminUserId] = useState("");
-  const dateTimeLocale = locale.startsWith("bn") ? "bn-BD-u-nu-beng" : "en-US";
+  const [clockFormat] = useClockFormat();
+  const when = (iso: string) => formatDateTime(new Date(iso), locale, clockFormat);
 
   useEffect(() => {
     startTransition(async () => {
@@ -195,13 +198,14 @@ export function AnnouncementsAdminContent() {
           <CardTitle className="text-base">{t("editor")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <Input value={titleBn} onChange={(e) => setTitleBn(e.target.value)} placeholder={t("titleBn")} />
-          <Input value={titleEn} onChange={(e) => setTitleEn(e.target.value)} placeholder={t("titleEn")} />
+          <Input value={titleBn} onChange={(e) => setTitleBn(e.target.value)} placeholder={t("titleBn")} maxLength={200} />
+          <Input value={titleEn} onChange={(e) => setTitleEn(e.target.value)} placeholder={t("titleEn")} maxLength={200} />
 
           <textarea
             value={bodyBn}
             onChange={(e) => setBodyBn(e.target.value)}
             placeholder={t("bodyBn")}
+            maxLength={4000}
             className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             rows={3}
           />
@@ -209,6 +213,7 @@ export function AnnouncementsAdminContent() {
             value={bodyEn}
             onChange={(e) => setBodyEn(e.target.value)}
             placeholder={t("bodyEn")}
+            maxLength={4000}
             className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             rows={3}
           />
@@ -246,7 +251,7 @@ export function AnnouncementsAdminContent() {
                 <p className="text-sm font-medium">{item.titleBn}</p>
                 <p className="text-xs text-muted-foreground">{item.bodyBn}</p>
                 <p className="text-xs text-muted-foreground">
-                  {new Date(item.startAt).toLocaleString(dateTimeLocale)} {item.endAt ? `→ ${new Date(item.endAt).toLocaleString(dateTimeLocale)}` : ""}
+                  {when(item.startAt)} {item.endAt ? `→ ${when(item.endAt)}` : ""}
                 </p>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={() => edit(item)}>{tCommon("edit")}</Button>
@@ -284,7 +289,7 @@ export function AnnouncementsAdminContent() {
                 <div key={item.userId} className="rounded-lg border p-3 space-y-2">
                   <p className="text-xs font-mono break-all">{item.userId}</p>
                   <p className="text-xs text-muted-foreground">
-                    {new Date(item.createdAt).toLocaleString(dateTimeLocale)}
+                    {when(item.createdAt)}
                   </p>
                   <Button
                     variant="destructive"

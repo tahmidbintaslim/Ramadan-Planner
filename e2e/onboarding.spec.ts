@@ -36,7 +36,7 @@ test.describe("first run", () => {
     const timingUrls = await mockApis(page);
     await visit(page, "/today");
     await expect(page).toHaveURL(/\/welcome$/);
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText(/আপনার জেলার সেহরি ও ইফতারের সময়/);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("আপনার জেলা");
     // While gated the Home fetched nothing.
     expect(timingUrls).toEqual([]);
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);

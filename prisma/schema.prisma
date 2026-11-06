@@ -49,9 +49,6 @@ model UserProfile {
   prayerGoals       PrayerGoal[]
   pushSubscriptions PushSubscription[]
   reminderRules     ReminderRule[]
-  billingCustomer   BillingCustomer?
-  subscriptions     Subscription[]
-  entitlementGrant  EntitlementGrant?
 
   @@map("user_profiles")
   @@schema("public")
@@ -105,6 +102,8 @@ model DailyLog {
   id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId      String      @map("user_id") @db.Uuid
   day         Int
+  /// Hijri year of the Ramadan this log belongs to (day 1-30 repeats every year). Migration 007.
+  ramadanYear Int         @default(1448) @map("ramadan_year")
   logDate     DateTime    @default(now()) @map("log_date") @db.Date
   prayers     Json        @default("{}")
   quranPara   Int         @default(0) @map("quran_para")
@@ -119,7 +118,7 @@ model DailyLog {
   updatedAt   DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   user        UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, day])
+  @@unique([userId, ramadanYear, day])
   @@index([userId, day])
   @@index([userId, logDate])
   @@map("daily_logs")
@@ -180,7 +179,10 @@ model CalendarLink {
   id           String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId       String      @unique @map("user_id") @db.Uuid
   googleTokens Json?       @map("google_tokens")
-  icsSecret    String?     @map("ics_secret")
+  /// DEPRECATED legacy plaintext ICS secret; the app never writes it (see supabase/migrations/008_ics_secret_hash.sql).
+  icsSecret     String?     @map("ics_secret")
+  /// Lowercase hex SHA-256 of the ICS feed secret (src/lib/ics-secret.ts).
+  icsSecretHash String?     @unique(map: "calendar_links_ics_secret_hash_key") @map("ics_secret_hash")
   createdAt    DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   user         UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -763,50 +765,22 @@ enum one_time_token_type {
   @@schema("auth")
 }
 
-model BillingCustomer {
-  userId           String      @id @map("user_id") @db.Uuid
-  stripeCustomerId String      @unique @map("stripe_customer_id")
-  createdAt        DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
-  user             UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+/// Anonymous card-donation ledger (supabase/migrations/009_donations.sql). Written only by the Stripe webhook;
+/// no donor PII (no name, email or address). RLS on, no anon/authenticated grants: server (service role) only.
+model Donation {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  stripeEventId        String   @unique @map("stripe_event_id")
+  stripeObjectId       String   @map("stripe_object_id")
+  stripeSubscriptionId String?  @map("stripe_subscription_id")
+  amountMinor          Int      @map("amount_minor")
+  currency             String
+  frequency            String
+  status               String
+  country              String?
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  @@map("billing_customers")
-  @@schema("public")
-}
-
-model Subscription {
-  id                 String      @id
-  userId             String      @map("user_id") @db.Uuid
-  status             String
-  priceId            String      @map("price_id")
-  currentPeriodStart DateTime?   @map("current_period_start") @db.Timestamptz(6)
-  currentPeriodEnd   DateTime?   @map("current_period_end") @db.Timestamptz(6)
-  trialEnd           DateTime?   @map("trial_end") @db.Timestamptz(6)
-  cancelAtPeriodEnd  Boolean     @default(false) @map("cancel_at_period_end")
-  eventCreated       BigInt      @map("event_created")
-  updatedAt          DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  user               UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@map("subscriptions")
-  @@schema("public")
-}
-
-model StripeEvent {
-  id          String   @id
-  type        String
-  processedAt DateTime @default(now()) @map("processed_at") @db.Timestamptz(6)
-
-  @@map("stripe_events")
-  @@schema("public")
-}
-
-model EntitlementGrant {
-  userId    String      @id @map("user_id") @db.Uuid
-  source    String
-  expiresAt DateTime?   @map("expires_at") @db.Timestamptz(6)
-  createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
-  user      UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("entitlement_grants")
+  @@index([stripeObjectId])
+  @@index([createdAt])
+  @@map("donations")
   @@schema("public")
 }

@@ -54,7 +54,7 @@ const signedOut = { getUserId: vi.fn(async () => null) };
 const as = (id: string) => ({ getUserId: vi.fn(async () => id) });
 
 function sessionFor(id: string, email: string) {
-  m.getAppAuthUser.mockResolvedValue({ id, clerkId: "user_x", email });
+  m.getAppAuthUser.mockResolvedValue({ id, clerkId: "user_x", email, emailVerified: true });
 }
 
 function expectNoWrites() {

@@ -3,6 +3,26 @@
 import "@tanstack/react-start/server-only";
 import { AUTH_UNAVAILABLE_MESSAGE, INTERNAL_ERROR_MESSAGE } from "@/server/errors";
 
+/** True for an IANA zone the runtime knows (`Intl.DateTimeFormat` accepts it). */
+export function isValidTimeZoneParam(tz: string): boolean {
+  if (!tz || tz.length > 64) return false;
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** True for a real calendar date written YYYY-MM-DD. */
+export function isValidDateParam(date: string): boolean {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  if (!m) return false;
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const at = new Date(Date.UTC(y, mo - 1, d));
+  return at.getUTCFullYear() === y && at.getUTCMonth() === mo - 1 && at.getUTCDate() === d;
+}
+
 /** `NextResponse.json(body, init)` equivalent. */
 export function json(body: unknown, init?: ResponseInit): Response {
   return Response.json(body, init);
@@ -80,11 +100,25 @@ export function redirect(url: URL | string, setCookies: string[] = []): Response
   return new Response(null, { status: 307, headers });
 }
 
-/** Public app origin for OAuth redirect URIs: `APP_URL` (old `NEXT_PUBLIC_APP_URL`), else the request origin. */
+/** Canonical production origin, used when no app/site URL is configured. */
+export const CANONICAL_APP_URL = "https://ramadanplanner.tahmid.space";
+
+/**
+ * Public app origin for OAuth redirect URIs: `APP_URL` (old `NEXT_PUBLIC_APP_URL`), else `SITE_URL` (old
+ * `NEXT_PUBLIC_SITE_URL`). In production it never comes from the request: the Host header is
+ * client-controlled, so a spoofed Host must not choose where Google sends the code. Without any of those
+ * variables production uses CANONICAL_APP_URL; only development/test falls back to the request origin.
+ */
 export function appBaseUrl(request: Request): string {
-  return (
-    process.env.APP_URL?.trim() ||
-    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
-    new URL(request.url).origin
-  );
+  const configured = [
+    process.env.APP_URL,
+    process.env.NEXT_PUBLIC_APP_URL,
+    process.env.SITE_URL,
+    process.env.NEXT_PUBLIC_SITE_URL,
+  ]
+    .map((value) => value?.trim())
+    .find((value): value is string => !!value);
+  if (configured) return configured.replace(/\/+$/, "");
+  if (process.env.NODE_ENV === "production") return CANONICAL_APP_URL;
+  return new URL(request.url).origin;
 }

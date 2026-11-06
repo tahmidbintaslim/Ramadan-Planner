@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useAuth } from "@/components/providers/auth-provider";
-import { getTodayKey, useGuestData } from "@/hooks/use-guest-data";
+import { useGuestData } from "@/hooks/use-guest-data";
+import { GUEST_PLAN_GOALS_KEY, GUEST_PLAN_TASKS_KEY, migrateGuestPlanList } from "@/lib/guest-plan";
 import {
   createPlanTaskAction,
   createPrayerGoalAction,
@@ -14,14 +15,17 @@ import {
   type PrayerGoalDTO,
 } from "@/actions/planner";
 
-// The plan's existing data model: prayer goals and plan tasks, in localStorage (per day) for guests and through
+// The plan's existing data model: prayer goals and plan tasks, in localStorage (persistent lists) for guests and through
 // the planner server functions when signed in. Toggles and deletes are optimistic; a row is locked while its
-// request is in flight, and a failure rolls back only that row. Signed-in task ticks carry the day they belong to
+// request is in flight, and a failure rolls back only that row. Task ticks (guest and signed-in) carry the day they belong to
 // in `dueDate` (see doneForDay).
 
 const subscribeNoop = () => () => {};
 const EMPTY_GOALS: PrayerGoalDTO[] = [];
 const EMPTY_TASKS: PlanTaskDTO[] = [];
+/** Guest lists live under fixed keys; the first read merges the old day-scoped lists (see guest-plan.ts). */
+const GOALS_OPTIONS = { migrate: () => void migrateGuestPlanList(GUEST_PLAN_GOALS_KEY) };
+const TASKS_OPTIONS = { migrate: () => void migrateGuestPlanList(GUEST_PLAN_TASKS_KEY) };
 /** If the auth client never loads (offline, blocked), the plan works as a guest after this long. */
 export const AUTH_WAIT_MS = 3000;
 
@@ -64,8 +68,8 @@ export function usePlanItems(): PlanItemsState {
   const [serverGoals, setServerGoals] = useState<PrayerGoalDTO[]>([]);
   const [serverTasks, setServerTasks] = useState<PlanTaskDTO[]>([]);
   const [serverLoaded, setServerLoaded] = useState(false);
-  const { data: guestGoals, updateData: updateGuestGoals } = useGuestData<PrayerGoalDTO[]>(getTodayKey("plan_goals"), []);
-  const { data: guestTasks, updateData: updateGuestTasks } = useGuestData<PlanTaskDTO[]>(getTodayKey("plan_tasks"), []);
+  const { data: guestGoals, updateData: updateGuestGoals } = useGuestData<PrayerGoalDTO[]>(GUEST_PLAN_GOALS_KEY, EMPTY_GOALS, GOALS_OPTIONS);
+  const { data: guestTasks, updateData: updateGuestTasks } = useGuestData<PlanTaskDTO[]>(GUEST_PLAN_TASKS_KEY, EMPTY_TASKS, TASKS_OPTIONS);
   const [error, setError] = useState(false);
   const [pending, setPending] = useState<ReadonlySet<string>>(() => new Set());
   const [authTimedOut, setAuthTimedOut] = useState(false);

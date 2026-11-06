@@ -1,5 +1,14 @@
 # Design system v2 (calm Islamic): implementation plan
 
+> **Superseded (2026-11-06).** This plan is kept as history. The current decisions, which win where they differ:
+>
+> - **Type per locale (html[lang]):** display Tiro Bangla (bn) / Noto Serif Display (en); UI Noto Sans Bengali (bn) / Noto Sans (en); reading Noto Serif Bengali (bn) / Noto Serif (en); Arabic Noto Naskh Arabic for duas, Amiri Quran for Quran ayahs. No Hind Siliguri.
+> - **Trimmed Home:** phase + next prayer → Sehri/Iftar → five prayers (above the nav at 390x844) → one sourced contextual card → a small link to today's amal → tiles → sadaqah (rule-gated). Task 7's longer list below is replaced.
+> - **Trackers on /plan:** আজকের আমল, নামাজ ট্র্যাকার, কুরআন খতম, আমার লক্ষ্য, রমজান ডায়েরি.
+> - **Hidden until ready:** Hadith, Books, Quiz (`src/config/features.ts`); /dashboard redirects to /today.
+> - **Timetable:** the stored district, else Dhaka (Asia/Dhaka); never the device zone.
+> - **Approved nav labels:** আজ · সময়সূচি · আমল · কুরআন · আরও; full terminology in PRODUCT.md ("Terminology and navigation").
+
 **Source of truth:** Figma file `obgy329uiFD871GV1NbuF8` ("Ramadan Planner — Ramadan 2027 Design System & App"). The pages are Foundations, Components, Mobile PWA and Web/Tablet. Direction contract: `.impeccable/surfaces/src-routes-app-today-tsx.md`. Product truth: `PRODUCT.md`. The founder approved both the design and the plan on 2026-11-03.
 
 **Branch:** `claude/tanstack-migration`. This stacks on the TanStack app; production cutover is still Task 12 of the migration plan.

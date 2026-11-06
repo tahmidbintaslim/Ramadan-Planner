@@ -5,7 +5,7 @@
 //               browser's network tab; in dev, the createClientRpc("...") argument of the module source).
 //               `--auto` (CI) reads every server-function id from the built client bundle (ASSETS_DIR, default
 //               .output/public/assets) and uses the first one that answers a signed-out same-origin POST with 401.
-//   webhookPath optional extra CSRF-exempt POST route to probe (e.g. /api/stripe/webhook once it exists);
+//   webhookPath optional extra CSRF-exempt POST route to probe (/api/stripe/webhook is always probed);
 //               it must answer anything but 403 to a cross-site, cookieless POST.
 // Server routes probed (real ones): POST /api/push/subscribe and PATCH/DELETE /api/announcements/<id>
 // (cookie-authenticated, CSRF-checked), POST /api/push/dispatch (secret-authenticated, CSRF-exempt) and
@@ -78,6 +78,12 @@ const checks = [
   // Exempt and safe routes
   ["exempt: cross-site POST /api/push/dispatch, no secret -> 401 (secret auth, not CSRF)", `${base}/api/push/dispatch`, { method: "POST", headers: { Origin: "https://cron.example" } }, [401]],
   ["safe: cross-site GET /api/quran -> not 403", `${base}/api/quran`, { headers: { ...evil, "Sec-Fetch-Site": "cross-site" } }, NOT_403],
+  // Card donations: checkout and portal are same-origin only; the Stripe webhook is exempt and signature-checked.
+  ["route: cross-origin POST /api/donations/checkout -> 403", `${base}/api/donations/checkout`, { method: "POST", headers: { ...json, ...evil }, body: '{"amount":5,"currency":"usd","frequency":"once"}' }, [403]],
+  ["route: headerless POST /api/donations/checkout -> 403", `${base}/api/donations/checkout`, { method: "POST", headers: json, body: '{"amount":5,"currency":"usd","frequency":"once"}' }, [403]],
+  ["route: cross-origin POST /api/donations/portal -> 403", `${base}/api/donations/portal`, { method: "POST", headers: { ...json, ...evil }, body: "{}" }, [403]],
+  ["exempt: cross-site POST /api/stripe/webhook, no signature -> 400/503 (signature auth, not CSRF)", `${base}/api/stripe/webhook`, { method: "POST", headers: { Origin: "https://stripe.com" }, body: "{}" }, [400, 503]],
+  ["safe: cross-site GET /api/donations/summary -> not 403", `${base}/api/donations/summary`, { headers: { ...evil, "Sec-Fetch-Site": "cross-site" } }, NOT_403],
 ];
 if (webhookPath) {
   checks.push([`exempt: cross-site POST ${webhookPath}, no cookie -> not 403`, `${base}${webhookPath}`, { method: "POST", headers: { Origin: "https://stripe.com" }, body: "{}" }, NOT_403]);

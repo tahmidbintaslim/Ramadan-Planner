@@ -1,20 +1,18 @@
 "use client";
 
-import { useState, useCallback, useSyncExternalStore, useEffect, type ReactNode } from "react";
-import { useMatches } from "@tanstack/react-router";
+import { useCallback, useSyncExternalStore, useEffect, type ReactNode } from "react";
 import { useLocale, useTranslations } from "@/i18n/use-intl";
 import { useTheme } from "next-themes";
 import {
-  Accessibility,
-  Sun,
-  Moon,
-  Monitor,
-  Clock,
-  Plus,
-  Minus,
-  RotateCcw,
-  X,
-} from "lucide-react";
+  ClockIcon,
+  ComputerIcon,
+  DhuhrIcon,
+  IshaIcon,
+  MinusIcon,
+  PlusIcon,
+  ResetIcon,
+  TextSizeIcon,
+} from "@/components/icons/islamic-icons";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -27,9 +25,10 @@ import {
 import { cn } from "@/lib/utils";
 import { formatLocalizedNumber } from "@/lib/locale-number";
 
-// Accessibility settings (font size, theme incl. Auto). Inside the app shell they live in the More sheet (mobile)
-// and behind a side-nav footer button (desktop); on pages without the shell (landing, auth) the floating button
-// opens the same controls. The stored font size is applied on every page by <AccessibilitySidebar /> in the root.
+// Text size and theme ("লেখা ও থিম", incl. Auto). Inside the app shell they live in the More sheet (mobile) and
+// behind a side-nav footer button (desktop); the landing header, onboarding and the auth pages open the same
+// controls from a labelled অ/Aa button (TextThemeButton). There is no floating button. The stored font size is
+// applied on every page by <AccessibilitySidebar /> in the root.
 
 export const FONT_SIZE_KEY = "ramadan-planner-font-size";
 const FONT_SIZE_EVENT = "rp:font-size";
@@ -110,10 +109,10 @@ export function AccessibilityControls({ className }: { className?: string }) {
   );
 
   const themeOptions = [
-    { value: "light" as const, icon: Sun, label: t("light") },
-    { value: "dark" as const, icon: Moon, label: t("dark") },
-    { value: "system" as const, icon: Monitor, label: t("system") },
-    { value: "auto" as const, icon: Clock, label: t("auto") },
+    { value: "light" as const, icon: DhuhrIcon, label: t("light") },
+    { value: "dark" as const, icon: IshaIcon, label: t("dark") },
+    { value: "system" as const, icon: ComputerIcon, label: t("system") },
+    { value: "auto" as const, icon: ClockIcon, label: t("auto") },
   ];
 
   return (
@@ -128,7 +127,7 @@ export function AccessibilityControls({ className }: { className?: string }) {
             disabled={fontSize <= MIN_FONT_SIZE}
             aria-label={t("decrease")}
           >
-            <Minus className="h-3.5 w-3.5" />
+            <MinusIcon size={18} />
           </Button>
 
           <div className="flex-1 text-center">
@@ -144,11 +143,11 @@ export function AccessibilityControls({ className }: { className?: string }) {
             disabled={fontSize >= MAX_FONT_SIZE}
             aria-label={t("increase")}
           >
-            <Plus className="h-3.5 w-3.5" />
+            <PlusIcon size={18} />
           </Button>
 
           <Button variant="ghost" size="icon" onClick={() => setFontSize(DEFAULT_FONT_SIZE)} aria-label={t("reset")}>
-            <RotateCcw className="h-3.5 w-3.5" />
+            <ResetIcon size={18} />
           </Button>
         </div>
 
@@ -174,7 +173,7 @@ export function AccessibilityControls({ className }: { className?: string }) {
               )}
               aria-label={option.label}
             >
-              <option.icon className="h-4 w-4" />
+              <option.icon size={18} />
               <span className="text-[10px] leading-tight">{option.label}</span>
             </button>
           ))}
@@ -211,63 +210,34 @@ function FontSizeSync() {
 }
 
 /**
- * Routes outside the app shell that reach the controls from their own UI (the landing header, the onboarding
- * screen), so a floating button would only cover their content.
+ * The labelled "লেখা ও থিম" button (অ/Aa icon) that opens the controls in a dialog: the landing header, onboarding
+ * and the auth pages. `compact` hides the label visually below 640px (it stays the accessible name).
  */
-const OWN_ACCESSIBILITY_ENTRY = new Set(["/", "/welcome"]);
-
-/** Root-level: font size sync everywhere, plus the floating trigger on the remaining pages outside the app shell. */
-export function AccessibilitySidebar() {
-  const floating = useMatches({
-    select: (matches) =>
-      !matches.some((m) => m.routeId.startsWith("/_app") || OWN_ACCESSIBILITY_ENTRY.has(m.routeId)),
-  });
+export function TextThemeButton({ className, tone = "page", compact = false }: { className?: string; tone?: "page" | "sky"; compact?: boolean }) {
+  const t = useTranslations("accessibility");
   return (
-    <>
-      <FontSizeSync />
-      {floating ? <FloatingAccessibility /> : null}
-    </>
+    <AccessibilityDialog
+      trigger={
+        <button
+          type="button"
+          data-testid="text-theme-button"
+          className={cn(
+            "rp-small inline-flex min-h-12 items-center gap-2 rounded-rp-full px-3.5 font-semibold transition-colors outline-none focus-visible:ring-[3px]",
+            tone === "sky"
+              ? "bg-white/14 text-white hover:bg-white/22 focus-visible:ring-white/70"
+              : "text-rp-ink hover:bg-rp-accent-tint/60 focus-visible:ring-ring",
+            className,
+          )}
+        >
+          <TextSizeIcon size={22} />
+          <span className={compact ? "sr-only sm:not-sr-only" : undefined}>{t("title")}</span>
+        </button>
+      }
+    />
   );
 }
 
-function FloatingAccessibility() {
-  const t = useTranslations("accessibility");
-  const [isOpen, setIsOpen] = useState(false);
-
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        aria-expanded={isOpen}
-        className={cn(
-          "fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] right-4 z-50 flex items-center justify-center lg:bottom-6 lg:right-6 border shadow-lg transition-all duration-200",
-          "h-12 w-12 rounded-full",
-          "bg-primary text-primary-foreground hover:scale-110",
-          "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-          isOpen && "rotate-45",
-        )}
-        aria-label={t("title")}
-      >
-        {isOpen ? <X className="h-5 w-5" /> : <Accessibility className="h-5 w-5" />}
-      </button>
-
-      <div
-        className={cn(
-          "fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-4 z-50 w-[min(92vw,18rem)] md:w-72 lg:bottom-20 lg:right-6",
-          "rounded-xl border bg-card shadow-2xl transition-all duration-200 origin-bottom-right",
-          isOpen ? "scale-100 opacity-100 pointer-events-auto" : "scale-75 opacity-0 pointer-events-none",
-        )}
-        aria-hidden={!isOpen}
-        inert={!isOpen}
-      >
-        <div className="p-4 space-y-4">
-          <h3 className="text-sm font-semibold text-foreground">{t("title")}</h3>
-          <AccessibilityControls />
-        </div>
-      </div>
-
-      {isOpen && <div className="fixed inset-0 z-40 md:hidden" onClick={() => setIsOpen(false)} />}
-    </>
-  );
+/** Root-level: applies the stored font size on every page. */
+export function AccessibilitySidebar() {
+  return <FontSizeSync />;
 }
