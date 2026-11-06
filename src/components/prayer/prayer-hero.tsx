@@ -17,7 +17,7 @@ export interface PrayerHeroProps {
   district: string;
   /** When set, the location pill is a link there (to change the district). */
   locationHref?: string;
-  /** Pre-formatted Hijri date, e.g. "১২ রমযান ১৪৪৮". */
+  /** Pre-formatted Hijri date, e.g. "১২ রমজান ১৪৪৮". */
   hijriLabel?: string;
   /** Where the times come from, e.g. "ইসলামিক ফাউন্ডেশন". Always shown. */
   source: string;

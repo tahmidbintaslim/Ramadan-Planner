@@ -205,7 +205,7 @@ describe("toBengaliDigits", () => {
         ["05:02", "০৫:০২"],
         ["Day 21 of 30", "Day ২১ of ৩০"],
         ["", ""],
-        ["রমযান", "রমযান"],
+        ["রমজান", "রমজান"],
     ])("%s -> %s", (input, out) => {
         expect(toBengaliDigits(input)).toBe(out);
     });
