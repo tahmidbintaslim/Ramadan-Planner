@@ -1,1 +1,27 @@
-{"framework":"tanstack-start","crons":[{"path":"/api/push/dispatch","schedule":"0 0 * * *"}]}
+{
+  "framework": "tanstack-start",
+  "crons": [{ "path": "/api/push/dispatch", "schedule": "0 0 * * *" }],
+  "redirects": [
+    {
+      "source": "/((?!api/push/dispatch).*)",
+      "has": [{ "type": "host", "value": "ramadan-planner-puce\\.vercel\\.app" }],
+      "destination": "https://ramadanplanner.tahmid.space/$1",
+      "permanent": true
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy", "value": "geolocation=(self), camera=(), microphone=()" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        {
+          "key": "Content-Security-Policy-Report-Only",
+          "value": "default-src 'self'; script-src 'self' 'sha256-xscK79fMu9z153gt8TpeaTbKTyJnOKxS2xLDWgDmc90=' 'sha256-w7NdUm/7kBaUmzyuBCjDUPefwwqNgPQDkm7HtLmQzmg=' 'sha256-WBdaHO0Km8lSuTtyGyZ0irW414W/MYySk4PnhsmVk7s=' 'sha256-zFML+AEdb/HsbX66VlYzBOqJKNNHs5/WNGYP8JiblyY=' 'sha256-X2wrMMbXwF8YlnD9Zhh8bF9hOUNwmZzsH/31YtmkwZM=' 'sha256-Jdi69ME7KHmQVBh2HLO6sVZfO4LiHOzmuLUGaT2UEUs=' 'sha256-REkTQ3mZNdOnZ0xWxlKdqBEAWdIVpJdIT6tm57gvq8Y=' https://*.clerk.accounts.dev https://clerk.ramadanplanner.tahmid.space https://challenges.cloudflare.com https://va.vercel-scripts.com https://js.stripe.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://img.clerk.com; font-src 'self' data:; connect-src 'self' https://*.clerk.accounts.dev https://clerk.ramadanplanner.tahmid.space https://clerk-telemetry.com https://api.stripe.com; media-src 'self' https://*.mp3quran.net https://everyayah.com https://the-quran-project.github.io https://github.com https://raw.githubusercontent.com; worker-src 'self' blob:; frame-src https://challenges.cloudflare.com https://js.stripe.com https://checkout.stripe.com; form-action 'self' https://checkout.stripe.com; manifest-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+        }
+      ]
+    }
+  ]
+}

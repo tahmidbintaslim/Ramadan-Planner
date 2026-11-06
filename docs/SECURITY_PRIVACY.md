@@ -11,11 +11,12 @@
 
 - `SUPABASE_SERVICE_ROLE_KEY`, `CLERK_SECRET_KEY`, `VAPID_PRIVATE_KEY`, `CRON_SECRET`, `GOOGLE_OAUTH_CLIENT_SECRET` and `CALENDAR_TOKENS_ENCRYPTION_KEY` are server only. Never prefix them with `VITE_` (Vite ships `VITE_*` values to the browser) or the deprecated `NEXT_PUBLIC_`.
 - Google OAuth tokens are encrypted at rest with AES-256-GCM (`src/lib/secure-json.ts`).
-- ICS feed URLs contain a per-user secret; anyone with the link can read that user's reminder schedule. Revoking clears the secret, but CDN-cached responses can be served for up to an hour plus a 6-hour stale window.
+- ICS feed URLs contain a per-user secret; anyone with the link can read that user's reminder schedule. Only its SHA-256 is stored, responses are `private, no-store`, and revoking takes effect at once.
 - `/api/push/dispatch` rejects calls without the cron secret.
 
 ## App
 
 - Auth pages and logged-in pages: noindex.
 - Log minimal detail; never log secrets or tokens. API routes return fixed error messages and keep details in server logs.
-- Not done yet: rate limiting on sensitive endpoints (push subscribe, calendar sync), a privacy policy, data export and account deletion.
+- Headers, CSP (Report-Only), rate limiting and the Vercel Firewall rules: see [security.md](security.md).
+- Not done yet: a privacy policy, data export and account deletion.
