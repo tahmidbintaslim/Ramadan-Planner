@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanAlAdhanTime, fastTimesFromAlAdhan } from "./fast-times";
+import { ALADHAN_METHOD_PARAMS, ALADHAN_TUNE, cleanAlAdhanTime, fastTimesFromAlAdhan } from "./fast-times";
 import { fetchPrayerTimes } from "./prayer-times";
 import { fetchRamadanTimetable } from "./ramadan-timetable";
 
@@ -67,6 +67,13 @@ describe("fast times: one function for the Home and the timetable", () => {
     expect({ sehri: home.prayerTimes.sehri, iftar: home.prayerTimes.iftar }).toEqual({ sehri: row!.sehri, iftar: row!.iftar });
     expect(home.prayerTimes.sehri).toBe("04:59");
     // Both requests use the same method and school.
-    for (const u of urls.filter((u) => /aladhan/.test(u))) expect(u).toContain("method=1&school=1");
+    for (const u of urls.filter((u) => /aladhan/.test(u))) expect(u).toContain("method=1&school=1&tune=7,0,0,0,0,2,0,0,0");
+  });
+});
+
+describe("IFB tune", () => {
+  it("moves Imsak to Fajr - 3 and Maghrib to sunset + 2, and leaves Fajr alone", () => {
+    expect(ALADHAN_TUNE.split(",").map(Number)).toEqual([7, 0, 0, 0, 0, 2, 0, 0, 0]);
+    expect(ALADHAN_METHOD_PARAMS).toBe("method=1&school=1&tune=7,0,0,0,0,2,0,0,0");
   });
 });
