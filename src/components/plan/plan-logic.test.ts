@@ -283,8 +283,8 @@ describe("plan rows (shared by /plan and the Home preview)", () => {
   const goals = [{ id: "g1", title: "ইফতারের পর যিকর", isCompleted: true, targetCount: 100, targetUnit: "বার" }];
   const base = { tasks, goals, titlesByKey, defaultWindows, todayISO: "2027-03-01", eveningISO: null };
 
-  it("keys, windows and done-for-the-day for a signed-in list", () => {
-    const rows = buildPlanRows({ ...base, isGuest: false, notes: { g1: { doneOn: "2027-03-01" } } });
+  it("keys, windows and done-for-the-day (guest and signed-in lists alike)", () => {
+    const rows = buildPlanRows({ ...base, notes: { g1: { doneOn: "2027-03-01" } } });
     expect(rows.map((r) => [r.id, r.kind, r.key, r.window, r.done])).toEqual([
       ["t1", "task", "quran", "dhuhrToIftar", true],
       ["t2", "task", "sehri", "sehriToDhuhr", false],
@@ -295,19 +295,20 @@ describe("plan rows (shared by /plan and the Home preview)", () => {
   });
 
   it("night practices count for the night's evening when it is known", () => {
-    const rows = buildPlanRows({ ...base, isGuest: false, notes: {}, eveningISO: "2027-02-28" });
+    const rows = buildPlanRows({ ...base, notes: {}, eveningISO: "2027-02-28" });
     expect(rows.find((r) => r.id === "t3")).toMatchObject({ scopeISO: "2027-02-28", done: true });
   });
 
-  it("guest lists use the stored ticks; a note's window and key win over the title guess", () => {
-    const rows = buildPlanRows({ ...base, isGuest: true, notes: { t2: { window: "afterIftar" } } });
-    expect(rows.map((r) => r.done)).toEqual([true, true, true, true]);
+  it("yesterday's ticks do not count today (the lists persist across days); a note's window wins over the title guess", () => {
+    const rows = buildPlanRows({ ...base, notes: { t2: { window: "afterIftar" } } });
+    // t2/t3 were ticked on 2027-02-28; g1 has no tick day.
+    expect(rows.map((r) => r.done)).toEqual([true, false, false, false]);
     expect(rows[1].window).toBe("afterIftar");
-    expect(buildPlanRows({ ...base, tasks: [], goals: [], isGuest: true, notes: {} })).toEqual([]);
+    expect(buildPlanRows({ ...base, tasks: [], goals: [], notes: {} })).toEqual([]);
   });
 
   it("display order follows the windows, keeping the order inside each", () => {
-    const rows = buildPlanRows({ ...base, isGuest: true, notes: {} });
+    const rows = buildPlanRows({ ...base, notes: {} });
     expect(planDisplayOrder(rows).map((r) => r.id)).toEqual(["t2", "t1", "t3", "g1"]);
   });
 });

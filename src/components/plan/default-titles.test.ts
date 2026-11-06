@@ -46,7 +46,6 @@ describe("matchDefaultKey across languages", () => {
     const rows = buildPlanRows({
       tasks: [{ id: "t1", title: "Tahajjud", isDone: false, dueDate: null }],
       goals: [],
-      isGuest: true,
       notes: {},
       titlesByKey: titles,
       defaultWindows: { "night:tahajjud": "afterIftar" },

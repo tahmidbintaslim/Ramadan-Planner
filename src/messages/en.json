@@ -156,7 +156,9 @@
         "fallbackAyahRef": "Surah Al-Fatihah 1:1",
         "dhikrChecklist": "Daily Amal Checklist",
         "reflectionPlaceholder": "Write what you learned or felt today",
-        "myDuaPlaceholder": "The duas you want to make today"
+        "myDuaPlaceholder": "The duas you want to make today",
+        "saveError": "Couldn’t save, so the change was undone. Please try again.",
+        "loadError": "Couldn’t load today’s entries. Please try again later."
     },
     "salah": {
         "fajr": "Fajr",
@@ -229,7 +231,7 @@
         "addTask": "Add Task",
         "noTasks": "No tasks yet",
         "noTasksHint": "Add practical prep items for your home, schedule, and worship routine.",
-        "guestLocalNotice": "Guest mode: your goals and checklist are saved locally for the last 7 days on this device.",
+        "guestLocalNotice": "Guest mode: your amal and trackers are saved on this device for this Ramadan.",
         "genericError": "Something went wrong. Please try again.",
         "dayTitle": "Amal",
         "todayAmal": "Today's Amal",
@@ -325,7 +327,7 @@
         "push": "Push",
         "calendar": "Calendar",
         "chooseChannel": "Choose at least one channel",
-        "guestLocalNotice": "Guest mode: your reminder rules are saved locally for the last 7 days on this device.",
+        "guestLocalNotice": "Guest mode: your reminder rules are saved on this device.",
         "genericError": "Something went wrong. Please try again.",
         "typeLabel": "Remind me about",
         "labelPlaceholder": "e.g. Wake up before Fajr",

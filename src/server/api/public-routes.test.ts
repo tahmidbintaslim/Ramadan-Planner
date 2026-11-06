@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Expected header values copied from the Next handlers in src/app/api/**/route.ts (not from the new constants),
 // so a drift in the port fails here.
-const NEXT_TIMINGS_CC = "public, s-maxage=3600, stale-while-revalidate=86400";
-const NEXT_RAMADAN_CC = "public, s-maxage=3600, stale-while-revalidate=86400";
+const NEXT_TIMINGS_CC = "public, s-maxage=3600, stale-while-revalidate=300";
+const NEXT_RAMADAN_CC = "public, s-maxage=3600, stale-while-revalidate=300";
 const NEXT_TIMETABLE_CC = "public, s-maxage=86400, stale-while-revalidate=604800";
 const NEXT_QURAN_CC = "public, s-maxage=604800, stale-while-revalidate=2592000";
 const NEXT_DAILY_CC = "public, s-maxage=3600, stale-while-revalidate=86400";
@@ -57,9 +57,9 @@ describe("GET /api/timings", () => {
 
   it("uses timezone defaults and explicit params", async () => {
     m.fetchPrayerTimes.mockResolvedValue({});
-    await handleTimings(req("/api/timings?tz=Europe/London&date=01-03-2026"));
+    await handleTimings(req("/api/timings?tz=Europe/London&date=2026-03-01"));
     expect(m.fetchPrayerTimes).toHaveBeenCalledWith(51.5074, -0.1278, "01-03-2026", "Europe/London", "London, UK");
-    await handleTimings(req("/api/timings?tz=Asia/Dhaka&lat=10&lng=20&location=X&date=01-03-2026"));
+    await handleTimings(req("/api/timings?tz=Asia/Dhaka&lat=10&lng=20&location=X&date=2026-03-01"));
     expect(m.fetchPrayerTimes).toHaveBeenLastCalledWith(10, 20, "01-03-2026", "Asia/Dhaka", "X");
   });
 
@@ -75,10 +75,18 @@ describe("GET /api/timings", () => {
     expect(text).toBe(JSON.stringify({ error: "Failed to fetch prayer times" }));
   });
 
-  it("an unexpected throw outside the old try (bad timezone) is a masked 500, not a leak", async () => {
-    const res = await handleTimings(req("/api/timings?tz=Not/AZone"));
-    expect(res.status).toBe(500);
-    expect(await res.json()).toEqual({ ok: false, error: "internal_error" });
+  it("400 on a bad timezone or date (validated before any upstream call)", async () => {
+    for (const q of ["tz=Not/AZone", "tz=", `tz=${"A".repeat(65)}`]) {
+      const res = await handleTimings(req(`/api/timings?${q}`));
+      expect(res.status, q).toBe(400);
+      expect(await res.json()).toEqual({ error: "Invalid timezone" });
+    }
+    for (const q of ["date=01-03-2026", "date=2026-3-1", "date=2026-02-30", "date=today"]) {
+      const res = await handleTimings(req(`/api/timings?tz=Asia/Dhaka&${q}`));
+      expect(res.status, q).toBe(400);
+      expect(await res.json()).toEqual({ error: "Invalid date" });
+    }
+    expect(m.fetchPrayerTimes).not.toHaveBeenCalled();
   });
 });
 
@@ -101,6 +109,20 @@ describe("GET /api/ramadan", () => {
     const res = await handleRamadan(req("/api/ramadan"));
     expect(res.status).toBe(502);
     expect(await res.json()).toEqual({ error: "Failed to fetch Ramadan status" });
+  });
+
+  it("accepts the local date (cache key only); 400 on a bad timezone or date", async () => {
+    m.getRamadanStatus.mockResolvedValueOnce({});
+    const ok = await handleRamadan(req("/api/ramadan?tz=Asia/Dhaka&date=2027-02-20"));
+    expect(ok.status).toBe(200);
+    expect(m.getRamadanStatus).toHaveBeenCalledWith("Asia/Dhaka", "BD", undefined);
+    const tz = await handleRamadan(req("/api/ramadan?tz=Mars/Base"));
+    expect(tz.status).toBe(400);
+    expect(await tz.json()).toEqual({ error: "Invalid timezone" });
+    const date = await handleRamadan(req("/api/ramadan?tz=Asia/Dhaka&date=20-02-2027"));
+    expect(date.status).toBe(400);
+    expect(await date.json()).toEqual({ error: "Invalid date" });
+    expect(m.getRamadanStatus).toHaveBeenCalledTimes(1);
   });
 });
 

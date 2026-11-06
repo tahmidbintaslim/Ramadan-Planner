@@ -11,6 +11,8 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { pruneLocalHistory } from "@/lib/local-history";
+import { migrateUtcDayKey } from "@/lib/local-day";
+import { useLocalTodayISO } from "@/hooks/use-local-day";
 
 const TASBIH_PRESETS = [33, 99, 100];
 const STORAGE_KEY_PREFIX = "rp_tasbih_state_v1_";
@@ -35,6 +37,8 @@ function readTasbihState(key: string): TasbihState {
   }
 
   try {
+    // Today's count may still sit under the old UTC-date key (one-time copy).
+    migrateUtcDayKey(key);
     const raw = localStorage.getItem(key);
     if (!raw) {
       return {
@@ -91,11 +95,11 @@ export function TasbihContent() {
   const tLanding = useTranslations("landing");
   const tTasbih = useTranslations("tasbih");
   const locale = useLocale();
-  const todayKey = useMemo(
-    () => `${STORAGE_KEY_PREFIX}${new Date().toISOString().slice(0, 10)}`,
-    [],
-  );
+  // The local day (live): at local midnight the counter switches to the new day's entry.
+  const todayKey = `${STORAGE_KEY_PREFIX}${useLocalTodayISO()}`;
   const initialState = useMemo(() => readTasbihState(todayKey), [todayKey]);
+  /** The key the state below was loaded from: it is only ever written back under this key. */
+  const [loadedKey, setLoadedKey] = useState(todayKey);
   const [count, setCount] = useState(initialState.count);
   const [target, setTarget] = useState(initialState.target);
   const [targetInput, setTargetInput] = useState(() => formatLocalizedNumber(initialState.target, locale));
@@ -103,9 +107,20 @@ export function TasbihContent() {
   const [totalIncrements, setTotalIncrements] = useState(initialState.totalIncrements);
   const [completedCycles, setCompletedCycles] = useState(initialState.completedCycles);
 
+  // A new day: load its entry during this render (yesterday's count is never written under today's key).
+  if (loadedKey !== todayKey) {
+    setLoadedKey(todayKey);
+    setCount(initialState.count);
+    setTarget(initialState.target);
+    setTargetInput(formatLocalizedNumber(initialState.target, locale));
+    setAutoEnabled(initialState.autoEnabled);
+    setTotalIncrements(initialState.totalIncrements);
+    setCompletedCycles(initialState.completedCycles);
+  }
+
   useEffect(() => {
-    pruneLocalHistory("rp_tasbih_state_v1", 7);
-  }, []);
+    pruneLocalHistory("rp_tasbih_state_v1");
+  }, [todayKey]);
 
   const percent = useMemo(() => {
     if (target <= 0) return 0;
@@ -113,7 +128,7 @@ export function TasbihContent() {
   }, [count, target]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || loadedKey !== todayKey) return;
     const payload: TasbihState = {
       count,
       target,
@@ -126,7 +141,7 @@ export function TasbihContent() {
     } catch {
       // Best effort only
     }
-  }, [autoEnabled, completedCycles, count, target, todayKey, totalIncrements]);
+  }, [autoEnabled, completedCycles, count, loadedKey, target, todayKey, totalIncrements]);
 
   const incrementCount = useCallback((options?: { stopAtTarget?: boolean }) => {
     const stopAtTarget = options?.stopAtTarget ?? false;
@@ -166,7 +181,7 @@ export function TasbihContent() {
 
   const resetAll = () => {
     setCount(0);
-    setAutoEnabled(false);
+    setAutoEnabled(initialState.autoEnabled);
     setTotalIncrements(0);
     setCompletedCycles(0);
   };

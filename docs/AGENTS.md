@@ -9,7 +9,7 @@ Goal: A high-performance TanStack Start (React 19) website for Bangladeshi Musli
 - Frontend: TanStack Start (TanStack Router, Vite, Nitro), Tailwind CSS
 - UI Components: shadcn/ui
 - Auth: Clerk
-- Database: PostgreSQL on Supabase, accessed through Prisma 7 and, for planner data, supabase-js with the service role key (server only)
+- Database: PostgreSQL on Supabase, accessed through Prisma 7 (server only)
 - Testing: Vitest (unit); Playwright smoke tests in `e2e/` against the built server (`npm run test:e2e`).
 - Hosting: Vercel
 
@@ -33,7 +33,7 @@ Goal: A high-performance TanStack Start (React 19) website for Bangladeshi Musli
 - Server-only code (Prisma, secrets, service role) lives in `src/server/` and is reached through server functions (`src/actions/*`) or server routes; components never import it directly.
 - Public pages: SEO-first (per-route `head()` via `pageHead` in `src/lib/seo.ts`), cache headers where possible.
 - Authenticated pages: privacy-first, noindex.
-- Data layer: server queries bypass RLS (Prisma and the service role), so every query must filter by the signed-in user's ID from `getAppAuthUser()`; never trust a client `user_id`.
+- Data layer: server queries bypass RLS (Prisma connects as the owner), so every query must filter by the signed-in user's ID from `getAppAuthUser()`; never trust a client `user_id`.
 
 ## Definition of Done (DoD)
 

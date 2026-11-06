@@ -318,21 +318,21 @@ export interface PlanRowSource {
 }
 
 /**
- * The plan's tasks then goals as rows with their suggestion key, window and done-for-the-day state. Guest lists
- * are stored per day; signed-in task ticks count for the day they were made (doneForDay), goal ticks for the day
- * kept in the item note (goalDoneForDay). `defaultWindows` maps suggestion keys to their window.
+ * The plan's tasks then goals as rows with their suggestion key, window and done-for-the-day state. The lists are
+ * persistent (guest and signed-in alike): task ticks count for the day they were made (doneForDay, the day is in
+ * `dueDate`), goal ticks for the day kept in the item note (goalDoneForDay). `defaultWindows` maps suggestion keys
+ * to their window.
  */
 export function buildPlanRows(input: {
   tasks: ReadonlyArray<{ id: string; title: string; isDone: boolean; dueDate: string | null }>;
   goals: ReadonlyArray<{ id: string; title: string; isCompleted: boolean; targetCount: number; targetUnit: string }>;
-  isGuest: boolean;
   notes: Readonly<Record<string, PlanRowNote | undefined>>;
   titlesByKey: Readonly<Record<string, readonly string[]>>;
   defaultWindows: Readonly<Record<string, PlanWindow | undefined>>;
   todayISO: string;
   eveningISO: string | null;
 }): PlanRowSource[] {
-  const { tasks, goals, isGuest, notes, titlesByKey, defaultWindows, todayISO, eveningISO } = input;
+  const { tasks, goals, notes, titlesByKey, defaultWindows, todayISO, eveningISO } = input;
   return [
     ...tasks.map((task): PlanRowSource => {
       const note = notes[task.id];
@@ -344,7 +344,7 @@ export function buildPlanRows(input: {
         rawTitle: task.title,
         key,
         scopeISO,
-        done: isGuest ? task.isDone : doneForDay(task, scopeISO),
+        done: doneForDay(task, scopeISO),
         window: note?.window ?? (key ? defaultWindows[key] : undefined) ?? windowFromTitle(task.title),
       };
     }),
@@ -355,7 +355,7 @@ export function buildPlanRows(input: {
         kind: "goal",
         rawTitle: goal.title,
         scopeISO: todayISO,
-        done: isGuest ? goal.isCompleted : goalDoneForDay(goal.isCompleted, note?.doneOn, todayISO),
+        done: goalDoneForDay(goal.isCompleted, note?.doneOn, todayISO),
         window: note?.window ?? windowFromTitle(goal.title),
         targetCount: goal.targetCount,
         targetUnit: goal.targetUnit,

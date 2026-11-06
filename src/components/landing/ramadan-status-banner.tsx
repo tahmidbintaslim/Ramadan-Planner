@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { CalendarDays, Moon, Star } from "lucide-react";
 import type { RamadanStatus } from "@/lib/ramadan-date";
 import { storedRequestLocation } from "@/lib/user-location";
+import { localTodayISO } from "@/lib/local-day";
 import {
   formatLocalizedNumber,
   localizeAsciiDigits,
@@ -24,7 +25,8 @@ export function RamadanStatusBanner() {
         // The location chosen at onboarding wins (no geolocation prompt); otherwise the device position.
         const stored = storedRequestLocation();
         const tz = stored?.tz ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
-        const params = new URLSearchParams({ tz });
+        // The local date keys the CDN cache (a new entry at local midnight).
+        const params = new URLSearchParams({ tz, date: localTodayISO(new Date(), tz) });
 
         if (stored) {
           params.set("lat", stored.lat.toFixed(2));

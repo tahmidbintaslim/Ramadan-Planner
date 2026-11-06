@@ -1,6 +1,6 @@
-import { localTodayISO } from "@/lib/local-day";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import type { RamadanTimetable } from "@/lib/ramadan-timetable";
+import { useLocalTodayISO } from "@/hooks/use-local-day";
 import { paraFromText, quranStreak } from "./plan-logic";
 
 // Data the plan screen reads from elsewhere in the app: the Ramadan timetable (night times and odd-night rows),
@@ -36,7 +36,7 @@ export function usePlanTimetable(enabled: boolean): { timetable: RamadanTimetabl
 // ── Quran tracker progress ──
 
 const QURAN_LAST_READ_KEY = "rp_quran_last_read_v1";
-// The tracker's per-day entries: rp_quran_<YYYY-MM-DD> (UTC date, see getTodayKey), kept for 7 days.
+// The tracker's per-day entries: rp_quran_<YYYY-MM-DD> (the local date, see local-day.ts), kept for 7 days.
 const DAY_KEY = /^rp_quran_(\d{4}-\d{2}-\d{2})$/;
 
 function hasQuranEntry(raw: string | null): boolean {
@@ -78,6 +78,7 @@ function subscribeStorage(onChange: () => void) {
 /** Para (1-30) of the last Quran reading and the day streak; null/0 until known (and on the server). */
 export function useQuranProgress(): { para: number | null; streak: number } {
   const snapshot = useSyncExternalStore(subscribeStorage, readQuranSnapshot, () => "");
+  const todayISO = useLocalTodayISO();
   return useMemo(() => {
     if (!snapshot) return { para: null, streak: 0 };
     const [lastRaw, daysRaw = ""] = snapshot.split("\n");
@@ -88,8 +89,6 @@ export function useQuranProgress(): { para: number | null; streak: number } {
       para = null;
     }
     const days = new Set(daysRaw ? daysRaw.split(",") : []);
-    // The local day (stored location, device zone, Dhaka), not the UTC date: a Dhaka morning before 06:00 is today.
-    const todayISO = localTodayISO();
     return { para, streak: quranStreak(todayISO, (iso) => days.has(iso)) };
-  }, [snapshot]);
+  }, [snapshot, todayISO]);
 }

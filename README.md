@@ -53,7 +53,7 @@ Icons: [Hugeicons](https://hugeicons.com) (the free Islamic icon set and the MIT
 | UI | Tailwind CSS 4, shadcn/ui, use-intl (Bengali default, English) |
 | Auth | Clerk (`clerkMiddleware()` in `src/start.ts`, `src/lib/auth/server.ts`, `src/server/auth-middleware.ts`) |
 | Database | PostgreSQL hosted on Supabase |
-| Data access | Prisma 7 with the `pg` adapter for content, Quran, hadith, announcements, push and calendar data; `supabase-js` with the service role key, on the server only, for planner data (daily logs, goals, plan tasks, reminder rules, profile) in `src/server/planner-impl.ts` |
+| Data access | Prisma 7 with the `pg` adapter, on the server only, for all data (content, Quran, hadith, announcements, push, calendar and the planner data in `src/server/planner-impl.ts`). The Supabase Data API (REST) is not used |
 | Tests | Vitest (unit), Playwright (e2e smoke against the built server) |
 | Hosting | Vercel |
 
@@ -74,7 +74,7 @@ flowchart LR
 
   browser -->|HTTPS| app
   app --> clerk
-  app -->|"Prisma (pg) and supabase-js"| db
+  app -->|"Prisma (pg)"| db
   app --> prayer
   app --> quran
   app --> google
@@ -83,14 +83,14 @@ flowchart LR
   calapps -->|private ICS feed| app
 ```
 
-Supabase Auth is not used. Clerk user IDs are mapped to stable UUIDs (`src/lib/auth/server.ts`) and every server query filters by that ID. The service role key bypasses Postgres row-level security, so the RLS policies in `supabase/migrations` do not protect these queries; the scoping in application code does. More in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/SECURITY_PRIVACY.md](docs/SECURITY_PRIVACY.md).
+Supabase Auth is not used. Clerk user IDs are mapped to stable UUIDs (`src/lib/auth/server.ts`) and every server query filters by that ID. Prisma connects as the database owner, which bypasses Postgres row-level security, so the scoping in application code is what protects these queries. RLS is enabled with no grants for the API roles (`supabase/migrations/006_enable_rls.sql`) so the Data API exposes nothing. More in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/SECURITY_PRIVACY.md](docs/SECURITY_PRIVACY.md).
 
 ## Getting started
 
 ### Prerequisites
 
 - Node.js 22 (see `.nvmrc`) and npm 10
-- For signed-in features: a Supabase project (Postgres plus its REST API, which the planner actions use) and a Clerk application
+- For signed-in features: a Postgres database (a Supabase project works) and a Clerk application
 - Optional: a Google OAuth client for calendar sync, and VAPID keys for push
 
 ### Run it locally without any accounts
@@ -113,7 +113,7 @@ Open http://localhost:3000. Clerk needs keys even in development (the TanStack S
 
 ### Full setup
 
-Fill in `.env.local`. [`.env.example`](.env.example) lists every variable the app and scripts read, with a comment for each. The minimum for signed-in use is `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `VITE_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY`. Only `VITE_*` variables reach the browser; the Next.js-era `NEXT_PUBLIC_*` names are deprecated but still read as fallbacks (the table at the top of `.env.example` maps old to new). Without Clerk keys the server fails on every page. Clearly fake, well-formed keys (as in `.github/workflows/ci.yml`) are enough to render the signed-out pages for tests, as long as the browser carries Clerk's dev-browser cookie (the e2e fixtures set it); signing in needs real keys.
+Fill in `.env.local`. [`.env.example`](.env.example) lists every variable the app and scripts read, with a comment for each. The minimum for signed-in use is `DATABASE_URL`, `VITE_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY`. Only `VITE_*` variables reach the browser; the Next.js-era `NEXT_PUBLIC_*` names are deprecated but still read as fallbacks (the table at the top of `.env.example` maps old to new). Without Clerk keys the server fails on every page. Clearly fake, well-formed keys (as in `.github/workflows/ci.yml`) are enough to render the signed-out pages for tests, as long as the browser carries Clerk's dev-browser cookie (the e2e fixtures set it); signing in needs real keys.
 
 #### Database
 
@@ -190,7 +190,7 @@ src/
   server/       Server-only implementations, auth/CSRF/error middleware, API handlers
   components/   UI grouped by feature; shadcn/ui primitives in ui/
   lib/          Prayer times, Ramadan dates and timetable, Quran, push schedule,
-                calendar, auth, Prisma and Supabase clients (unit tests sit next to them)
+                calendar, auth and the Prisma client (unit tests sit next to them)
   i18n/         use-intl provider and locale loader
   messages/     bn.json and en.json
   start.ts      Request middleware (CSRF, Clerk) and global server-function middleware

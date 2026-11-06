@@ -8,11 +8,14 @@ import { localizeAsciiDigits, toAsciiDigits } from "@/lib/locale-number";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { useGuestData, getTodayKey } from "@/hooks/use-guest-data";
+import { useGuestData } from "@/hooks/use-guest-data";
+import { useLocalDayKey, useLocalTodayISO } from "@/hooks/use-local-day";
 import { SignupPrompt } from "@/components/shared/signup-prompt";
 import { useAuth } from "@/components/providers/auth-provider";
-import { getDailyLogAction, saveDailyLogAction } from "@/actions/planner";
+import { saveDailyLogAction } from "@/actions/planner";
 import { Badge } from "@/components/ui/badge";
+import { useServerDailyLogField } from "./use-server-daily-log";
+import { TrackerError } from "./tracker-error";
 
 interface QuranData {
   para: string;
@@ -27,28 +30,25 @@ interface LastReadSnapshot extends QuranData {
 }
 
 const LAST_READ_KEY = "rp_quran_last_read_v1";
+const EMPTY_QURAN: QuranData = { para: "", surah: "", ayah: "", pages: "" };
+const pickQuran = (log: { quran: QuranData } | null): QuranData => log?.quran ?? EMPTY_QURAN;
 
 export function QuranTracker({ day }: { day: number }) {
   const t = useTranslations("quran");
   const tToday = useTranslations("today");
   const locale = useLocale();
   const { isGuest, loading } = useAuth();
+  const todayISO = useLocalTodayISO();
 
   const { data: guestData, updateData, showPrompt, dismissPrompt } =
-    useGuestData<QuranData>(getTodayKey("quran"), {
-      para: "",
-      surah: "",
-      ayah: "",
-      pages: "",
-    });
+    useGuestData<QuranData>(useLocalDayKey("quran"), EMPTY_QURAN);
 
-  const [serverData, setServerData] = useState<QuranData>({
-    para: "",
-    surah: "",
-    ayah: "",
-    pages: "",
-  });
+  const signedIn = !loading && !isGuest;
+  const server = useServerDailyLogField(day, todayISO, signedIn, pickQuran);
+  const serverData = server.value ?? EMPTY_QURAN;
+  const setServerData = server.setValue;
   const [dirty, setDirty] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">(
     "idle",
   );
@@ -71,22 +71,12 @@ export function QuranTracker({ day }: { day: number }) {
       return null;
     }
   });
-  const lastSavedPayloadRef = useRef("");
+  const latestRef = useRef(serverData);
   const savedStateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (loading || isGuest) return;
-
-    const load = async () => {
-      const res = await getDailyLogAction(day);
-      if (res.ok && res.data) {
-        setServerData(res.data.quran);
-        lastSavedPayloadRef.current = JSON.stringify(res.data.quran);
-      }
-    };
-
-    load();
-  }, [day, isGuest, loading]);
+    latestRef.current = serverData;
+  }, [serverData]);
 
   useEffect(() => {
     return () => {
@@ -119,17 +109,24 @@ export function QuranTracker({ day }: { day: number }) {
   }, [day]);
 
   useEffect(() => {
-    if (loading || isGuest || !dirty) return;
+    if (!signedIn || !dirty || server.value === null) return;
 
-    const payload = JSON.stringify(serverData);
+    const snapshot = serverData;
+    const payload = JSON.stringify(snapshot);
 
     const timeout = setTimeout(() => {
       const save = async () => {
         setSaveState("saving");
-        const res = await saveDailyLogAction({ day, quran: serverData });
-        if (res.ok) {
-          lastSavedPayloadRef.current = payload;
-          persistLastRead(serverData);
+        let ok = false;
+        try {
+          ok = (await saveDailyLogAction({ day, logDate: todayISO, quran: snapshot })).ok;
+        } catch {
+          ok = false;
+        }
+        // Typed text is never thrown away: a failed save keeps the entry (marked unsaved, retried on the next edit).
+        if (ok) {
+          persistLastRead(snapshot);
+          setSaveFailed(false);
           setSaveState("saved");
           if (savedStateTimerRef.current) {
             clearTimeout(savedStateTimerRef.current);
@@ -139,18 +136,22 @@ export function QuranTracker({ day }: { day: number }) {
             1200,
           );
         } else {
+          setSaveFailed(true);
           setSaveState("idle");
         }
-        setDirty(false);
+        // Edits made while the request was in flight still need saving.
+        if (JSON.stringify(latestRef.current) === payload) setDirty(false);
       };
 
       void save();
     }, 650);
 
     return () => clearTimeout(timeout);
-  }, [day, dirty, isGuest, loading, persistLastRead, serverData]);
+  }, [day, dirty, signedIn, persistLastRead, serverData, server.value, todayISO]);
 
   const data = isGuest ? guestData : serverData;
+  // Signed in: editing waits for the day's log (an edit before it would save over the stored entry).
+  const locked = !isGuest && server.value === null;
 
   const paraNumber = useMemo(() => Number.parseInt(data.para || "0", 10), [data.para]);
   const pagesNumber = useMemo(() => Number.parseInt(data.pages || "0", 10), [data.pages]);
@@ -176,13 +177,9 @@ export function QuranTracker({ day }: { day: number }) {
       return;
     }
 
-    setServerData((prev) => {
-      if (prev[field] === nextValue) return prev;
-      return { ...prev, [field]: nextValue };
-    });
-    if (data[field] !== nextValue) {
-      setDirty(true);
-    }
+    if (locked || data[field] === nextValue) return;
+    setServerData((prev) => ({ ...prev, [field]: nextValue }));
+    setDirty(true);
   };
 
   const incrementNumberField = (
@@ -208,17 +205,18 @@ export function QuranTracker({ day }: { day: number }) {
       return;
     }
 
-    setServerData(nextData);
+    if (locked) return;
+    setServerData(() => nextData);
     setDirty(true);
   };
 
   const clearToday = () => {
-    const empty: QuranData = { para: "", surah: "", ayah: "", pages: "" };
     if (isGuest) {
-      updateData(() => empty);
+      updateData(() => EMPTY_QURAN);
       return;
     }
-    setServerData(empty);
+    if (locked) return;
+    setServerData(() => EMPTY_QURAN);
     setDirty(true);
   };
 
@@ -268,7 +266,7 @@ export function QuranTracker({ day }: { day: number }) {
                     : `${t("para")} ${lastRead.para ? num(lastRead.para) : "-"}`}
                 </p>
               </div>
-              <Button variant="soft" onClick={applyLastRead}>
+              <Button variant="soft" onClick={applyLastRead} disabled={locked}>
                 {t("continueFromLast")}
               </Button>
             </div>
@@ -281,6 +279,7 @@ export function QuranTracker({ day }: { day: number }) {
                 {t("para")}
               </Label>
               <Input
+                disabled={locked}
                 id="para"
                 inputMode="numeric"
                 autoComplete="off"
@@ -294,6 +293,7 @@ export function QuranTracker({ day }: { day: number }) {
                   type="button"
                   variant="soft"
                   onClick={() => incrementNumberField("para", 1)}
+                  disabled={locked}
                 >
                   +{num(1)} {t("para")}
                 </Button>
@@ -304,6 +304,7 @@ export function QuranTracker({ day }: { day: number }) {
                 {t("surah")}
               </Label>
               <Input
+                disabled={locked}
                 id="surah"
                 placeholder={t("surah")}
                 value={data.surah}
@@ -316,6 +317,7 @@ export function QuranTracker({ day }: { day: number }) {
                 {t("ayah")}
               </Label>
               <Input
+                disabled={locked}
                 id="ayah"
                 inputMode="numeric"
                 autoComplete="off"
@@ -329,6 +331,7 @@ export function QuranTracker({ day }: { day: number }) {
                   type="button"
                   variant="soft"
                   onClick={() => incrementNumberField("ayah", 1)}
+                  disabled={locked}
                 >
                   +{num(1)} {t("ayah")}
                 </Button>
@@ -339,6 +342,7 @@ export function QuranTracker({ day }: { day: number }) {
                 {t("page")}
               </Label>
               <Input
+                disabled={locked}
                 id="pages"
                 inputMode="numeric"
                 autoComplete="off"
@@ -352,6 +356,7 @@ export function QuranTracker({ day }: { day: number }) {
                   type="button"
                   variant="soft"
                   onClick={() => incrementNumberField("pages", 1)}
+                  disabled={locked}
                 >
                   +{num(1)} {t("page")}
                 </Button>
@@ -359,10 +364,11 @@ export function QuranTracker({ day }: { day: number }) {
             </div>
           </div>
           <div className="mt-4 flex justify-end">
-            <Button type="button" variant="quiet" onClick={clearToday}>
+            <Button type="button" variant="quiet" onClick={clearToday} disabled={locked}>
               {t("clearToday")}
             </Button>
           </div>
+          <TrackerError loadFailed={server.loadFailed} saveFailed={saveFailed} />
         </CardContent>
       </Card>
       <SignupPrompt open={showPrompt} onClose={dismissPrompt} />
