@@ -86,7 +86,7 @@
         "loginHere": "Login here",
         "unavailableSignInTitle": "Sign-in is unavailable right now",
         "unavailableSignUpTitle": "Sign-up is unavailable right now",
-        "unavailableBody": "The account service isn't loading. The app still works without an account: your plan and trackers are saved on this device.",
+        "unavailableBody": "The account service isn't loading. The app still works without an account: your plan and trackers are then saved on this device. To see data saved to your account, sign in later.",
         "unavailableContinue": "Continue without an account",
         "unavailableRetry": "Try again"
     },
@@ -339,7 +339,8 @@
         "offsetLabel": "How long before or after",
         "minutesUnit": "minutes",
         "offsetHint": "A negative value means before: {example} = {minutes} minutes before.",
-        "channelsLabel": "How to remind you"
+        "channelsLabel": "How to remind you",
+        "offsetInvalid": "Enter the offset in whole minutes, within {limit} minutes (for example -15 or 10)."
     },
     "settings": {
         "title": "Settings",
@@ -823,7 +824,9 @@
         "tomorrow": "Tomorrow",
         "planTitleNoCount": "Today's plan",
         "planEmpty": "Nothing in today's plan yet.",
-        "planEmptyAction": "Set up today's plan"
+        "planEmptyAction": "Set up today's plan",
+        "planError": "Today's plan couldn't be loaded or saved right now.",
+        "planErrorAction": "Try again on the plan page"
     },
     "supportPage": {
         "metaTitle": "Sadaqah & contribute",

@@ -361,3 +361,21 @@ export function planDisplayOrder<T extends { window: PlanWindow }>(rows: readonl
   const groups = groupByWindow(rows);
   return PLAN_WINDOWS.flatMap((w) => groups[w]);
 }
+
+/**
+ * The evening date (YYYY-MM-DD) of the night whose practices are ticked now, the same day /plan uses from its
+ * timetable row (roza `night - 1`): `todayISO` from maghrib, yesterday before fajr; null outside the last ten
+ * nights. Lets the Home preview count night ticks for the same day as /plan.
+ */
+export function nightEveningISO(
+  ramadanDay: number | null,
+  now: Date,
+  fajrToday: Date | null,
+  maghribToday: Date | null,
+  todayISO: string,
+): string | null {
+  if (ramadanDay === null || !nightsViewAvailable(ramadanDay, now, fajrToday, maghribToday)) return null;
+  const shift = currentNight(ramadanDay, now, fajrToday) - 1 - ramadanDay;
+  const [y, m, d] = todayISO.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d + shift)).toISOString().slice(0, 10);
+}

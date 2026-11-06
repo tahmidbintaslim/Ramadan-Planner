@@ -50,6 +50,8 @@ export function SettingsContent() {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const { user, isGuest, loading } = useAuth();
+  // The guest-only sign-in notes wait for auth, so a signed-in user never sees them while Clerk loads.
+  const showSignInNote = !loading && isGuest;
 
   const [displayName, setDisplayName] = useState("");
   const [timezone, setTimezone] = useState("Asia/Dhaka");
@@ -404,19 +406,19 @@ export function SettingsContent() {
             </div>
           </div>
 
-          {isGuest ? (
+          {showSignInNote ? (
             <p id="calendar-signin-reason" className="rp-small rounded-rp-md bg-rp-accent-tint px-3 py-2 text-rp-ink">
               {t("signInRequired")}{" "}
-              <Link href="/sign-in" className="font-semibold text-rp-accent underline-offset-4 hover:underline">
+              <Link href="/sign-in" className="inline-flex min-h-[44px] items-center font-semibold text-rp-accent underline-offset-4 hover:underline">
                 {tAuth("login")}
               </Link>
             </p>
           ) : null}
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={generateIcsLink} disabled={isPending || isGuest} aria-describedby={isGuest ? "calendar-signin-reason" : undefined}>
+            <Button variant="outline" onClick={generateIcsLink} disabled={isPending || isGuest} aria-describedby={showSignInNote ? "calendar-signin-reason" : undefined}>
               {t("generateIcs")}
             </Button>
-            <Button variant="destructive" onClick={revokeIcsLink} disabled={isPending || isGuest || !icsLink} aria-describedby={isGuest ? "calendar-signin-reason" : undefined}>
+            <Button variant="destructive" onClick={revokeIcsLink} disabled={isPending || isGuest || !icsLink} aria-describedby={showSignInNote ? "calendar-signin-reason" : undefined}>
               {t("revokeIcs")}
             </Button>
           </div>
@@ -437,15 +439,15 @@ export function SettingsContent() {
               count: formatLocalizedNumber(pushCount, locale),
             })}
           </p>
-          {isGuest ? (
+          {showSignInNote ? (
             <p id="push-signin-reason" className="rp-small rounded-rp-md bg-rp-accent-tint px-3 py-2 text-rp-ink">
               {t("signInRequired")}{" "}
-              <Link href="/sign-in" className="font-semibold text-rp-accent underline-offset-4 hover:underline">
+              <Link href="/sign-in" className="inline-flex min-h-[44px] items-center font-semibold text-rp-accent underline-offset-4 hover:underline">
                 {tAuth("login")}
               </Link>
             </p>
           ) : null}
-          <Button variant="outline" onClick={enablePush} disabled={isGuest} aria-describedby={isGuest ? "push-signin-reason" : undefined}>
+          <Button variant="outline" onClick={enablePush} disabled={isGuest} aria-describedby={showSignInNote ? "push-signin-reason" : undefined}>
             {t("enablePush")}
           </Button>
         </CardContent>

@@ -7,6 +7,14 @@ describe("locale numbers", () => {
     expect(formatLocalizedNumber(-15, "bn")).toBe("-১৫");
     expect(formatLocalizedNumber(33, "en")).toBe("33");
     expect(localizeAsciiDigits("+1 / -1", "bn")).toBe("+১ / -১");
+    expect(localizeAsciiDigits("05:02, 1.50", "bn")).toBe("০৫:০২, ১.৫০");
+    expect(localizeAsciiDigits("05:02", "en")).toBe("05:02");
+  });
+
+  it("localizes any number of digits without throwing (a pasted 22-digit value)", () => {
+    const long = "1234567890123456789012";
+    expect(() => localizeAsciiDigits(long, "bn")).not.toThrow();
+    expect(localizeAsciiDigits(long, "bn")).toBe("১২৩৪৫৬৭৮৯০১২৩৪৫৬৭৮৯০১২");
   });
 
   it("converts Bengali digits to ASCII", () => {
@@ -21,6 +29,9 @@ describe("locale numbers", () => {
     expect(parseLocalizedNumber("১২.৫")).toBe(12.5);
     expect(parseLocalizedNumber("-১৫")).toBe(-15);
     expect(parseLocalizedNumber("−15")).toBe(-15);
+    expect(parseLocalizedNumber("+15")).toBe(15);
+    expect(parseLocalizedNumber("+১৫")).toBe(15);
+    expect(parseLocalizedNumber("+-1")).toBeNull();
     expect(parseLocalizedNumber("৩৩")).toBe(33);
     expect(parseLocalizedNumber("")).toBeNull();
     expect(parseLocalizedNumber("abc")).toBeNull();

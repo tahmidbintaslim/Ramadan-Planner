@@ -61,9 +61,17 @@ export function useTodayPlan(todayISO: string, eveningISO: string | null = null)
 
   /** Ticks or unticks a row for its day (goal ticks remember the day on this device when signed in). */
   const toggleRow = (row: Pick<PlanRowSource, "id" | "kind" | "scopeISO">, next: boolean) => {
-    if (!plan.ready) return;
-    plan.toggle(row.kind, row.id, next, row.scopeISO);
-    if (row.kind === "goal" && !plan.isGuest) remember(row.id, { doneOn: row.scopeISO });
+    if (!plan.ready || plan.pending.has(row.id)) return;
+    if (row.kind !== "goal" || plan.isGuest) {
+      plan.toggle(row.kind, row.id, next, row.scopeISO);
+      return;
+    }
+    // Signed-in goal ticks keep their day in the item note; a failed save restores the previous day.
+    const previous = notes[row.id]?.doneOn;
+    remember(row.id, { doneOn: row.scopeISO });
+    plan.toggle(row.kind, row.id, next, row.scopeISO, (ok) => {
+      if (!ok) remember(row.id, { doneOn: previous });
+    });
   };
 
   return { plan, notes, remember, forget, quran, titleOf, titlesByKey, rows, done, total: rows.length, toggleRow };

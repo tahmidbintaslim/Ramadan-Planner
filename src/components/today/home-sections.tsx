@@ -122,6 +122,8 @@ export interface PlanPreviewState {
   ready: boolean;
   pending: ReadonlySet<string>;
   toggleRow: (row: PlanPreviewRow, next: boolean) => void;
+  /** The last load or save failed (a failed tick is rolled back). */
+  error?: boolean;
 }
 
 export function PlanPreview({ state, className }: { state: PlanPreviewState; className?: string }) {
@@ -148,15 +150,25 @@ export function PlanPreview({ state, className }: { state: PlanPreviewState; cla
           </Link>
         }
       />
+      {state.error ? (
+        <p role="alert" data-testid="plan-preview-error" className="rp-small rounded-rp-md bg-destructive/10 px-4 py-3 text-destructive">
+          {t("planError")}{" "}
+          <Link href={PLAN_HREF} className="inline-flex min-h-[44px] items-center font-semibold underline underline-offset-4">
+            {t("planErrorAction")}
+          </Link>
+        </p>
+      ) : null}
       {!state.ready ? (
         <div aria-hidden="true" className="min-h-[72px] rounded-rp-lg bg-rp-surface shadow-rp-soft" />
       ) : items.length === 0 ? (
+        state.error ? null : (
         <div data-testid="plan-preview-empty" className="flex flex-col items-start gap-2 rounded-rp-lg bg-rp-surface p-5 shadow-rp-soft">
           <p className="rp-small text-rp-muted">{t("planEmpty")}</p>
           <Link href={PLAN_HREF} className={cn(buttonVariants({ variant: "soft" }))}>
             {t("planEmptyAction")}
           </Link>
         </div>
+        )
       ) : (
         <ul className="flex flex-col gap-3">
           {items.map((row) => (

@@ -7,7 +7,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input, fieldClass } from "@/components/ui/input";
-import { formatLocalizedNumber, parseLocalizedNumber } from "@/lib/locale-number";
+import { formatLocalizedNumber } from "@/lib/locale-number";
+import { OFFSET_LIMIT, parseOffsetMinutes } from "@/lib/reminder-offset";
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -38,6 +39,7 @@ export function RemindersContent() {
   const tCommon = useTranslations("common");
   const tSalah = useTranslations("salah");
   const locale = useLocale();
+  const num = (n: number) => formatLocalizedNumber(n, locale);
   const { isGuest, loading } = useAuth();
 
   const [serverRules, setServerRules] = useState<ReminderRuleDTO[]>([]);
@@ -96,16 +98,19 @@ export function RemindersContent() {
       return;
     }
 
-    // Either digit set ("-১৫" or "-15").
-    const parsedOffset = parseLocalizedNumber(newOffset);
-    const offset = parsedOffset === null ? Number.NaN : Math.trunc(parsedOffset);
+    // Either digit set ("-১৫" or "-15"); an invalid draft is an error, never a silent default.
+    const offset = parseOffsetMinutes(newOffset);
+    if (offset === null) {
+      setError(t("offsetInvalid", { limit: num(OFFSET_LIMIT) }));
+      return;
+    }
 
     if (isGuest) {
       const next: ReminderRuleDTO = {
         id: crypto.randomUUID(),
         type: newType,
         label: newLabel.trim(),
-        offsetMinutes: Number.isFinite(offset) ? offset : -15,
+        offsetMinutes: offset,
         channels,
         enabled: true,
       };
@@ -123,7 +128,7 @@ export function RemindersContent() {
       const res = await createReminderRuleAction({
         type: newType,
         label: newLabel.trim(),
-        offsetMinutes: Number.isFinite(offset) ? offset : -15,
+        offsetMinutes: offset,
         channels,
         enabled: true,
       });
@@ -147,6 +152,13 @@ export function RemindersContent() {
       setError(t("chooseChannel"));
       return;
     }
+    // The offset field keeps what was typed; an invalid draft blocks the save instead of saving 0.
+    const draft = offsetDrafts[rule.id];
+    if (draft !== undefined && parseOffsetMinutes(draft) === null) {
+      setError(t("offsetInvalid", { limit: num(OFFSET_LIMIT) }));
+      return;
+    }
+    setError(null);
 
     if (isGuest) {
       setAllRules((prev) =>
@@ -215,7 +227,6 @@ export function RemindersContent() {
     return type;
   };
 
-  const num = (n: number) => formatLocalizedNumber(n, locale);
   const selectClass = cn(fieldClass, "w-full appearance-auto");
 
   const channelToggle = (id: string, label: string, checked: boolean, onChange: (checked: boolean) => void) => (
@@ -241,6 +252,7 @@ export function RemindersContent() {
           value={value}
           onChange={(e) => onChange(e.target.value)}
           aria-describedby={`${id}-hint`}
+          aria-invalid={parseOffsetMinutes(value) === null}
           className={cn(fieldClass, "pe-20")}
         />
         <span aria-hidden="true" className="rp-small pointer-events-none absolute inset-y-0 end-4 flex items-center text-rp-muted">
@@ -362,8 +374,9 @@ export function RemindersContent() {
                   </div>
                   {offsetField(`rule-${rule.id}-offset`, offsetDrafts[rule.id] ?? num(rule.offsetMinutes), (value) => {
                     setOffsetDrafts((prev) => ({ ...prev, [rule.id]: value }));
-                    const parsed = parseLocalizedNumber(value);
-                    const offsetMinutes = parsed === null ? 0 : Math.trunc(parsed);
+                    // Only a valid offset reaches the rule; an invalid draft stays in the field and blocks the save.
+                    const offsetMinutes = parseOffsetMinutes(value);
+                    if (offsetMinutes === null) return;
                     setAllRules((prev) => prev.map((item) => (item.id === rule.id ? { ...item, offsetMinutes } : item)));
                   })}
                 </div>

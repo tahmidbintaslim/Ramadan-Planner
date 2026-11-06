@@ -12,6 +12,7 @@ import { HomeOverview, ramadanDayOf } from "./home-overview";
 import { useSadaqahDismissal } from "./sadaqah-dismissal";
 import { useDailyChecklist } from "./use-daily-checklist";
 import { useTodayPlan } from "@/components/plan/use-today-plan";
+import { nightEveningISO } from "@/components/plan/plan-logic";
 import { deviceTimeZone, nextDayISO, useHomeTimings } from "./use-home-timings";
 import { usePrayerReminders } from "./use-prayer-reminders";
 
@@ -68,7 +69,11 @@ export function TodayContent({ initialNow }: { initialNow?: Date }) {
   const ramadanDay = ramadanDayOf(home.ramadan);
   // The daily dhikr checklist (its own card below) and today's plan (the same rows and counts as /plan).
   const checklist = useDailyChecklist(ramadanDay ?? 1);
-  const today = useTodayPlan(dateISO ?? todayISO);
+  // Night practices count for the night's evening, as on /plan (yesterday's date between midnight and fajr).
+  const eveningISO = dateISO
+    ? nightEveningISO(ramadanDay, now, phaseTimings?.fajr ?? null, phaseTimings?.maghrib ?? null, dateISO)
+    : null;
+  const today = useTodayPlan(dateISO ?? todayISO, eveningISO);
   const plan = {
     rows: today.rows,
     done: today.done,
@@ -76,6 +81,7 @@ export function TodayContent({ initialNow }: { initialNow?: Date }) {
     ready: today.plan.ready,
     pending: today.plan.pending,
     toggleRow: today.toggleRow,
+    error: today.plan.error,
   };
   const { reminders, toggle } = usePrayerReminders();
   const sadaqah = useSadaqahDismissal();

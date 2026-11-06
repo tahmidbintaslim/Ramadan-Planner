@@ -65,7 +65,9 @@ describe("ClerkGate", () => {
     act(() => vi.advanceTimersByTime(CLERK_FALLBACK_MS + 10));
     const card = await screen.findByTestId("clerk-unavailable");
     expect(card).toHaveTextContent("এই মুহূর্তে সাইন ইন করা যাচ্ছে না");
-    expect(card).toHaveTextContent("অ্যাকাউন্ট ছাড়াই অ্যাপটি কাজ করে");
+    expect(card).toHaveTextContent("অ্যাকাউন্ট ছাড়াও অ্যাপটি কাজ করে");
+    // Account data is not implied to be on the device.
+    expect(card).toHaveTextContent("অ্যাকাউন্টে সংরক্ষিত তথ্য দেখতে পরে সাইন ইন করতে হবে");
     expect(screen.getByRole("link", { name: "অ্যাকাউন্ট ছাড়াই চালিয়ে যান" })).toHaveAttribute("href", "/today");
     expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
   });

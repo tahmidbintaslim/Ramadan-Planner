@@ -159,7 +159,8 @@ export function TasbihContent() {
   const applyTargetInput = () => {
     // Either digit set ("৩৩" or "33").
     const parsed = parseLocalizedNumber(targetInput);
-    if (parsed === null || parsed <= 0) return;
+    // A target below one (e.g. 0.5) would floor to 0 and auto count would never stop.
+    if (parsed === null || parsed < 1) return;
     setTarget(Math.floor(parsed));
   };
 

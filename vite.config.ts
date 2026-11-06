@@ -12,6 +12,13 @@ const PUBLIC_FALLBACKS: Record<string, string> = {
   VITE_VAPID_PUBLIC_KEY: "NEXT_PUBLIC_VAPID_PUBLIC_KEY",
 };
 
+/** A Node server build: no preset (the default) or an explicit node preset, and not a Vercel build. */
+function isNodeServerBuild(env: Record<string, string | undefined>): boolean {
+  if (env.VERCEL) return false;
+  const preset = env.NITRO_PRESET;
+  return !preset || /^node([-_]|$)/.test(preset);
+}
+
 // Nitro picks its preset from NITRO_PRESET (CI and Vercel builds use NITRO_PRESET=vercel -> .vercel/output);
 // without it the build is a Node server in .output/.
 export default defineConfig(({ mode }) => {
@@ -26,10 +33,10 @@ export default defineConfig(({ mode }) => {
     define,
     plugins: [
       nitro({
-        // Node server builds (no NITRO_PRESET): pre-compress the static assets (JS, CSS, fonts) as .br/.gz, served
+        // Node server builds (no NITRO_PRESET, or node-server/node-cluster/...): pre-compress the static assets (JS, CSS, fonts) as .br/.gz, served
         // when the browser accepts them. Vercel compresses on its CDN, so its build skips this. HTML responses
         // are rendered per request and stay uncompressed on the Node server.
-        compressPublicAssets: env.NITRO_PRESET || env.VERCEL ? false : { gzip: true, brotli: true },
+        compressPublicAssets: isNodeServerBuild(env) ? { gzip: true, brotli: true } : false,
       }),
       tailwindcss(),
       tanstackStart(),

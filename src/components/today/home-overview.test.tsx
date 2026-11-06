@@ -360,6 +360,13 @@ describe("today's plan preview", () => {
     expect(screen.getByRole("link", { name: "পরিকল্পনা সাজান" })).toHaveAttribute("href", "/plan");
   });
 
+  it("a failed load or save shows an error with a way to the plan, not the empty-plan prompt", async () => {
+    await renderInRouter(<PlanPreview state={planState([], { error: true })} />);
+    expect(screen.getByRole("alert")).toHaveTextContent("আজকের পরিকল্পনা এখন লোড বা সংরক্ষণ করা যায়নি।");
+    expect(screen.getByRole("link", { name: "পরিকল্পনায় আবার চেষ্টা করুন" })).toHaveAttribute("href", "/plan");
+    expect(screen.queryByTestId("plan-preview-empty")).toBeNull();
+  });
+
   it("shows no count before the list is known, and English labels in en", async () => {
     await renderInRouter(<PlanPreview state={planState(rows, { ready: false })} />, "en");
     expect(screen.getByRole("heading")).toHaveTextContent(/^Today's plan$/);

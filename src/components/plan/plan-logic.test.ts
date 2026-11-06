@@ -7,6 +7,7 @@ import {
   NIGHT_DEFAULTS,
   bnOrdinal,
   buildPlanRows,
+  nightEveningISO,
   planDisplayOrder,
   currentNight,
   defaultPlanView,
@@ -307,5 +308,22 @@ describe("plan rows (shared by /plan and the Home preview)", () => {
   it("display order follows the windows, keeping the order inside each", () => {
     const rows = buildPlanRows({ ...base, isGuest: true, notes: {} });
     expect(planDisplayOrder(rows).map((r) => r.id)).toEqual(["t2", "t1", "t3", "g1"]);
+  });
+});
+
+describe("nightEveningISO (Home uses the same night day as /plan)", () => {
+  const today = "2027-03-03";
+  const fajr = new Date("2027-03-02T23:00:00Z"); // 05:00 Dhaka
+  const maghrib = new Date("2027-03-03T12:10:00Z"); // 18:10 Dhaka
+  it("after midnight, before fajr: the night began yesterday evening", () => {
+    expect(nightEveningISO(23, new Date("2027-03-02T20:00:00Z"), fajr, maghrib, today)).toBe("2027-03-02");
+  });
+  it("from maghrib: tonight's evening is today", () => {
+    expect(nightEveningISO(23, new Date("2027-03-03T14:00:00Z"), fajr, maghrib, today)).toBe("2027-03-03");
+  });
+  it("during the day it is today's evening; outside the last ten nights null", () => {
+    expect(nightEveningISO(23, new Date("2027-03-03T06:00:00Z"), fajr, maghrib, today)).toBe("2027-03-03");
+    expect(nightEveningISO(12, new Date("2027-03-03T14:00:00Z"), fajr, maghrib, today)).toBeNull();
+    expect(nightEveningISO(null, new Date("2027-03-03T14:00:00Z"), fajr, maghrib, today)).toBeNull();
   });
 });
