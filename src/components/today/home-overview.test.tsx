@@ -272,7 +272,7 @@ describe("HomeOverview sadaqah card", () => {
 
   it("shows in the day during the last ten nights, with the last-ten title", async () => {
     await renderHome("13:00", { ramadan: ramadanStatus(25) });
-    expect(within(supportCard()!).getByRole("heading")).toHaveTextContent("শেষ দশকে সাদাকায়ে জারিয়া");
+    expect(within(supportCard()!).getByRole("heading")).toHaveTextContent("শেষ দশকে অ্যাপটি চালু রাখতে সাহায্য করুন");
   });
 
   it("shows on Eid", async () => {
@@ -288,7 +288,7 @@ describe("HomeOverview sadaqah card", () => {
     cleanup();
     const onDismissSadaqah = vi.fn();
     await renderHome("20:00", { onDismissSadaqah });
-    fireEvent.click(screen.getByRole("button", { name: "সাদাকার কার্ডটি এখন লুকান" }));
+    fireEvent.click(screen.getByRole("button", { name: "সাপোর্ট কার্ডটি এখন লুকান" }));
     expect(onDismissSadaqah).toHaveBeenCalledTimes(1);
     expect(supportCard()).toBeNull();
   });
@@ -311,7 +311,7 @@ describe("sadaqah dismissal storage", () => {
     await renderInRouter(<Harness />);
     expect(screen.getByTestId("dismissed")).toHaveTextContent("none");
     act(() => {
-      fireEvent.click(screen.getByRole("button", { name: "সাদাকার কার্ডটি এখন লুকান" }));
+      fireEvent.click(screen.getByRole("button", { name: "সাপোর্ট কার্ডটি এখন লুকান" }));
     });
     expect(localStorage.getItem(SADAQAH_DISMISSED_KEY)).toBe("2027-03-01T14:00:00.000Z");
     expect(screen.getByTestId("dismissed")).toHaveTextContent("2027-03-01T14:00:00.000Z");

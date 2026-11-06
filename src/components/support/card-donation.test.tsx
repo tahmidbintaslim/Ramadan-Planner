@@ -72,7 +72,7 @@ describe("card donations on", () => {
     expect(screen.queryByTestId("card-button")).toBeNull();
     expect(screen.getByTestId("wallet-button")).toBeEnabled();
     const form = screen.getByTestId("card-donation");
-    expect(within(form).getByRole("heading", { name: "কার্ডে সাদাকা দিন" })).toBeInTheDocument();
+    expect(within(form).getByRole("heading", { name: "কার্ডে অবদান রাখুন" })).toBeInTheDocument();
     expect(within(form).getByTestId("stripe-button")).toHaveTextContent(/^কার্ডে .*১০.* দিন$/);
   });
 

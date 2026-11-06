@@ -122,7 +122,7 @@ test.describe("Support page (English)", () => {
   test.use({ viewport: { width: 390, height: 844 }, appLocale: "en" });
   test("renders in English", async ({ page }) => {
     await visit(page, "/support");
-    await expect(page.getByRole("heading", { level: 1, name: "Sadaqah & Support" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Support & Contribute" })).toBeVisible();
     await expect(page.getByTestId("wallet-button")).toHaveText("Coming soon");
   });
 });
