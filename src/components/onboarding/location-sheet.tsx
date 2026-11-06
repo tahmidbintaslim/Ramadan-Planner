@@ -27,7 +27,7 @@ export function LocationSheet({
       <SheetContent
         side="bottom"
         showCloseButton={false}
-        className="max-h-[92dvh] gap-0 overflow-y-auto rounded-t-rp-xl border-0 bg-rp-page text-rp-ink regular:inset-auto regular:top-1/2 regular:left-1/2 regular:max-h-[85dvh] regular:w-[560px] regular:-translate-x-1/2 regular:-translate-y-1/2 regular:rounded-rp-xl"
+        className="max-h-[92dvh] gap-0 overflow-y-auto rounded-t-rp-xl border-0 bg-rp-page text-rp-ink regular:inset-auto regular:top-1/2 regular:left-1/2 regular:max-h-[94dvh] regular:w-[560px] regular:-translate-x-1/2 regular:-translate-y-1/2 regular:rounded-rp-xl"
       >
         {/* Mounted only while open, so each opening starts from the stored choice. */}
         {open ? <LocationSheetBody onOpenChange={onOpenChange} onSaved={onSaved} /> : null}
@@ -77,7 +77,7 @@ function LocationSheetBody({
         </div>
       </div>
       {/* Regular header: title aligned to the content (32), 44 Close. */}
-      <div className="hidden items-center bg-rp-elevated pt-4 pr-4 pb-2 pl-8 regular:flex">
+      <div className="hidden items-center bg-rp-elevated pt-3 pr-4 pb-2 pl-8 regular:flex">
         <p aria-hidden="true" className="rp-h2 flex-1 text-rp-ink">
           {t("title")}
         </p>
@@ -90,7 +90,7 @@ function LocationSheetBody({
       </div>
       <SheetDescription className="sr-only">{t("subtitle")}</SheetDescription>
       <LocationPickerFields picker={picker} className="px-4 pt-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))] regular:px-8 regular:pb-4" />
-      <div className="hidden bg-rp-page px-8 pt-2 pb-8 regular:sticky regular:bottom-0 regular:block">
+      <div className="hidden px-8 pt-2 pb-8 regular:block">
         <button
           type="button"
           onClick={done}
