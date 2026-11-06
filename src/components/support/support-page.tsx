@@ -13,7 +13,7 @@ import {
   ChevronRightIcon,
   CodeIcon,
   DuaIcon,
-  LanternIcon,
+  HeartIcon,
   MosqueIcon,
   ShareIcon,
 } from "@/components/icons/islamic-icons";
@@ -121,7 +121,7 @@ export function SupportPage({ config = SUPPORT_CONFIG }: { config?: SupportConfi
         data-testid="support-intro"
         className="flex-row items-center gap-4 bg-linear-to-br from-rp-gold-tint to-rp-page px-5"
       >
-        <LanternIcon size={64} className="shrink-0 text-rp-gold" />
+        <HeartIcon size={56} className="shrink-0 text-rp-gold-text" />
         <div className="min-w-0 space-y-1">
           <h2 className="rp-h2 text-rp-ink">{t("introTitle")}</h2>
           <p className="rp-small text-rp-ink">{t("introText")}</p>
