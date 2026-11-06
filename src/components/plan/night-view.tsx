@@ -3,7 +3,8 @@ import { GirihPattern } from "@/components/design/girih-pattern";
 import { MihrabArch } from "@/components/design/mihrab-arch";
 import { CrescentIcon, PinIcon } from "@/components/icons/islamic-icons";
 import { HERO_SCRIM_RGB, HERO_RING_SCRIM_ALPHA, HERO_SOURCE_PILL_ALPHA } from "@/components/prayer/prayer-hero";
-import { formatPrayerClock } from "@/components/prayer/use-prayer-phase";
+import { ClockTime } from "@/components/prayer/clock-time";
+import { formatPrayerClock, prayerClockParts } from "@/components/prayer/use-prayer-phase";
 import { formatClock, formatRowDate, digits, type Locale } from "@/components/timetable/timetable-logic";
 import { cn } from "@/lib/utils";
 import { useClockFormat } from "@/hooks/use-clock-format";
@@ -99,7 +100,7 @@ export function NightHero({
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
             <span className="rp-small text-white/90">{t("nightHeroLabel")}</span>
             <span className="rp-time-xl tabular-nums" data-testid="tahajjud-time" suppressHydrationWarning>
-              {formatPrayerClock(times.tahajjud, timeZone, locale, clockFormat)}
+              <ClockTime parts={prayerClockParts(times.tahajjud, timeZone, locale, clockFormat)} />
             </span>
             <span className="rp-caption text-white/90" suppressHydrationWarning>
               {t("sehriEndsAt", { time: formatPrayerClock(times.sehriEnd, timeZone, locale, clockFormat) })}

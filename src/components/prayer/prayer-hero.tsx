@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { Link } from "@/components/shared/link";
 import { useClockFormat } from "@/hooks/use-clock-format";
 import { joinClockParts } from "@/lib/clock-format";
+import { ClockTime } from "./clock-time";
 import { formatRemaining, isBnLocale, prayerClockParts, usePrayerPhase } from "./use-prayer-phase";
 
 export interface PrayerHeroProps {
@@ -285,11 +286,8 @@ export function PrayerHero({
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
             <span className="rp-small text-white/90">{label}</span>
-            {/* The day period (AM/PM, or রাত after midnight in bn) is set small so the digits keep the ring's size. */}
             <span className="rp-time-xl tabular-nums" suppressHydrationWarning>
-              {clock.period && clock.periodFirst ? <span className="rp-row me-1 align-middle">{clock.period}</span> : null}
-              {clock.time}
-              {clock.period && !clock.periodFirst ? <span className="rp-row ms-1 align-middle">{clock.period}</span> : null}
+              <ClockTime parts={clock} />
             </span>
             <span className="rp-caption tabular-nums text-white/90" suppressHydrationWarning>
               {remaining}
