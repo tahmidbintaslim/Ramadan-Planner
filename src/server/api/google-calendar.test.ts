@@ -37,6 +37,8 @@ beforeEach(() => {
   vi.stubEnv("CALENDAR_TOKENS_ENCRYPTION_KEY", "a".repeat(64));
   vi.stubEnv("APP_URL", "");
   vi.stubEnv("NEXT_PUBLIC_APP_URL", "");
+  vi.stubEnv("SITE_URL", "");
+  vi.stubEnv("NEXT_PUBLIC_SITE_URL", "");
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 afterEach(() => vi.unstubAllEnvs());
@@ -78,6 +80,24 @@ describe("GET /api/calendar/google/connect", () => {
     expect(new URL(res.headers.get("Location")!).searchParams.get("redirect_uri")).toBe(
       "https://new.example/api/calendar/google/callback",
     );
+  });
+
+  it("production never takes the redirect base from the request Host: SITE_URL, else the canonical origin", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const spoofed = new Request("https://evil.example/api/calendar/google/connect", {
+      headers: { Host: "evil.example", "X-Forwarded-Host": "evil.example" },
+    });
+    let res = await handleGoogleConnect(spoofed, signedIn);
+    expect(new URL(res.headers.get("Location")!).searchParams.get("redirect_uri")).toBe(
+      "https://ramadanplanner.tahmid.space/api/calendar/google/callback",
+    );
+    vi.stubEnv("SITE_URL", "https://site.example/");
+    res = await handleGoogleConnect(spoofed, signedIn);
+    expect(new URL(res.headers.get("Location")!).searchParams.get("redirect_uri")).toBe(
+      "https://site.example/api/calendar/google/callback",
+    );
+    res = await handleGoogleCallback(new Request("https://evil.example/api/calendar/google/callback?error=x"), signedIn);
+    expect(res.headers.get("Location")).toBe("https://site.example/settings?google=error");
   });
 
   it("each call uses a new state", async () => {
