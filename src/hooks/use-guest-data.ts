@@ -70,7 +70,7 @@ export function useGuestData<T>(key: string, defaultValue: T, options: GuestData
         if (loading && signedInFromCookie(document.cookie)) return;
         try {
             localStorage.setItem(`rp_${slot.key}`, JSON.stringify(slot.data));
-            pruneLocalHistory(`rp_${slot.key.replace(/_\d{4}-\d{2}-\d{2}$/, "")}`, 7);
+            pruneLocalHistory(`rp_${slot.key.replace(/_\d{4}-\d{2}-\d{2}$/, "")}`);
         } catch {
             // Storage full or unavailable
         }

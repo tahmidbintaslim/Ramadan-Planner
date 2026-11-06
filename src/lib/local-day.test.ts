@@ -113,3 +113,14 @@ describe("pruneLocalHistory (local cutoff)", () => {
     expect(localStorage.getItem("rp_salah_extra_2027-01-01")).not.toBeNull();
   });
 });
+
+describe("pruneLocalHistory (default retention)", () => {
+  it("keeps a full Ramadan of guest history by default", () => {
+    for (const d of ["2027-01-01", "2027-01-09", "2027-02-10"]) localStorage.setItem(`rp_salah_${d}`, "{}");
+    // Default keeps GUEST_HISTORY_DAYS (45) local days: 2027-01-09 through 2027-02-22.
+    pruneLocalHistory("rp_salah", undefined, "2027-02-22");
+    expect(localStorage.getItem("rp_salah_2027-01-01")).toBeNull();
+    expect(localStorage.getItem("rp_salah_2027-01-09")).not.toBeNull();
+    expect(localStorage.getItem("rp_salah_2027-02-10")).not.toBeNull();
+  });
+});

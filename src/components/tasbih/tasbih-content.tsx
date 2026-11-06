@@ -119,7 +119,7 @@ export function TasbihContent() {
   }
 
   useEffect(() => {
-    pruneLocalHistory("rp_tasbih_state_v1", 7);
+    pruneLocalHistory("rp_tasbih_state_v1");
   }, [todayKey]);
 
   const percent = useMemo(() => {
