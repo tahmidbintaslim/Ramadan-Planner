@@ -19,6 +19,7 @@ import {
 import { getRamadanDayOrdinal } from "@/lib/ramadan-ordinal";
 import { rememberTimings } from "@/lib/auto-night";
 import { storedRequestLocation } from "@/lib/user-location";
+import { localTodayISO } from "@/lib/local-day";
 
 export function DashboardContent() {
   const t = useTranslations("dashboard");
@@ -55,7 +56,8 @@ export function DashboardContent() {
           // Geolocation denied or unavailable — use defaults
         }
 
-        const timingsParams = new URLSearchParams({ tz });
+        // The local date keys the CDN cache, so a request after local midnight never gets yesterday's entry.
+        const timingsParams = new URLSearchParams({ tz, date: localTodayISO(new Date(), tz) });
         if (lat !== undefined) timingsParams.set("lat", lat.toFixed(2));
         if (lng !== undefined) timingsParams.set("lng", lng.toFixed(2));
 
