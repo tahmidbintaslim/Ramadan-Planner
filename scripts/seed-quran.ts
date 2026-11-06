@@ -5,7 +5,7 @@
 
 import path from "node:path";
 import dotenv from "dotenv";
-import fetch from "node-fetch";
+// Uses the global fetch built into Node 18+.
 import { Client } from "pg";
 
 dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
