@@ -80,7 +80,7 @@ describe("surah page head", () => {
     expect(last("property", "og:site_name")?.content).toBe("Ramadan Planner");
     expect(last("property", "og:type")?.content).toBe("website");
     expect(last("property", "og:url")?.content).toBe(`${SITE}/quran/2`);
-    expect(last("property", "og:image")?.content).toBe(`${SITE}/og.png?v=2`);
+    expect(last("property", "og:image")?.content).toBe(`${SITE}/og.png?v=3`);
     expect(last("name", "description")?.content).toBe("সূরা 2 (Surah 2) — 7 আয়াত");
   });
 });
