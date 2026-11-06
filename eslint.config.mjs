@@ -11,6 +11,11 @@ export default defineConfig([
     "coverage/**",
     "src/generated/**",
     "src/routeTree.gen.ts",
+    // Native app shells (generated platform projects and build output).
+    "android/**",
+    "ios/**",
+    "src-tauri/**",
+    "native/**",
     // Agent worktrees (local only, git-excluded) contain full checkouts and build output.
     ".claude/**",
   ]),
