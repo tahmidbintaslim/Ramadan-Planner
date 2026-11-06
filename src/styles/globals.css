@@ -3,17 +3,20 @@
  *
  * Modes: :root is Light, .dark is Night (class set by next-themes; "auto" phase switching arrives in Task 6).
  * Fonts (self-hosted via @fontsource, font-display: swap; a face downloads only when a page uses it):
- *   - UI / body (nav, settings, menus, buttons) .. Noto Sans Bengali 400/500/600/700, bengali + latin -> `font-sans` (body)
+ *   - UI / body (nav, settings, menus, buttons) .. Noto Sans Bengali variable (wght 100-900, one file per subset),
+ *     bengali + latin -> `font-sans` (body)
  *   - scripture + long reading (ayah translations,
- *     hadith, dua meanings, niyyah) .............. Noto Serif Bengali 400/500, bengali + latin -> `font-reading` (= `font-serif`)
+ *     hadith, dua meanings, niyyah) .............. Noto Serif Bengali variable, bengali + latin -> `font-reading` (= `font-serif`)
  *     (references and sources stay in Noto Sans `.rp-caption`)
  *   - greetings, H1, surah titles, banners ....... Tiro Bangla 400 only, bengali + latin     -> `font-display`
+ *     (English pages, :lang(en): Noto Serif Display variable instead, with tighter Latin line heights)
  *     (never font-semibold/bold on Tiro: hierarchy comes from size)
- *   - Arabic (ayahs, dua Arabic) ................. Noto Naskh Arabic 400/500, arabic subset  -> `font-arabic`
+ *   - Quran ayahs (reader, surah list names) ...... Amiri Quran 400, arabic subset -> `font-quran` (founder, 2026-11-06)
+ *   - other Arabic (duas, niyyah, day's ayah card) Noto Naskh Arabic 400/500, arabic subset  -> `font-arabic`
  *     (always with dir="rtl" lang="ar"; about 1.4-1.5x the Bengali beside it, line-height >= 2:
  *     Quran reader 28/56, Today cards 24/48, surah list 20/32)
  *   Each stack falls back to Kalpurush / SolaimanLipi (common Bangladeshi system fonts), then the system sans/serif.
- *   Only Noto Sans Bengali 400 (bengali subset) is preloaded (src/routes/__root.tsx).
+ *   Only the Noto Sans Bengali variable face (bengali subset) is preloaded (src/routes/__root.tsx).
  * Type roles (CSS classes, use together with font-display where noted):
  *   .rp-greeting 24/36 (Tiro)  .rp-h1 28/40 (Tiro)  .rp-time-xl 56/64 600  .rp-time-l 36/44 600
  *   .rp-h2 20/30 600  .rp-row 16/24 500  .rp-body 16/26  .rp-small 14/22  .rp-button 16/24 600
@@ -32,22 +35,15 @@
  *   border-input = Light 3.20 page/3.43 surface, Night 4.04/3.35.
  * Hero gradients: --rp-hero-sehri / -day / -iftar / -night (top to bottom) for the Prayer Hero.
  */
-@import "@fontsource/noto-sans-bengali/bengali-400.css";
-@import "@fontsource/noto-sans-bengali/bengali-500.css";
-@import "@fontsource/noto-sans-bengali/bengali-600.css";
-@import "@fontsource/noto-sans-bengali/bengali-700.css";
-@import "@fontsource/noto-sans-bengali/latin-400.css";
-@import "@fontsource/noto-sans-bengali/latin-500.css";
-@import "@fontsource/noto-sans-bengali/latin-600.css";
-@import "@fontsource/noto-sans-bengali/latin-700.css";
-@import "@fontsource/noto-serif-bengali/bengali-400.css";
-@import "@fontsource/noto-serif-bengali/bengali-500.css";
-@import "@fontsource/noto-serif-bengali/latin-400.css";
-@import "@fontsource/noto-serif-bengali/latin-500.css";
+@import "@fontsource-variable/noto-sans-bengali/wght.css";
+@import "@fontsource-variable/noto-serif-bengali/wght.css";
 @import "@fontsource/tiro-bangla/bengali-400.css";
-@import "@fontsource/tiro-bangla/latin-400.css";
 @import "@fontsource/noto-naskh-arabic/arabic-400.css";
 @import "@fontsource/noto-naskh-arabic/arabic-500.css";
+@import "@fontsource/amiri-quran/arabic-400.css";
+@import "@fontsource-variable/noto-serif-display/wght.css";
+@import "@fontsource-variable/noto-sans/wght.css";
+@import "@fontsource-variable/noto-serif/wght.css";
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
@@ -85,6 +81,7 @@
   --font-serif: var(--font-rp-scripture);
   --font-reading: var(--font-rp-scripture);
   --font-arabic: var(--font-rp-arabic);
+  --font-quran: var(--font-rp-quran);
   --font-mono: var(--font-rp-mono);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -149,10 +146,13 @@
 
 :root {
   /* "RP Sans Fallback" (below) stands in with Noto's metrics while the web font swaps in. */
-  --font-rp-sans: "Noto Sans Bengali", "RP Sans Fallback", "Kalpurush", "SolaimanLipi", "Noto Sans", system-ui, sans-serif;
-  --font-rp-scripture: "Noto Serif Bengali", "RP Serif Fallback", "Kalpurush", "SolaimanLipi", "Noto Serif", Georgia, serif;
-  --font-rp-display: "Tiro Bangla", "Noto Serif Bengali", "Kalpurush", "SolaimanLipi", Georgia, serif;
+  /* Per-locale type tokens (html[lang]); bn here, en under :root:lang(en) below. Latin inside bn text falls through
+     to the matching Noto Latin family (Tiro's Latin glyphs are not loaded). */
+  --font-rp-sans: "Noto Sans Bengali Variable", "Noto Sans Bengali", "RP Sans Fallback", "Kalpurush", "SolaimanLipi", "Noto Sans", system-ui, sans-serif;
+  --font-rp-scripture: "Noto Serif Bengali Variable", "Noto Serif Bengali", "RP Serif Fallback", "Kalpurush", "SolaimanLipi", "Noto Serif", Georgia, serif;
+  --font-rp-display: "Tiro Bangla", "Noto Serif Display Variable", "Noto Serif Bengali Variable", "Kalpurush", "SolaimanLipi", Georgia, serif;
   --font-rp-arabic: "Noto Naskh Arabic", "Geeza Pro", "Traditional Arabic", "Arabic Typesetting", "Kalpurush", "SolaimanLipi", serif;
+  --font-rp-quran: "Amiri Quran", "Noto Naskh Arabic", "Geeza Pro", "Traditional Arabic", "Kalpurush", "SolaimanLipi", serif;
   --font-rp-mono: "Fira Code", "JetBrains Mono", "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
   /* Primitives */
@@ -303,6 +303,31 @@
   .rp-reading { font-family: var(--font-rp-scripture); font-size: 17px; line-height: 30px; font-weight: 400; }
   .rp-reading-small { font-family: var(--font-rp-scripture); font-size: 15px; line-height: 26px; font-weight: 400; }
   .rp-overline { font-size: 13px; line-height: 20px; font-weight: 500; }
+
+  /*
+   * English type (html lang="en"). Tiro Bangla's Latin glyphs sat oddly beside Noto Sans, so English headings use
+   * Noto Serif Display (variable, latin subset only downloads), and Latin gets tighter line heights than the
+   * Bengali roles above (which leave room for stacked conjuncts and vowel signs).
+   */
+  .rp-greeting:lang(en) { line-height: 32px; }
+  .rp-h1:lang(en) { line-height: 36px; letter-spacing: -0.01em; }
+  .rp-h2:lang(en) { line-height: 28px; }
+  .rp-body:lang(en) { line-height: 24px; }
+  .rp-small:lang(en) { line-height: 20px; }
+  .rp-caption:lang(en) { line-height: 18px; }
+  .rp-reading:lang(en) { line-height: 28px; }
+  .rp-reading-small:lang(en) { line-height: 24px; }
+}
+
+/*
+ * English type tokens (html lang="en"): display Noto Serif Display, UI Noto Sans, reading Noto Serif, each falling back
+ * to the Bengali family for any Bengali words, then the same system fallbacks. Arabic is the same in both locales
+ * (Noto Naskh Arabic for duas, Amiri Quran for ayahs).
+ */
+:root:lang(en) {
+  --font-rp-display: "Noto Serif Display Variable", "Noto Serif Variable", "Tiro Bangla", Georgia, serif;
+  --font-rp-sans: "Noto Sans Variable", "Noto Sans Bengali Variable", "RP Sans Fallback", "Noto Sans", system-ui, sans-serif;
+  --font-rp-scripture: "Noto Serif Variable", "Noto Serif Bengali Variable", "RP Serif Fallback", "Noto Serif", Georgia, serif;
 }
 
 @layer base {
