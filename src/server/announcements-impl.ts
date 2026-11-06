@@ -25,7 +25,7 @@ async function requireAdmin(
     return { ok: false, error: "unauthorized" };
   }
 
-  const admin = await isUserAdmin({ userId: user.id, email: user.email });
+  const admin = await isUserAdmin({ userId: user.id, email: user.email, emailVerified: user.emailVerified });
   if (!admin) {
     return { ok: false, error: "forbidden" };
   }

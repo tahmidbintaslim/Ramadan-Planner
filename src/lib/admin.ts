@@ -17,8 +17,10 @@ export function isAdminEmail(email: string | null | undefined): boolean {
 export async function isUserAdmin(params: {
   userId: string;
   email?: string | null;
+  /** Clerk's verification status of `email` is "verified". ADMIN_EMAILS never matches an unverified address. */
+  emailVerified?: boolean;
 }): Promise<boolean> {
-  if (isAdminEmail(params.email)) {
+  if (params.emailVerified === true && isAdminEmail(params.email)) {
     return true;
   }
 

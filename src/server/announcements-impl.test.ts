@@ -50,8 +50,8 @@ const input = {
 };
 
 /** Signs `id` in with `email`; `adminRows` lists the user ids that have an AdminUser row. */
-function session(id: string, email: string | null, adminRows: string[] = []) {
-  m.getAppAuthUser.mockResolvedValue({ id, clerkId: "user_x", email });
+function session(id: string, email: string | null, adminRows: string[] = [], verified = true) {
+  m.getAppAuthUser.mockResolvedValue({ id, clerkId: "user_x", email, emailVerified: verified && email !== null });
   m.prisma.adminUser.findUnique.mockImplementation(async ({ where }: { where: { userId: string } }) =>
     adminRows.includes(where.userId) ? { userId: where.userId } : null,
   );
@@ -137,6 +137,12 @@ describe("admin gate on every admin function", () => {
     session(ADMIN_MAIL, "boss@EXAMPLE.com");
     const res = (await call(ADMIN_MAIL)) as { ok: boolean };
     expect(res.ok).toBe(true);
+  });
+
+  it.each(calls)("%s: an ADMIN_EMAILS address that Clerk has not verified is forbidden", async (_n, call) => {
+    session(ADMIN_MAIL, "boss@example.com", [], false);
+    const res = (await call(ADMIN_MAIL)) as { ok: boolean; error?: string };
+    expect(res).toEqual({ ok: false, error: "forbidden" });
   });
 
   it("the email is fetched with getAppAuthUser({ withEmail: true })", async () => {

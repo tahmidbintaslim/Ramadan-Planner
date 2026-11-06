@@ -10,6 +10,12 @@ export interface AppAuthUser {
   id: string;
   clerkId: string;
   email: string | null;
+  /**
+   * True only when Clerk reports `email`'s verification status as "verified". Anything that grants rights by
+   * email (the ADMIN_EMAILS list) must check this: an unverified address proves nothing about its owner.
+   * Always false when the email was not looked up (`withEmail: false`).
+   */
+  emailVerified: boolean;
 }
 
 export async function getAppAuthUser(options?: {
@@ -25,11 +31,12 @@ export async function getAppAuthUser(options?: {
   if (!userId) return null;
 
   let email: string | null = null;
+  let emailVerified = false;
   if (options?.withEmail ?? true) {
     const clerkUser = await clerkClient().users.getUser(userId);
-    email = clerkUser?.primaryEmailAddress?.emailAddress ??
-      clerkUser?.emailAddresses?.[0]?.emailAddress ??
-      null;
+    const address = clerkUser?.primaryEmailAddress ?? clerkUser?.emailAddresses?.[0] ?? null;
+    email = address?.emailAddress ?? null;
+    emailVerified = Boolean(email) && address?.verification?.status === "verified";
   }
   const id = clerkIdToUuid(userId);
 
@@ -41,5 +48,5 @@ export async function getAppAuthUser(options?: {
     });
   }
 
-  return { id, clerkId: userId, email };
+  return { id, clerkId: userId, email, emailVerified };
 }
