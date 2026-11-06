@@ -185,7 +185,7 @@ test.describe("Auto Night", () => {
       else await expect(html).not.toHaveClass(/\bdark\b/);
       const colors = () =>
         page.evaluate(() => Array.from(document.querySelectorAll('meta[name="theme-color"]'), (m) => m.getAttribute("content")));
-      await expect.poll(async () => [...new Set(await colors())]).toEqual([dark ? "#0B1F24" : "#F3F8F6"]);
+      await expect.poll(async () => [...new Set(await colors())]).toEqual([dark ? "#0B1A17" : "#F4F7F6"]);
     });
   }
 });

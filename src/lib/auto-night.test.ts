@@ -140,7 +140,7 @@ describe("storage helpers", () => {
 describe("AUTO_NIGHT_SCRIPT (pre-hydration) runs the same decision", () => {
   function run(theme: string | null, cached: unknown, now: Date) {
     const classes = new Set(["light"]);
-    const meta = { content: "#F3F8F6", setAttribute: (_: string, v: string) => (meta.content = v) };
+    const meta = { content: "#F4F7F6", setAttribute: (_: string, v: string) => (meta.content = v) };
     const html = {
       classList: { remove: (c: string) => classes.delete(c), add: (c: string) => classes.add(c) },
       style: { colorScheme: "light" },
@@ -168,7 +168,7 @@ describe("AUTO_NIGHT_SCRIPT (pre-hydration) runs the same decision", () => {
   });
 
   it("switches to Night with the matching theme-color", () => {
-    expect(run("auto", null, at("22:00"))).toEqual({ dark: true, meta: "#0B1F24", scheme: "dark" });
+    expect(run("auto", null, at("22:00"))).toEqual({ dark: true, meta: "#0B1A17", scheme: "dark" });
     expect(run("auto", "{corrupt", at("12:00")).dark).toBe(false);
   });
 
