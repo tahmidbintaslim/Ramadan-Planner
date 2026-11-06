@@ -56,8 +56,12 @@ jobs:
         run: NITRO_PRESET=vercel npm run build
 
       # End-to-end checks against the built Node server (placeholder database, fake Clerk keys).
+      # Card donations are a BUILD-TIME flag (off by default, and off in the Vercel build above). The e2e build turns
+      # it on so e2e/support.spec.ts can drive the card form; checkout is mocked there and no Stripe key is set.
       - name: Build (Node server for e2e)
         run: npm run build
+        env:
+          VITE_STRIPE_DONATIONS_ENABLED: "true"
 
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
