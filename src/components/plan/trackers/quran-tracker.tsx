@@ -319,7 +319,7 @@ export function QuranTracker({ day }: { day: number }) {
                 id="ayah"
                 inputMode="numeric"
                 autoComplete="off"
-                placeholder={num(1)}
+                placeholder={t("ayah")}
                 value={num(data.ayah)}
                 onChange={(e) => updateField("ayah", e.target.value)}
                 className={fieldClass}
@@ -342,7 +342,7 @@ export function QuranTracker({ day }: { day: number }) {
                 id="pages"
                 inputMode="numeric"
                 autoComplete="off"
-                placeholder={num(0)}
+                placeholder={t("page")}
                 value={num(data.pages)}
                 onChange={(e) => updateField("pages", e.target.value)}
                 className={fieldClass}

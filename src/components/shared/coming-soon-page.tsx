@@ -1,7 +1,7 @@
 import { useTranslations } from "@/i18n/use-intl";
 import { Link } from "@/components/shared/link";
 import { buttonVariants } from "@/components/ui/button";
-import { LanternIcon } from "@/components/icons/islamic-icons";
+import { ClockIcon } from "@/components/icons/islamic-icons";
 
 /**
  * The calm page a feature that is switched off (src/config/features.ts) shows at its direct URL: the feature's name,
@@ -20,7 +20,7 @@ export function ComingSoonPage({ titleKey }: { titleKey: "hadith" | "books" | "q
         className="flex flex-col items-start gap-3 rounded-rp-lg bg-rp-surface p-5 text-rp-ink shadow-rp-soft"
       >
         <span aria-hidden="true" className="flex size-12 items-center justify-center rounded-rp-full bg-rp-gold-tint text-rp-gold-text">
-          <LanternIcon size={24} />
+          <ClockIcon size={24} />
         </span>
         <p className="rp-h2">{t("label")}</p>
         <p className="rp-body text-rp-muted">{t("body")}</p>

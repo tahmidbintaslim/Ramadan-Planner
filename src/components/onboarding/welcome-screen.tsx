@@ -175,7 +175,7 @@ export function WelcomeScreen() {
       <main id="main-content" className="mx-auto flex w-full max-w-[480px] flex-col pb-10">
         <section
           aria-labelledby="welcome-greeting"
-          className="relative isolate flex h-[360px] flex-col items-center overflow-hidden rounded-b-[40px] px-6 pt-14 text-center text-white sm:mt-6 sm:rounded-rp-xl"
+          className="relative isolate flex h-[360px] flex-col items-center overflow-hidden rounded-b-[40px] px-6 pt-[68px] text-center text-white sm:mt-6 sm:rounded-rp-xl"
           style={{ backgroundImage: "var(--rp-hero-sehri)" }}
         >
           <GirihPattern opacity={0.07} className="-z-10 text-white" />

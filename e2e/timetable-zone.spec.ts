@@ -3,7 +3,25 @@ import type { Page } from "@playwright/test";
 
 // The timetable's place and zone (production showed "UTC · sehri 11:09 PM"): a browser in UTC must still get
 // Dhaka's times in Asia/Dhaka, labelled Dhaka, when no location is stored; a stored district is used as is.
-// These call the real /api/ramadan-timetable (AlAdhan upstream), like the app does.
+// With E2E_NETWORK=1 they call the real /api/ramadan-timetable (AlAdhan upstream), like the app does; otherwise (CI has
+// no upstream access) the API answer is a Dhaka fixture and the tests check what the screen asks for and shows.
+const NET = Boolean(process.env.E2E_NETWORK);
+
+async function answerLocally(page: Page) {
+  if (NET) return;
+  await page.route(/\/api\/ramadan-timetable/, (route) => {
+    const days = Array.from({ length: 30 }, (_, i) => ({
+      day: i + 1,
+      gregorianDate: `${String(9 + i > 28 ? i - 19 : 9 + i).padStart(2, "0")}-${9 + i > 28 ? "03" : "02"}-2027`,
+      weekday: "Mon",
+      sehri: "04:57",
+      iftar: "17:58",
+      fajr: "05:07",
+      maghrib: "17:58",
+    }));
+    return route.fulfill({ json: { days, location: "ঢাকা, বাংলাদেশ", timezone: "Asia/Dhaka", hijriYear: "1448", method: "Karachi" } });
+  });
+}
 
 const SYLHET = { v: 1, kind: "district", districtId: "sylhet", lat: 24.9, lng: 91.87, tz: "Asia/Dhaka", savedAt: "2027-01-01T00:00:00.000Z" };
 
@@ -25,6 +43,7 @@ test.describe("timetable zone (browser in UTC)", () => {
     page.on("request", (r) => {
       if (r.url().includes("/api/ramadan-timetable")) asked.push(r.url());
     });
+    await answerLocally(page);
     await visit(page, "/timetable");
     const caption = page.getByTestId("timetable-caption");
     await expect(caption).toContainText("Dhaka", { timeout: 30_000 });
@@ -41,6 +60,7 @@ test.describe("timetable zone (browser in UTC)", () => {
     page.on("request", (r) => {
       if (r.url().includes("/api/ramadan-timetable")) asked.push(r.url());
     });
+    await answerLocally(page);
     await visit(page, "/timetable");
     await expect(page.getByTestId("timetable-caption")).toContainText("Sylhet", { timeout: 30_000 });
     const q = new URL(asked[0]).searchParams;
@@ -51,6 +71,7 @@ test.describe("timetable zone (browser in UTC)", () => {
   });
 
   test("the API never pairs Dhaka's sun with the UTC clock", async ({ request }) => {
+    test.skip(!NET, "set E2E_NETWORK=1 to call the upstream timetable API");
     const res = await request.get("/api/ramadan-timetable?tz=UTC");
     expect(res.status()).toBe(200);
     const body = (await res.json()) as { timezone: string; days: { sehri: string }[] };

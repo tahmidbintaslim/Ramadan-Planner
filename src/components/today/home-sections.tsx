@@ -6,7 +6,7 @@ import { buttonVariants } from "@/components/ui/button";
 import {
   ChevronRightIcon,
   DuaIcon,
-  LanternIcon,
+  HeartIcon,
   PlanIcon,
   QuranIcon,
   TasbihIcon,
@@ -185,7 +185,7 @@ export function SupportCard({
       className={cn("flex items-start gap-4 rounded-rp-lg bg-rp-gold-tint p-5 text-rp-ink shadow-rp-soft", className)}
     >
       <span className="flex size-11 shrink-0 items-center justify-center rounded-rp-full bg-rp-surface text-rp-gold-text">
-        <LanternIcon size={24} />
+        <HeartIcon size={24} />
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <h2 id="home-support" className="rp-row font-semibold">

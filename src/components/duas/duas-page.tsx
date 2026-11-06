@@ -1,7 +1,7 @@
 "use client";
 
 import { useLocale, useTranslations } from "@/i18n/use-intl";
-import { CrescentIcon, DatesIcon, LanternIcon, type IconProps } from "@/components/icons/islamic-icons";
+import { CrescentIcon, DatesIcon, IshaIcon, type IconProps } from "@/components/icons/islamic-icons";
 import { formatLocalizedNumber } from "@/lib/locale-number";
 import { DUA_CATEGORIES, duasIn, type DuaCategory } from "@/lib/duas";
 import type { ComponentType } from "react";
@@ -10,7 +10,7 @@ import { DuaCard } from "./dua-card";
 const CATEGORY_ICONS: Record<DuaCategory, ComponentType<IconProps>> = {
   sehri: CrescentIcon,
   iftar: DatesIcon,
-  lastTen: LanternIcon,
+  lastTen: IshaIcon,
 };
 
 /**

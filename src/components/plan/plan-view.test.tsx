@@ -53,7 +53,7 @@ describe("ProgressCard", () => {
         <ProgressCard done={4} total={4} quranPara={3} streak={0} />
       </WithIntl>,
     );
-    expect(screen.getByTestId("plan-progress-copy")).toHaveTextContent("MashaAllah, all of today's deeds are done");
+    expect(screen.getByTestId("plan-progress-copy")).toHaveTextContent("MashaAllah, all of today's amal is done");
     expect(screen.getByText("Quran 3/30 juz")).toBeInTheDocument();
   });
 

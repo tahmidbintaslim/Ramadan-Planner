@@ -39,24 +39,24 @@ export function SehriIftarPair({ timings, timeZone, dayLabel, className }: Sehri
         </p>
       ) : null}
       <div className="flex min-w-0 items-center gap-3 pr-3">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-rp-full bg-rp-accent-tint text-rp-accent">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-rp-full bg-rp-accent-tint text-rp-accent max-[359px]:hidden">
           <FajrIcon size={22} />
         </span>
         <div className="min-w-0">
-          <p className="rp-caption text-rp-muted">{t("sehriEnds")}</p>
-          <p className="rp-h2 tabular-nums" data-testid="pair-sehri">
+          <p className="rp-caption whitespace-nowrap text-rp-muted">{t("sehriEnds")}</p>
+          <p className="rp-h2 whitespace-nowrap tabular-nums" data-testid="pair-sehri">
             {sehri}
           </p>
         </div>
       </div>
       <span aria-hidden="true" className="h-10 w-px bg-rp-rule" />
       <div className="flex min-w-0 items-center gap-3 pl-4">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-rp-full bg-rp-gold-tint text-rp-gold-text">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-rp-full bg-rp-gold-tint text-rp-gold-text max-[359px]:hidden">
           <MaghribIcon size={22} />
         </span>
         <div className="min-w-0">
           <p className="rp-caption text-rp-muted">{t("iftar")}</p>
-          <p className="rp-h2 tabular-nums" data-testid="pair-iftar">
+          <p className="rp-h2 whitespace-nowrap tabular-nums" data-testid="pair-iftar">
             {iftar}
           </p>
         </div>
