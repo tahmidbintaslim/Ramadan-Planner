@@ -49,9 +49,6 @@ model UserProfile {
   prayerGoals       PrayerGoal[]
   pushSubscriptions PushSubscription[]
   reminderRules     ReminderRule[]
-  billingCustomer   BillingCustomer?
-  subscriptions     Subscription[]
-  entitlementGrant  EntitlementGrant?
 
   @@map("user_profiles")
   @@schema("public")
@@ -761,52 +758,4 @@ enum one_time_token_type {
   phone_change_token
 
   @@schema("auth")
-}
-
-model BillingCustomer {
-  userId           String      @id @map("user_id") @db.Uuid
-  stripeCustomerId String      @unique @map("stripe_customer_id")
-  createdAt        DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
-  user             UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("billing_customers")
-  @@schema("public")
-}
-
-model Subscription {
-  id                 String      @id
-  userId             String      @map("user_id") @db.Uuid
-  status             String
-  priceId            String      @map("price_id")
-  currentPeriodStart DateTime?   @map("current_period_start") @db.Timestamptz(6)
-  currentPeriodEnd   DateTime?   @map("current_period_end") @db.Timestamptz(6)
-  trialEnd           DateTime?   @map("trial_end") @db.Timestamptz(6)
-  cancelAtPeriodEnd  Boolean     @default(false) @map("cancel_at_period_end")
-  eventCreated       BigInt      @map("event_created")
-  updatedAt          DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  user               UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@map("subscriptions")
-  @@schema("public")
-}
-
-model StripeEvent {
-  id          String   @id
-  type        String
-  processedAt DateTime @default(now()) @map("processed_at") @db.Timestamptz(6)
-
-  @@map("stripe_events")
-  @@schema("public")
-}
-
-model EntitlementGrant {
-  userId    String      @id @map("user_id") @db.Uuid
-  source    String
-  expiresAt DateTime?   @map("expires_at") @db.Timestamptz(6)
-  createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
-  user      UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("entitlement_grants")
-  @@schema("public")
 }

@@ -1,32 +1,33 @@
+// Server-only Stripe helpers: the API client and webhook signature verification. Nothing here is a secret by
+// itself; the keys come from the environment (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET) and are never logged.
+import "@tanstack/react-start/server-only";
 import Stripe from "stripe";
-import { z } from "zod";
-
-export const intervalSchema = z.enum(["month", "year"]);
-export type Interval = z.infer<typeof intervalSchema>;
 
 let client: Stripe | undefined;
 
+/** Trimmed env value; a stray newline pasted from the dashboard must not break a key. "" when unset. */
+export const stripeEnv = (
+  name: "STRIPE_SECRET_KEY" | "STRIPE_WEBHOOK_SECRET" | "STRIPE_DONATION_PRODUCT_ID",
+): string => process.env[name]?.trim() ?? "";
+
+/** The shared Stripe client. Throws when STRIPE_SECRET_KEY is unset, so callers answer 503 instead of guessing. */
 export function getStripe(): Stripe {
-  const key = process.env.STRIPE_SECRET_KEY;
+  const key = stripeEnv("STRIPE_SECRET_KEY");
   if (!key) throw new Error("STRIPE_SECRET_KEY is not set");
   return (client ??= new Stripe(key, { apiVersion: "2026-10-28.endive" }));
 }
 
-// Trimmed: a stray newline or space in a dashboard-pasted price id must not silently drop events.
-const envPrice = (name: "STRIPE_PRICE_MONTHLY" | "STRIPE_PRICE_YEARLY") => process.env[name]?.trim() ?? "";
-
-export function priceIdForInterval(interval: Interval): string {
-  const name = interval === "month" ? "STRIPE_PRICE_MONTHLY" : "STRIPE_PRICE_YEARLY";
-  const id = envPrice(name);
-  if (!id) throw new Error(`${name} is not set`);
-  return id;
+/**
+ * Verifies the `stripe-signature` header against the RAW request body (the exact bytes Stripe signed: never a
+ * re-serialised JSON object) and returns the parsed event. Throws on a missing, malformed, stale (default
+ * 300 s tolerance) or forged signature. Uses Stripe's static helper, so no API key is needed to verify.
+ */
+export async function verifyStripeWebhook(
+  rawBody: string,
+  signature: string | null,
+  secret: string,
+): Promise<Stripe.Event> {
+  if (!secret) throw new Error("STRIPE_WEBHOOK_SECRET is not set");
+  if (!signature) throw new Error("missing stripe-signature header");
+  return Stripe.webhooks.constructEventAsync(rawBody, signature, secret);
 }
-
-export const pricesConfigured = (): boolean => !!envPrice("STRIPE_PRICE_MONTHLY") && !!envPrice("STRIPE_PRICE_YEARLY");
-
-export function isAllowedPrice(priceId: string): boolean {
-  if (!priceId) return false;
-  return [envPrice("STRIPE_PRICE_MONTHLY"), envPrice("STRIPE_PRICE_YEARLY")].some((id) => !!id && id === priceId);
-}
-
-export const trialDaysFor = (hasHadSubscription: boolean): number => (hasHadSubscription ? 0 : 7);
