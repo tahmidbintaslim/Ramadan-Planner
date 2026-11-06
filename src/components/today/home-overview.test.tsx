@@ -218,9 +218,11 @@ describe("HomeOverview core", () => {
   it("renders the hero, pair and prayer list with the source line and Hijri date", async () => {
     await renderHome("13:00");
     expect(screen.getByRole("region", { name: "নামাজের সময় ও কাউন্টডাউন" })).toBeInTheDocument();
-    expect(screen.getByTestId("hero-source")).toHaveTextContent("উৎস: AlAdhan · করাচি পদ্ধতি, হানাফি আসর");
+    expect(screen.getByTestId("hero-source")).toHaveTextContent("উৎস: AlAdhan · করাচি · হানাফি আসর");
     expect(screen.getByTestId("hero-source")).not.toHaveTextContent("নমুনা");
-    expect(screen.getByText("২২ রমজান ১৪৪৮")).toBeInTheDocument();
+    // The large title's subtitle carries the place, the date and the Hijri date (regular).
+    expect(screen.getByRole("heading", { level: 1, name: "আজ" })).toBeInTheDocument();
+    expect(screen.getByTestId("today-subtitle")).toHaveTextContent(/২২ রমজান ১৪৪৮$/);
     expect(screen.getByTestId("pair-iftar")).toHaveTextContent("৬:০৫");
     expect(document.querySelectorAll("li[data-prayer]")).toHaveLength(5);
   });
