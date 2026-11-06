@@ -28,6 +28,13 @@ Reminders/Integrations:
 - `GET /api/calendar/google/connect`
 - `GET /api/calendar/google/callback`
 
+Card donations (see [donations.md](donations.md)):
+
+- `POST /api/donations/checkout` (guests welcome; same-origin only): `{ amount, currency: "usd"|"gbp"|"eur"|"bdt", frequency: "once"|"monthly", locale?: "bn"|"en" }` -> `{ ok: true, url }`. `400` with `issue` (`amount_min`, `amount_max`, `amount_invalid`, `monthly_unsupported`, `invalid_request`), `429` when rate-limited, `503` when Stripe is not configured
+- `POST /api/stripe/webhook` (CSRF-exempt; `stripe-signature` verified): `400` bad signature, `503` without `STRIPE_WEBHOOK_SECRET`, `500` on a database error so Stripe retries
+- `GET /api/donations/summary`: anonymous totals per month and currency plus a donor count, cached 5 minutes
+- `POST /api/donations/portal` (same-origin only): `{ sessionId: "cs_..." }` -> `{ ok: true, url }` for a monthly donation's Stripe customer portal; `404` for anything else
+
 Announcements:
 
 - `GET /api/announcements` (`503` when the database is unreachable)
