@@ -225,15 +225,20 @@ test("landing shows today's live times for Dhaka with a source line, never sampl
   await mockApis(page);
   await visit(page, "/");
   const today = page.getByTestId("landing-sample");
-  await expect(today).toContainText("আজকের সময় · ঢাকা");
+  await expect(today).toContainText("আজ · ঢাকা");
   // The mocked answer's sehri end, the next prayer at 13:00 (Asr) and iftar, period first in Bengali.
   await expect(today).toContainText("ভোর ৪:৫৭");
-  await expect(today).toContainText("পরবর্তী · আসর");
+  await expect(today).toContainText("পরবর্তী নামাজ");
+  await expect(today).toContainText("আসর");
   await expect(today).toContainText("বিকাল ৪:১৮");
   await expect(today).toContainText("সন্ধ্যা ৫:৫৮");
   await expect(page.locator("main")).not.toContainText("নমুনা");
   await expect(page.locator("main")).toContainText("উৎস: AlAdhan · করাচি · হানাফি আসর");
   await expect(page.getByRole("contentinfo").getByRole("link", { name: "সময়সূচি" })).toHaveAttribute("href", "/timetable");
   await expect(page.locator('footer a[href="/support"]')).toBeVisible();
+  // The homepage v2 sections (Figma page 11) render on the server.
+  for (const name of ["তিন ধাপে আপনার রমজান শুরু", "রমজানের জন্য যা যা দরকার", "যেকোনো ডিভাইসে", "সাপোর্ট ও অবদান"]) {
+    await expect(page.getByRole("heading", { level: 2, name })).toBeVisible();
+  }
 });
 });

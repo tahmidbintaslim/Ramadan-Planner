@@ -99,7 +99,7 @@ function heroTarget(label: string, result: PrayerPhaseResult, t: Translate, tSal
 }
 
 /** The card's two lines: an eyebrow ("পরবর্তী নামাজ" / "এরপর") and the title (the prayer, "সেহরি শেষ", "ইফতার"). */
-function heroLines(label: string, result: PrayerPhaseResult, t: Translate, tSalah: Translate): { eyebrow: string; title: string } {
+export function heroLines(label: string, result: PrayerPhaseResult, t: Translate, tSalah: Translate): { eyebrow: string; title: string } {
   if (label === t("sehriEnds") || result.phase === "iftar") return { eyebrow: t("upNext"), title: label };
   return { eyebrow: t("nextPrayerEyebrow"), title: tSalah(result.next.key === "sehri" ? "fajr" : result.next.key) };
 }
