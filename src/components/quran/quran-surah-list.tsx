@@ -165,6 +165,22 @@ function LastReadCard({ surah, lastRead: saved }: { surah: SurahInfo | undefined
   );
 }
 
+/**
+ * Forgiving surah search: case, spaces, hyphens and apostrophes are ignored; Latin long vowels fold ("Yaa-Seen"
+ * matches "yasin"); Bengali long and short i/u fold (ইয়াসিন matches ইয়াসীন).
+ */
+export function normalizeSearch(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize("NFC")
+    .replace(/[\s\-'’`.]/g, "")
+    .replace(/ী/g, "ি")
+    .replace(/ূ/g, "ু")
+    .replace(/aa+/g, "a")
+    .replace(/ee+|ii+/g, "i")
+    .replace(/oo+|uu+/g, "u");
+}
+
 /** `initialSurahs` (from the route loader) renders the full list on the server; empty falls back to fetching. */
 export function QuranSurahList({ initialSurahs = [] }: { initialSurahs?: SurahInfo[] }) {
   const t = useTranslations("quranReader");
@@ -202,17 +218,17 @@ export function QuranSurahList({ initialSurahs = [] }: { initialSurahs?: SurahIn
     load();
   }, [hasList]);
 
+  const q = normalizeSearch(searchQuery);
   const filteredSurahs = surahs.filter((surah) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      surah.nameEnglish.toLowerCase().includes(q) ||
-      surah.nameTranslation.toLowerCase().includes(q) ||
-      surah.nameArabic.includes(q) ||
-      surah.nameBengali.includes(q) ||
-      String(surah.surahNo).includes(q) ||
-      formatLocalizedNumber(surah.surahNo, "bn").includes(q)
-    );
+    if (!q) return true;
+    return [
+      surah.nameEnglish,
+      surah.nameTranslation,
+      surah.nameArabic,
+      surah.nameBengali,
+      String(surah.surahNo),
+      formatLocalizedNumber(surah.surahNo, "bn"),
+    ].some((name) => normalizeSearch(name).includes(q));
   });
 
   const lastReadSurah = lastRead ? surahs.find((s) => s.surahNo === lastRead.surah) : undefined;
