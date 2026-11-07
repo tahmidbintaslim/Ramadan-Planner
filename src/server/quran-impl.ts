@@ -1,7 +1,7 @@
 // Server-only implementation of the /quran/$surah page loader (src/actions/quran-page.ts). PUBLIC read: the old
 // page had no auth. Only what head() needs is returned; the reader component fetches the ayahs itself.
 import "@tanstack/react-start/server-only";
-import { fetchSurah } from "@/lib/quran";
+import { fetchSurah, type SurahDetail } from "@/lib/quran";
 import { getSiteUrl } from "@/server/site-url";
 
 export interface SurahPageData {
@@ -10,6 +10,8 @@ export interface SurahPageData {
   surah: { surahNo: number; nameEnglish: string; nameBengali: string; totalAyah: number } | null;
   /** Public origin without trailing slash, "" when not configured. */
   siteUrl: string;
+  /** The surah's text without audio URLs, so the server renders the ayahs (SEO); the client then loads audio. */
+  text: SurahDetail | null;
 }
 
 export function isSurahNumber(n: unknown): n is number {
@@ -31,5 +33,19 @@ export async function getSurahPageDataImpl(surahNumber: number): Promise<SurahPa
         }
       : null,
     siteUrl: getSiteUrl(),
+    text: surah
+      ? {
+          ...surah,
+          audio: {},
+          ayahs: surah.ayahs.map(({ ayahNo, textArabic, textArabicClean, textEnglish, textBengali }) => ({
+            ayahNo,
+            textArabic,
+            textArabicClean,
+            textEnglish,
+            textBengali,
+            audio: {},
+          })),
+        }
+      : null,
   };
 }

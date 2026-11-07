@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "@/i18n/use-intl";
-import { QuranIcon } from "@/components/icons/islamic-icons";
 import { cn } from "@/lib/utils";
 
 interface DailyAyah {
@@ -61,20 +60,18 @@ export function DailyAyahCard({ ramadanDay, className }: { ramadanDay: number | 
   const meaning = locale === "en" ? ayah.en || ayah.bn : ayah.bn;
 
   return (
-    <section
-      aria-labelledby="home-ayah"
-      data-testid="daily-ayah"
-      className={cn("flex flex-col gap-2 rounded-rp-lg bg-rp-surface p-5 text-rp-ink shadow-rp-soft", className)}
-    >
-      <h2 id="home-ayah" className="rp-row flex items-center gap-2 font-semibold">
-        <QuranIcon size={24} className="text-rp-accent" />
+    <section aria-labelledby="home-ayah" data-testid="daily-ayah" className={cn("flex flex-col gap-2", className)}>
+      <h2 id="home-ayah" className="rp-headline text-rp-ink">
         {tHome("ayahTitle")}
       </h2>
-      <p lang="ar" dir="rtl" className="font-arabic text-[24px] leading-[48px]">
-        {ayah.ar}
-      </p>
-      <p className="rp-reading-small text-rp-muted">{meaning}</p>
-      <p className="rp-caption text-rp-gold-text">{ayah.ref}</p>
+      {/* v4 Ayah: Amiri Quran 28/56 (the founder's Quran face); the meaning in Body, the reference in Footnote. */}
+      <div className="flex flex-col gap-3 rounded-rp-md bg-rp-surface p-6 text-rp-ink">
+        <p lang="ar" dir="rtl" className="font-quran text-[28px] leading-[56px]">
+          {ayah.ar}
+        </p>
+        <p className="rp-body">{meaning}</p>
+        <p className="rp-caption text-rp-muted">{ayah.ref}</p>
+      </div>
     </section>
   );
 }

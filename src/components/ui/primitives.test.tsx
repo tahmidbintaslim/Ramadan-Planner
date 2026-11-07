@@ -13,14 +13,15 @@ import { SectionHeader } from "@/components/design/section-header"
 afterEach(cleanup)
 
 describe("buttonVariants", () => {
-  it("default and primary are the teal pill at 48px", () => {
+  it("default and primary are the v4 primary fill: Regular 44 at radius 10, Large 56 at radius 12", () => {
     for (const variant of ["default", "primary"] as const) {
       const c = buttonVariants({ variant })
-      expect(c).toContain("bg-rp-live")
-      expect(c).toContain("text-rp-on-live")
-      expect(c).toContain("rounded-rp-full")
-      expect(c).toContain("h-12")
+      expect(c).toContain("bg-rp-primary")
+      expect(c).toContain("text-rp-on-primary")
+      expect(c).toContain("rounded-rp-sm")
+      expect(c).toContain("h-11")
     }
+    expect(buttonVariants({ size: "lg" })).toContain("rounded-rp-input")
   })
   it("soft and its legacy alias secondary share the tint look", () => {
     for (const variant of ["soft", "secondary"] as const) {
@@ -44,11 +45,11 @@ describe("buttonVariants", () => {
   })
   it("keeps destructive, sizes and focus/disabled styles", () => {
     expect(buttonVariants({ variant: "destructive" })).toContain("bg-destructive")
-    expect(buttonVariants({ size: "sm" })).toContain("h-10")
-    expect(buttonVariants({ size: "icon" })).toContain("size-12")
-    expect(buttonVariants({ size: "lg" })).toContain("h-[52px]")
+    expect(buttonVariants({ size: "sm" })).toContain("h-11")
+    expect(buttonVariants({ size: "icon" })).toContain("size-11")
+    expect(buttonVariants({ size: "lg" })).toContain("h-14")
     expect(buttonVariants()).toContain("focus-visible:ring-")
-    // 44px pixel floors under the 80% font setting (rem-based 48px would be 38.4px).
+    // 44px pixel floors under the 80% font setting (rem-based 44px would be 35.2px).
     expect(buttonVariants()).toContain("min-h-[44px]")
     expect(buttonVariants({ size: "icon" })).toContain("min-w-[44px]")
     expect(buttonVariants()).toContain("disabled:opacity-50")
@@ -66,7 +67,9 @@ describe("badgeVariants", () => {
     expect(badgeVariants({ variant: "gold" })).toContain("bg-rp-gold-tint")
     expect(badgeVariants({ variant: "gold" })).toContain("text-rp-gold-text")
     expect(badgeVariants({ variant: "outline" })).toContain("border-rp-strong")
-    expect(badgeVariants()).toContain("rounded-full")
+    // v4 chip: 24 tall, radius 11, Footnote 13 (no Bengali below 13px).
+    expect(badgeVariants()).toContain("rounded-[11px]")
+    expect(badgeVariants()).toContain("rp-caption")
   })
   it("renders", () => {
     render(createElement(Badge, null, "New"))
@@ -117,7 +120,7 @@ describe("Chip", () => {
 describe("SectionHeader", () => {
   it("renders the title as a heading with an optional action", () => {
     render(createElement(SectionHeader, { title: "Prayers", action: createElement("a", { href: "/x" }, "See all") }))
-    expect(screen.getByRole("heading", { name: "Prayers", level: 2 }).className).toContain("rp-h2")
+    expect(screen.getByRole("heading", { name: "Prayers", level: 2 }).className).toContain("rp-headline")
     expect(screen.getByRole("link", { name: "See all" })).toBeTruthy()
   })
   it("omits the action slot when none is given", () => {

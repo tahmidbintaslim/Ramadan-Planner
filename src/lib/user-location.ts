@@ -103,13 +103,28 @@ export function readStoredLocation(): StoredLocation | null {
   }
 }
 
+/** Fired on window after the location is saved, so mounted screens (header, Today) follow at once. */
+export const LOCATION_EVENT = "rp:location";
+
 export function writeStoredLocation(loc: StoredLocation): boolean {
   try {
     localStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify(loc));
     return true;
   } catch {
     return false;
+  } finally {
+    if (typeof window !== "undefined") window.dispatchEvent(new Event(LOCATION_EVENT));
   }
+}
+
+/** Subscribe to location changes (this tab's saves and other tabs' storage writes). */
+export function subscribeStoredLocation(onChange: () => void): () => void {
+  window.addEventListener(LOCATION_EVENT, onChange);
+  window.addEventListener("storage", onChange);
+  return () => {
+    window.removeEventListener(LOCATION_EVENT, onChange);
+    window.removeEventListener("storage", onChange);
+  };
 }
 
 /**

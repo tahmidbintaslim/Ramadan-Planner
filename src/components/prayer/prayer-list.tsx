@@ -1,30 +1,13 @@
-import type { ComponentType } from "react";
+import { Bell, Circle, CircleCheck } from "lucide-react";
 import { useLocale, useTranslations } from "@/i18n/use-intl";
 import { SectionHeader } from "@/components/design/section-header";
 import { Link } from "@/components/shared/link";
 import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
-import {
-  AsrIcon,
-  BellIcon,
-  DhuhrIcon,
-  FajrIcon,
-  IshaIcon,
-  MaghribIcon,
-  type IconProps,
-} from "@/components/icons/islamic-icons";
+import { LUCIDE_STROKE, TIMETABLE_HREF } from "@/components/layout/nav-items";
 import type { PhaseTimings } from "@/lib/prayer-phase";
 import { cn } from "@/lib/utils";
 import { useClockFormat } from "@/hooks/use-clock-format";
 import { FIVE_PRAYERS, formatPrayerClock, useNowTick, type FivePrayer } from "./use-prayer-phase";
-
-const ICONS: Record<FivePrayer, ComponentType<IconProps>> = {
-  fajr: FajrIcon,
-  dhuhr: DhuhrIcon,
-  asr: AsrIcon,
-  maghrib: MaghribIcon,
-  isha: IshaIcon,
-};
 
 export const REMINDERS_HREF = "/reminders";
 
@@ -61,6 +44,12 @@ export interface PrayerListProps {
    * rule-based there: offset + channels, guest local storage or server), so nothing is toggled here.
    */
   onToggleReminder?: (prayer: FivePrayer, enabled: boolean) => void;
+  /** Hide the bells (the landing page, which has no reminders). */
+  hideReminders?: boolean;
+  /** The source line under the list ("উৎস: AlAdhan · করাচি · হানাফি আসর"). */
+  source?: string;
+  /** Hide the section header (the landing page's card stack has none). */
+  hideHeader?: boolean;
   /** Freeze the clock (tests, previews). */
   now?: Date;
   /** Server render time for hydration-safe first render (see PrayerHero). */
@@ -68,11 +57,20 @@ export interface PrayerListProps {
   className?: string;
 }
 
+/**
+ * Today's prayers (v4): an inset-grouped list, radius 16, rows 48 on compact and 56 from medium (all five clear the
+ * tab bar at 390×844). Leading 24 state icon in the 16 inset (past: circle-check accent; next: tonal row + teal
+ * chip; upcoming: circle secondary), the name grows, the time hugs the trailing edge with tabular figures, and each
+ * separator starts where the text starts (x = 56). A trailing 44 bell keeps the per-prayer reminder toggle.
+ */
 export function PrayerList({
   timings,
   timeZone,
   reminders,
   onToggleReminder,
+  hideReminders = false,
+  source,
+  hideHeader = false,
   now: nowOverride,
   initialNow,
   className,
@@ -85,21 +83,17 @@ export function PrayerList({
   const states = prayerRowStates(now, timings);
 
   return (
-    <section className={cn("flex flex-col gap-1.5", className)}>
-      <SectionHeader
-        title={t("todayPrayers")}
-        action={<Link href={REMINDERS_HREF}>{t("reminders")}</Link>}
-      />
-      <ul className="flex flex-col rounded-rp-lg bg-rp-surface p-1 shadow-rp-soft">
+    <section aria-label={hideHeader ? t("todayPrayers") : undefined} className={cn("flex flex-col gap-2", className)}>
+      {hideHeader ? null : <SectionHeader title={t("todayPrayers")} action={<Link href={TIMETABLE_HREF}>{t("seeAll")}</Link>} />}
+      <ul className="flex flex-col overflow-hidden rounded-rp-md bg-rp-surface">
         {FIVE_PRAYERS.map((key) => {
-          const Icon = ICONS[key];
           const state = states[key];
           const name = tSalah(key);
           const enabled = Boolean(reminders?.[key]);
+          const StateIcon = state === "past" ? CircleCheck : Circle;
           const bellClass = cn(
-            buttonVariants({ variant: "quiet", size: "icon" }),
-            "-mr-3 size-11 shrink-0",
-            state === "past" && "text-rp-muted",
+            "-mr-3 flex size-11 shrink-0 items-center justify-center rounded-rp-full transition-colors hover:bg-rp-accent-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rp-focus",
+            enabled ? "text-rp-accent" : "text-rp-muted",
           );
           return (
             <li
@@ -108,22 +102,26 @@ export function PrayerList({
               data-state={state}
               aria-current={state === "next" ? "time" : undefined}
               className={cn(
-                "flex h-11 items-center gap-3 rounded-rp-md px-4",
-                state === "next" && "bg-rp-accent-tint text-rp-accent",
-                state === "past" && "text-rp-muted",
-                state === "upcoming" && "text-rp-ink",
+                "relative flex h-12 items-center gap-4 px-4 text-rp-ink medium:h-14",
+                "after:absolute after:right-0 after:bottom-0 after:left-14 after:h-px after:bg-rp-rule last:after:hidden",
+                state === "next" && "bg-rp-accent-tint",
               )}
             >
-              <Icon
+              <StateIcon
                 size={24}
-                className={cn("shrink-0", state === "past" ? "text-rp-strong" : "text-rp-accent")}
+                strokeWidth={LUCIDE_STROKE}
+                aria-hidden
+                className={cn("shrink-0", state === "upcoming" ? "text-rp-muted" : "text-rp-icon")}
               />
-              <span className={cn("rp-row flex-1 truncate", state === "next" && "font-semibold")}>{name}</span>
+              <span className={cn("rp-row min-w-0 flex-1 truncate", state === "next" && "font-semibold")}>{name}</span>
               {state === "next" ? <Badge>{t("next")}</Badge> : null}
-              <span className={cn("rp-row tabular-nums", state === "next" && "font-semibold")}>
+              <span
+                className={cn("rp-headline whitespace-nowrap text-right tabular-nums", state === "past" && "text-rp-muted")}
+                suppressHydrationWarning
+              >
                 {formatPrayerClock(timings[key], timeZone, locale, clockFormat)}
               </span>
-              {onToggleReminder ? (
+              {hideReminders ? null : onToggleReminder ? (
                 <button
                   type="button"
                   aria-pressed={enabled}
@@ -131,17 +129,22 @@ export function PrayerList({
                   onClick={() => onToggleReminder(key, !enabled)}
                   className={bellClass}
                 >
-                  <BellIcon size={20} className="size-5" fill={enabled ? "currentColor" : "none"} />
+                  <Bell size={20} strokeWidth={LUCIDE_STROKE} aria-hidden fill={enabled ? "currentColor" : "none"} />
                 </button>
               ) : (
                 <Link href={REMINDERS_HREF} aria-label={t("reminderManage", { name })} className={bellClass}>
-                  <BellIcon size={20} className="size-5" />
+                  <Bell size={20} strokeWidth={LUCIDE_STROKE} aria-hidden />
                 </Link>
               )}
             </li>
           );
         })}
       </ul>
+      {source ? (
+        <p data-testid="hero-source" className="rp-caption text-rp-muted">
+          {source}
+        </p>
+      ) : null}
     </section>
   );
 }

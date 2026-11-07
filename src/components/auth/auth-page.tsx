@@ -20,7 +20,7 @@ export function AuthPage({ children }: { children: ReactNode }) {
           </span>
           <span className="font-display text-[18px] leading-[28px] text-rp-ink">{t("appName")}</span>
         </Link>
-        <TextThemeButton compact />
+        <TextThemeButton />
       </header>
       <main id="main-content" className="flex items-center justify-center px-4 pt-6 pb-10">
         <div className="w-full max-w-md">{children}</div>

@@ -165,12 +165,14 @@ function LastReadCard({ surah, lastRead: saved }: { surah: SurahInfo | undefined
   );
 }
 
-export function QuranSurahList() {
+/** `initialSurahs` (from the route loader) renders the full list on the server; empty falls back to fetching. */
+export function QuranSurahList({ initialSurahs = [] }: { initialSurahs?: SurahInfo[] }) {
   const t = useTranslations("quranReader");
   const locale = useLocale();
   const showBengaliName = locale.startsWith("bn");
-  const [surahs, setSurahs] = useState<SurahInfo[]>(FALLBACK_SURAHS);
-  const [loading, setLoading] = useState(true);
+  const [surahs, setSurahs] = useState<SurahInfo[]>(initialSurahs.length ? initialSurahs : FALLBACK_SURAHS);
+  const [loading, setLoading] = useState(initialSurahs.length === 0);
+  const hasList = initialSurahs.length > 0;
   const [searchQuery, setSearchQuery] = useState("");
   const [lastRead, setLastRead] = useState<LastRead | null>(null);
 
@@ -180,6 +182,7 @@ export function QuranSurahList() {
   }, []);
 
   useEffect(() => {
+    if (hasList) return;
     async function load() {
       try {
         const controller = new AbortController();
@@ -197,7 +200,7 @@ export function QuranSurahList() {
       }
     }
     load();
-  }, []);
+  }, [hasList]);
 
   const filteredSurahs = surahs.filter((surah) => {
     if (!searchQuery.trim()) return true;

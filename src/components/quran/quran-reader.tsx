@@ -35,6 +35,8 @@ import { formatLocalizedNumber } from "@/lib/locale-number";
 
 interface QuranReaderProps {
   surahNumber: number;
+  /** Server-rendered text (no audio); shown at once while the full surah (with audio) loads. */
+  initialText?: SurahDetail | null;
 }
 
 // Default reciter id (Mishary Rashid Al Afasy)
@@ -46,12 +48,13 @@ const DEFAULT_RECITER = "1";
 export const AUDIO_BAR_CLASS =
   "fixed left-4 right-[4.5rem] bottom-[calc(6.5rem+env(safe-area-inset-bottom))] z-30 mx-auto max-w-[900px] lg:static lg:inset-auto lg:w-auto";
 
-export function QuranReader({ surahNumber }: QuranReaderProps) {
+export function QuranReader({ surahNumber, initialText = null }: QuranReaderProps) {
   const t = useTranslations("quranReader");
   const locale = useLocale();
   const showBengaliName = locale.startsWith("bn");
-  const [surah, setSurah] = useState<SurahDetail | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [surah, setSurah] = useState<SurahDetail | null>(initialText);
+  const [loading, setLoading] = useState(initialText === null);
+  const hasText = initialText !== null;
   const [error, setError] = useState<string | null>(null);
 
   // Text-to-Speech is temporarily disabled. Keeping variables commented
@@ -87,7 +90,8 @@ export function QuranReader({ surahNumber }: QuranReaderProps) {
       }
     })();
     async function load() {
-      setLoading(true);
+      // With server text on screen, the fetch only adds audio: no spinner, and a failure keeps the text.
+      if (!hasText) setLoading(true);
       setError(null);
 
       try {
@@ -104,7 +108,7 @@ export function QuranReader({ surahNumber }: QuranReaderProps) {
         const data: SurahDetail = await res.json();
         setSurah(data);
       } catch {
-        setError(t("loadError"));
+        if (!hasText) setError(t("loadError"));
       } finally {
         setLoading(false);
       }
@@ -113,7 +117,7 @@ export function QuranReader({ surahNumber }: QuranReaderProps) {
     return () => {
       mounted = false;
     };
-  }, [surahNumber, t]);
+  }, [surahNumber, t, hasText]);
 
   // Cleanup speech & audio on unmount
   useEffect(() => {

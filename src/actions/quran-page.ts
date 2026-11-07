@@ -15,3 +15,17 @@ const getSurahPageDataFn = createServerFn({ method: "GET" })
 export async function getSurahPageData(surahNumber: number): Promise<SurahPageData | null> {
   return getSurahPageDataFn({ data: surahNumber });
 }
+
+const getSurahListFn = createServerFn({ method: "GET" }).handler(async () => {
+  const { fetchSurahList } = await import("@/lib/quran");
+  try {
+    return await fetchSurahList();
+  } catch {
+    return []; // the list then fetches /api/quran on the client, as before
+  }
+});
+
+/** All 114 surahs for the /quran loader, so the list renders on the server; [] when the source fails. */
+export async function getSurahList() {
+  return getSurahListFn();
+}

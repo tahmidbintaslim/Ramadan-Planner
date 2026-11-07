@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderToString } from "react-dom/server";
 import { hydrateRoot } from "react-dom/client";
@@ -16,58 +16,51 @@ afterEach(() => {
 function renderHero(props: Partial<PrayerHeroProps> = {}, locale: "bn" | "en" = "bn") {
   return render(
     <WithIntl locale={locale}>
-      <PrayerHero
-        timings={TIMINGS}
-        timeZone={TZ}
-        district="ঢাকা"
-        hijriLabel="২২ রমজান ১৪৪৮"
-        source="ইসলামিক ফাউন্ডেশন"
-        {...props}
-      />
+      <PrayerHero timings={TIMINGS} timeZone={TZ} {...props} />
     </WithIntl>,
   );
 }
 
 const hero = () => screen.getByRole("region");
+const title = () => within(hero()).getByRole("heading");
 
 describe("PrayerHero phases (bn)", () => {
-  it("sehri: label, sehri-end time, remaining, night sky with crescent", () => {
+  it("sehri: label, sehri-end time, remaining, on the flat teal card", () => {
     renderHero({ now: at("03:55") });
     expect(hero().dataset.phase).toBe("sehri");
-    expect(hero()).toHaveTextContent("সেহরি শেষ");
+    expect(title()).toHaveTextContent("সেহরি শেষ");
+    expect(hero()).toHaveTextContent("এরপর");
     expect(hero()).toHaveTextContent("৪:৫৫");
     expect(hero()).toHaveTextContent("আর ১ ঘণ্টা");
-    expect(hero().style.backgroundImage).toContain("--rp-hero-sehri");
-    expect(screen.getByTestId("hero-crescent")).toBeTruthy();
+    // The card is bg/live (#0E7C6B) in every phase and both modes: no sky gradient.
+    expect(hero().className).toContain("bg-rp-live");
+    expect(hero().style.backgroundImage).toBe("");
   });
 
-  it("day: next prayer label and time, no crescent", () => {
+  it("day: the next prayer under the 'next prayer' eyebrow", () => {
     renderHero({ now: at("13:00") });
     expect(hero().dataset.phase).toBe("day");
-    expect(hero()).toHaveTextContent("পরবর্তী · আসর");
+    expect(hero()).toHaveTextContent("পরবর্তী নামাজ");
+    expect(title()).toHaveTextContent(/^আসর$/);
     expect(hero()).toHaveTextContent("৪:২৫");
     expect(hero()).toHaveTextContent("আর ৩ ঘণ্টা ২৫ মিনিট");
-    expect(hero().style.backgroundImage).toContain("--rp-hero-day");
-    expect(screen.queryByTestId("hero-crescent")).toBeNull();
+    expect(hero().className).toContain("bg-rp-live");
   });
 
-  it("iftar: iftar label, maghrib time, white arc", () => {
+  it("iftar: iftar label and maghrib time", () => {
     renderHero({ now: at("17:35") });
     expect(hero().dataset.phase).toBe("iftar");
-    expect(hero()).toHaveTextContent("ইফতার");
+    expect(title()).toHaveTextContent("ইফতার");
     expect(hero()).toHaveTextContent("৬:০৫");
     expect(hero()).toHaveTextContent("আর ৩০ মিনিট");
-    expect(screen.getByTestId("hero-ring-progress").getAttribute("stroke")).toBe("white");
-    expect(screen.queryByTestId("hero-crescent")).toBeNull();
   });
 
   it("night before isha: isha label and time", () => {
     renderHero({ now: at("18:30") });
     expect(hero().dataset.phase).toBe("night");
-    expect(hero()).toHaveTextContent("ইশা");
+    expect(title()).toHaveTextContent("ইশা");
     expect(hero()).toHaveTextContent("৭:২০");
     expect(hero()).toHaveTextContent("আর ৫০ মিনিট");
-    expect(screen.getByTestId("hero-crescent")).toBeTruthy();
   });
 
   it("night after isha: next fajr tomorrow, or sehri end in Ramadan", () => {
@@ -96,15 +89,11 @@ describe("PrayerHero phases (bn)", () => {
     expect(hero()).toHaveTextContent("আর ৭ ঘণ্টা ৫৪ মিনিট");
   });
 
-  it("top row and source line (sample labelled)", () => {
-    renderHero({ now: at("13:00"), sample: true });
-    expect(hero()).toHaveTextContent("ঢাকা");
-    expect(hero()).toHaveTextContent("২২ রমজান ১৪৪৮");
-    expect(hero()).toHaveTextContent("নমুনা সময় · উৎস: ইসলামিক ফাউন্ডেশন");
-    cleanup();
+  it("puts the Bengali day period before the time (founder rule)", () => {
     renderHero({ now: at("13:00") });
-    expect(hero()).toHaveTextContent("উৎস: ইসলামিক ফাউন্ডেশন");
-    expect(hero()).not.toHaveTextContent("নমুনা");
+    const time = screen.getByTestId("hero-time");
+    expect(time.textContent).toBe("বিকাল৪:২৫");
+    expect(time.firstElementChild).toBe(screen.getByTestId("hero-period"));
   });
 
   it("uses Bengali digits only in bn", () => {
@@ -114,27 +103,26 @@ describe("PrayerHero phases (bn)", () => {
 });
 
 describe("PrayerHero (en)", () => {
-  it("renders English labels with Latin digits", () => {
-    renderHero({ now: at("13:00"), district: "Dhaka", hijriLabel: "22 Ramadan 1448", source: "IFB" }, "en");
+  it("renders English labels with Latin digits and the period after the time", () => {
+    renderHero({ now: at("13:00") }, "en");
+    expect(hero()).toHaveTextContent("Next prayer");
+    expect(title()).toHaveTextContent(/^Asr$/);
     expect(hero()).toHaveTextContent("Next · Asr");
-    expect(hero()).toHaveTextContent("4:25");
     expect(hero()).toHaveTextContent("3h 25m left");
-    expect(hero()).toHaveTextContent("Source: IFB");
+    const time = screen.getByTestId("hero-time");
+    expect(time.textContent).toBe("4:25PM");
+    expect(time.lastElementChild).toBe(screen.getByTestId("hero-period"));
   });
 });
 
-describe("PrayerHero ring", () => {
-  it("arc length follows progress and has no transition under reduced motion", () => {
+describe("PrayerHero progress", () => {
+  it("keeps a spoken progressbar for the phase", () => {
     renderHero({ now: at("13:00") });
-    const arc = screen.getByTestId("hero-ring-progress");
-    const c = Number(arc.getAttribute("stroke-dasharray"));
-    const offset = Number(arc.getAttribute("stroke-dashoffset"));
-    expect(c).toBeGreaterThan(0);
-    expect(offset).toBeGreaterThan(0);
-    expect(offset).toBeLessThan(c);
-    expect(arc.getAttribute("class")).toContain("motion-reduce:transition-none");
     const bar = screen.getByRole("progressbar");
-    expect(Number(bar.getAttribute("aria-valuenow"))).toBe(Math.round((1 - offset / c) * 100));
+    const value = Number(bar.getAttribute("aria-valuenow"));
+    expect(value).toBeGreaterThan(0);
+    expect(value).toBeLessThan(100);
+    expect(bar).toHaveClass("sr-only");
   });
 });
 
@@ -162,7 +150,7 @@ describe("PrayerHero live clock", () => {
     expect(hero().dataset.phase).toBe("day");
     rerender(
       <WithIntl>
-        <PrayerHero timings={TIMINGS} timeZone={TZ} district="ঢাকা" source="IFB" />
+        <PrayerHero timings={TIMINGS} timeZone={TZ} />
       </WithIntl>,
     );
     expect(hero().dataset.phase).toBe("iftar");
@@ -216,16 +204,14 @@ describe("nextAnnouncement (live-region gate)", () => {
 });
 
 describe("PrayerHero a11y labels", () => {
-  it("progressbar has a spoken value and the location pill a labelled prefix", () => {
+  it("progressbar has a spoken value", () => {
     renderHero({ now: at("17:35") }); // 30 of the 60 iftar minutes
     expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuetext", "ইফতার পর্যন্ত ৫০% সময় পেরিয়েছে");
-    expect(screen.getByText("অবস্থান: ঢাকা")).toHaveClass("sr-only");
     cleanup();
-    renderHero({ now: at("13:00"), district: "Dhaka" }, "en");
+    renderHero({ now: at("13:00") }, "en");
     expect(screen.getByRole("progressbar").getAttribute("aria-valuetext")).toMatch(
       /^\d+% of the time until Asr has passed$/,
     );
-    expect(screen.getByText("Location: Dhaka")).toBeInTheDocument();
   });
 });
 
@@ -233,7 +219,7 @@ describe("PrayerHero hydration", () => {
   it("hydrates without a mismatch across a phase boundary when given initialNow", async () => {
     const tree = (
       <WithIntl>
-        <PrayerHero timings={TIMINGS} timeZone={TZ} district="ঢাকা" source="IFB" initialNow={at("17:04:30")} />
+        <PrayerHero timings={TIMINGS} timeZone={TZ} initialNow={at("17:04:30")} />
       </WithIntl>
     );
     vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });

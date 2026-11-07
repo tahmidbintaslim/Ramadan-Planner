@@ -1,10 +1,11 @@
 import { useState, type ComponentType } from "react";
+import { Circle, CircleCheck } from "lucide-react";
+import { LUCIDE_STROKE } from "@/components/layout/nav-items";
 import { useLocale, useTranslations } from "@/i18n/use-intl";
 import { SectionHeader } from "@/components/design/section-header";
 import { Link } from "@/components/shared/link";
 import { buttonVariants } from "@/components/ui/button";
 import {
-  ChevronRightIcon,
   DuaIcon,
   HeartIcon,
   PlanIcon,
@@ -77,12 +78,12 @@ export function FeatureTiles({ className }: { className?: string }) {
           <li key={key}>
             <Link
               href={href}
-              className="flex min-h-[100px] flex-col items-center justify-center gap-2 rounded-rp-md bg-rp-surface px-1 py-4 text-rp-ink shadow-rp-soft transition-colors outline-none hover:bg-rp-accent-tint/60 focus-visible:ring-[3px] focus-visible:ring-ring"
+              className="flex min-h-[100px] flex-col items-center justify-center gap-2 rounded-rp-md bg-rp-surface px-1 py-4 text-rp-ink transition-colors outline-none hover:bg-rp-accent-tint/60 focus-visible:ring-[3px] focus-visible:ring-ring"
             >
               <span className="flex size-11 items-center justify-center rounded-rp-full bg-rp-accent-tint text-rp-accent">
                 <Icon size={24} />
               </span>
-              <span className="text-[13px] leading-[18px] font-medium">{t(key)}</span>
+              <span className="rp-caption text-center">{t(key)}</span>
             </Link>
           </li>
         ))}
@@ -118,42 +119,81 @@ export interface PlanPreviewState {
   error?: boolean;
 }
 
+/** How many of the day's deeds the Home lists (Figma: five). */
+export const PLAN_PREVIEW_ROWS = 5;
+
 /**
- * Today's plan on the Home: one small link row (title with the same count as /plan, and the next deed still open),
- * never the checklist itself: ticking and tracking live on /plan only.
+ * Today's plan on the Home (v4 "আজকের আমল"): the section header (title with the same count as /plan, and one
+ * "See all" link to /plan), then up to five of the day's deeds as an inset-grouped list that shows their state
+ * (circle-check done, circle open). Never the checklist itself: ticking and tracking live on /plan only.
  */
 export function PlanPreview({ state, className }: { state: PlanPreviewState; className?: string }) {
   const t = useTranslations("home");
+  const tToday = useTranslations("today");
+  const tPrayer = useTranslations("prayer");
   const locale = useLocale();
-  const next = planDisplayOrder(state.rows).find((row) => !row.done);
+  const ordered = planDisplayOrder(state.rows);
+  const next = ordered.find((row) => !row.done);
   // No count for an empty or failed list ("০/০" reads as a score of nothing).
   const showCount = state.ready && state.total > 0;
+  // A no-break space holds the line before the list is known.
+  const nextText = !state.ready
+    ? " "
+    : next
+      ? t("planNext", { title: next.title })
+      : state.rows.length > 0
+        ? t("planAllDone")
+        : t("planEmpty");
+  const shown = state.ready ? ordered.slice(0, PLAN_PREVIEW_ROWS) : [];
 
   return (
     <section aria-labelledby="home-plan" data-testid="plan-preview" className={cn("flex flex-col gap-2", className)}>
-      <Link
-        href={PLAN_HREF}
-        aria-label={t("planAllLabel")}
-        className="flex min-h-14 items-center gap-3 rounded-rp-lg bg-rp-surface px-4 py-3 text-rp-ink shadow-rp-soft outline-none transition-colors hover:bg-rp-accent-tint/60 focus-visible:ring-[3px] focus-visible:ring-ring"
-      >
-        <span aria-hidden="true" className="flex size-10 shrink-0 items-center justify-center rounded-rp-full bg-rp-accent-tint text-rp-accent">
-          <PlanIcon size={22} />
-        </span>
-        <span className="flex min-w-0 flex-1 flex-col">
-          <h2 id="home-plan" className="rp-row font-semibold">
+      <SectionHeader
+        title={
+          <span id="home-plan">
             {/* No count after a failed load with nothing to show: "০/০" would read as an empty plan. */}
             {showCount
               ? t("planTitle", { done: formatLocalizedNumber(state.done, locale), total: formatLocalizedNumber(state.total, locale) })
               : t("planTitleNoCount")}
-          </h2>
-          <span className="rp-small truncate text-rp-muted" data-testid="plan-preview-next">
-            {!state.ready ? " " : next ? t("planNext", { title: next.title }) : state.rows.length > 0 ? t("planAllDone") : t("planEmpty")}
           </span>
-        </span>
-        <ChevronRightIcon size={20} className="shrink-0 text-rp-muted" />
-      </Link>
+        }
+        action={
+          <Link href={PLAN_HREF} aria-label={t("planAllLabel")}>
+            {tPrayer("seeAll")}
+          </Link>
+        }
+      />
+      <ul className="flex flex-col overflow-hidden rounded-rp-md bg-rp-surface">
+        {shown.map((row) => {
+          const Icon = row.done ? CircleCheck : Circle;
+          return (
+            <li
+              key={row.id}
+              className="relative flex min-h-[52px] items-center gap-4 px-4 py-3 text-rp-ink after:absolute after:right-0 after:bottom-0 after:left-14 after:h-px after:bg-rp-rule last:after:hidden"
+            >
+              <Icon size={24} strokeWidth={LUCIDE_STROKE} aria-hidden className={cn("shrink-0", row.done ? "text-rp-icon" : "text-rp-muted")} />
+              <span className="rp-row min-w-0 flex-1">{row.title}</span>
+              <span className="sr-only">{tToday(row.done ? "statusDone" : "statusPending")}</span>
+            </li>
+          );
+        })}
+        {shown.length === 0 ? (
+          <li className="flex min-h-[52px] items-center gap-4 px-4 py-3 text-rp-muted">
+            {/* Before the list is known the row only holds its place. */}
+            {state.ready ? <PlanIcon size={24} className="shrink-0 text-rp-icon" /> : null}
+            <span className="rp-row min-w-0 flex-1" data-testid="plan-preview-next">
+              {nextText}
+            </span>
+          </li>
+        ) : null}
+      </ul>
+      {shown.length > 0 ? (
+        <p className="rp-caption px-4 text-rp-muted" data-testid="plan-preview-next">
+          {nextText}
+        </p>
+      ) : null}
       {state.error ? (
-        <p role="alert" data-testid="plan-preview-error" className="rp-small rounded-rp-md bg-destructive/10 px-4 py-3 text-destructive">
+        <p role="alert" data-testid="plan-preview-error" className="rp-small rounded-rp-md bg-rp-surface px-4 py-3 text-rp-ink">
           {t("planError")}
         </p>
       ) : null}

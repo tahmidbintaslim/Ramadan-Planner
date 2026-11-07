@@ -24,6 +24,10 @@
     ".output",
     ".vercel",
     ".nitro",
-    ".tanstack"
+    ".tanstack",
+    "android",
+    "ios",
+    "src-tauri",
+    "native"
   ]
 }

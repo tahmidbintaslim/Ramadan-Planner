@@ -3,11 +3,12 @@ import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router";
 import { ClerkProvider } from "@clerk/tanstack-react-start";
 import { Analytics } from "@vercel/analytics/react";
 import appCss from "@/styles/globals.css?url";
-// The one font worth preloading: the UI face (Noto Sans Bengali variable, Bengali subset: every weight in one file)
-// that nearly every screen paints first. Same file the stylesheet's @font-face points at, so Vite emits it once.
-import uiFont400 from "@fontsource-variable/noto-sans-bengali/files/noto-sans-bengali-bengali-wght-normal.woff2?url";
-// English pages paint Latin UI text first: Noto Sans variable, latin subset.
-import uiFontLatin from "@fontsource-variable/noto-sans/files/noto-sans-latin-wght-normal.woff2?url";
+// The one font worth preloading per locale: the display/UI face every screen paints first (titles, rows, times).
+// Same file the stylesheet's @font-face points at, so Vite emits it once. Bengali: Anek Bangla variable, bengali
+// subset (every weight in one file).
+import uiFontBn from "@fontsource-variable/anek-bangla/files/anek-bangla-bengali-wght-normal.woff2?url";
+// English pages: Figtree variable, latin subset.
+import uiFontLatin from "@fontsource-variable/figtree/files/figtree-latin-wght-normal.woff2?url";
 import { getLocaleAndMessages } from "@/i18n/load";
 import { AppIntlProvider } from "@/i18n/provider";
 import { AuthProvider } from "@/components/providers/auth-provider";
@@ -16,7 +17,7 @@ import { AccessibilitySidebar } from "@/components/shared/accessibility-sidebar"
 import { NotFound } from "@/components/shared/not-found";
 import { Toaster } from "@/components/ui/sonner";
 
-const THEME_COLOR_SCRIPT = `try{var t=localStorage.getItem("theme");var d=t==="dark"||(t==="system"&&matchMedia("(prefers-color-scheme: dark)").matches);var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute("content",d?"#0B1F24":"#F3F8F6")}catch(e){}`;
+const THEME_COLOR_SCRIPT = `try{var t=localStorage.getItem("theme");var d=t==="dark"||((!t||t==="system")&&matchMedia("(prefers-color-scheme: dark)").matches);var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute("content",d?"#0B1A17":"#F4F7F6")}catch(e){}`;
 
 export const Route = createRootRoute({
   loader: () => getLocaleAndMessages(),
@@ -34,20 +35,20 @@ export const Route = createRootRoute({
         { property: "og:title", content: title },
         { property: "og:description", content: common?.metaOgDescription ?? "" },
         { property: "og:type", content: "website" },
-        // Light value; ThemeColorSync switches it to the Night value (#0B1F24) when the .dark class is active.
-        { name: "theme-color", content: "#F3F8F6" },
+        // Light value; ThemeColorSync switches it to the Night value (#0B1A17) when the .dark class is active.
+        { name: "theme-color", content: "#F4F7F6" },
       ],
       links: [
         {
           rel: "preload",
-          href: loaderData?.locale === "en" ? uiFontLatin : uiFont400,
+          href: loaderData?.locale === "en" ? uiFontLatin : uiFontBn,
           as: "font",
           type: "font/woff2",
           crossOrigin: "anonymous",
         },
         { rel: "stylesheet", href: appCss },
         { rel: "icon", href: "/favicon.ico", sizes: "any" },
-        { rel: "manifest", href: "/manifest.webmanifest" },
+        { rel: "manifest", href: "/manifest.webmanifest", crossOrigin: "use-credentials" },
         { rel: "apple-touch-icon", href: "/icons/apple-touch-icon.png" },
       ],
     };

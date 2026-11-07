@@ -76,8 +76,9 @@ test.describe("mobile Home", () => {
       await top('main a[href="/quran"]'),
     ];
     const heroHeight = await page.locator("[data-phase]").first().evaluate((el) => el.getBoundingClientRect().height);
-    expect(heroHeight).toBeGreaterThanOrEqual(220);
-    expect(heroHeight).toBeLessThanOrEqual(255);
+    // v4 next-prayer card: padding 24, top row, Title 2, Display L time (about 176 tall).
+    expect(heroHeight).toBeGreaterThanOrEqual(160);
+    expect(heroHeight).toBeLessThanOrEqual(200);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
     // The sadaqah card never shows in the day before the last ten nights.
     await expect(page.getByTestId("support-card")).toHaveCount(0);
@@ -107,7 +108,8 @@ test.describe("mobile Home", () => {
     await expect(page.getByTestId("phase-card")).toHaveCount(0);
     const ayah = page.getByTestId("daily-ayah");
     await expect(ayah).toHaveCount(1);
-    await expect(ayah.locator('[lang="ar"]')).toHaveClass(/font-arabic/);
+    // The ayah is Quran text: Amiri Quran (font-quran), per the founder's type rule.
+    await expect(ayah.locator('[lang="ar"]')).toHaveClass(/font-quran/);
     await expect(ayah).toContainText(/সূরা|Surah/);
     const main = page.locator("main");
     for (const gone of ["নামাজ ট্র্যাকার", "কুরআন খতম", "দৈনিক আমলের তালিকা", "রমজান ডায়েরি", "আজকের আমল ও ট্র্যাকার", "দিনের হাদিস"]) {
@@ -189,7 +191,7 @@ test.describe("mobile Home", () => {
   });
 });
 
-test("desktop Home has two columns: hero on the left, prayers on the right; sadaqah after maghrib", async ({
+test("desktop Today has two columns: card, pair and prayers on the left, amal and ayah on the right; sadaqah after maghrib", async ({
   page,
   appErrors,
 }) => {
@@ -206,8 +208,11 @@ test("desktop Home has two columns: hero on the left, prayers on the right; sada
   await expect(list).toBeVisible();
   const h = await hero.boundingBox();
   const l = await list.boundingBox();
-  expect(h && l && l.x > h.x + h.width).toBeTruthy();
-  expect(h && l && Math.abs(l.y - h.y) < 120).toBeTruthy();
+  const plan = await page.getByTestId("plan-preview").boundingBox();
+  // Prayers sit under the card in the left column; today's amal starts the right column beside the card.
+  expect(h && l && l.y > h.y + h.height && l.x >= h.x && l.x < h.x + h.width).toBeTruthy();
+  expect(h && plan && plan.x > h.x + h.width && Math.abs(plan.y - h.y) < 120).toBeTruthy();
+  await expect(page.getByRole("heading", { level: 1, name: /^(আজ|Today)$/ })).toBeVisible();
   const support = page.getByTestId("support-card");
   await expect(support).toBeVisible();
   await support.getByRole("button").click();

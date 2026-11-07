@@ -28,8 +28,9 @@ test.describe("Quran list (mobile)", () => {
     await mockSurahs(page);
     await visit(page, "/quran");
     await expect(page.getByRole("heading", { level: 1, name: "কুরআন" })).toBeVisible();
+    // The server renders the list when its source answers (all 114); otherwise the mocked /api/quran fills it.
     const rows = page.getByTestId("surah-list").getByRole("link");
-    await expect(rows).toHaveCount(3);
+    await expect(rows.nth(2)).toBeVisible();
     await expect(rows.nth(1)).toHaveAttribute("href", "/quran/2");
     await expect(rows.nth(1)).toContainText("মাদানী · ২৮৬ আয়াত");
     await expect(page.getByTestId("last-read-card")).toHaveCount(0);
@@ -70,7 +71,7 @@ test.describe("Support page (mobile)", () => {
     const res = await visit(page, "/support");
     expect(res?.status()).toBe(200);
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "index, follow");
-    await expect(page.getByRole("heading", { level: 1, name: "সাদাকা ও সহযোগিতা" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "সাপোর্ট ও অবদান" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "এই আমল চলমান থাকুক" })).toBeVisible();
     await expect(page.getByText("রমজান ২০২৭-এর খরচ")).toBeVisible();
     await expect(page.getByTestId("cost-server")).toHaveText("শীঘ্রই প্রকাশ করা হবে");
@@ -106,9 +107,9 @@ test.describe("Support page (mobile)", () => {
     await visit(page, "/today");
     const nav = page.getByRole("navigation", { name: /প্রধান নেভিগেশন|Main navigation/ }).first();
     await nav.getByRole("button", { name: /আরও|More/ }).click();
-    await page.getByRole("dialog").getByRole("link", { name: "সহযোগিতা" }).click();
+    await page.getByRole("dialog").getByRole("link", { name: "সাপোর্ট ও অবদান" }).click();
     await expect(page).toHaveURL(/\/support$/);
-    await expect(page.getByRole("heading", { level: 1, name: "সাদাকা ও সহযোগিতা" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "সাপোর্ট ও অবদান" })).toBeVisible();
 
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     const last = (await page.getByTestId("share-button").boundingBox())!;
@@ -122,7 +123,7 @@ test.describe("Support page (English)", () => {
   test.use({ viewport: { width: 390, height: 844 }, appLocale: "en" });
   test("renders in English", async ({ page }) => {
     await visit(page, "/support");
-    await expect(page.getByRole("heading", { level: 1, name: "Sadaqah & Support" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Support & Contribute" })).toBeVisible();
     await expect(page.getByTestId("wallet-button")).toHaveText("Coming soon");
   });
 });

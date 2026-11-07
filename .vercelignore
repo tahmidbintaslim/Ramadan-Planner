@@ -1,0 +1,5 @@
+# Native app shells: not part of the web deployment.
+/android
+/ios
+/src-tauri
+/native

@@ -20,7 +20,7 @@ test("/quran/1 has the surah title, is indexable and renders verses", async ({ p
   const apis = trackApi(page, baseURL!);
   const res = await visit(page, "/quran/1");
   expect(res?.status()).toBe(200);
-  await expect(page).toHaveTitle(/Al-Faatiha.*সূরা 1/);
+  await expect(page).toHaveTitle(/সূরা ১/);
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "index, follow");
   await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute("content", "summary_large_image");
   const verses = page.locator("main [dir=rtl].font-arabic");

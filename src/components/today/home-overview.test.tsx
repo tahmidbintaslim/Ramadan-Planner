@@ -218,9 +218,11 @@ describe("HomeOverview core", () => {
   it("renders the hero, pair and prayer list with the source line and Hijri date", async () => {
     await renderHome("13:00");
     expect(screen.getByRole("region", { name: "নামাজের সময় ও কাউন্টডাউন" })).toBeInTheDocument();
-    expect(screen.getByTestId("hero-source")).toHaveTextContent("উৎস: AlAdhan · করাচি পদ্ধতি, হানাফি আসর");
+    expect(screen.getByTestId("hero-source")).toHaveTextContent("উৎস: AlAdhan · করাচি · হানাফি আসর");
     expect(screen.getByTestId("hero-source")).not.toHaveTextContent("নমুনা");
-    expect(screen.getByText("২২ রমজান ১৪৪৮")).toBeInTheDocument();
+    // The large title's subtitle carries the place, the date and the Hijri date (regular).
+    expect(screen.getByRole("heading", { level: 1, name: "আজ" })).toBeInTheDocument();
+    expect(screen.getByTestId("today-subtitle")).toHaveTextContent(/২২ রমজান ১৪৪৮$/);
     expect(screen.getByTestId("pair-iftar")).toHaveTextContent("৬:০৫");
     expect(document.querySelectorAll("li[data-prayer]")).toHaveLength(5);
   });
@@ -270,7 +272,7 @@ describe("HomeOverview sadaqah card", () => {
 
   it("shows in the day during the last ten nights, with the last-ten title", async () => {
     await renderHome("13:00", { ramadan: ramadanStatus(25) });
-    expect(within(supportCard()!).getByRole("heading")).toHaveTextContent("শেষ দশকে সাদাকায়ে জারিয়া");
+    expect(within(supportCard()!).getByRole("heading")).toHaveTextContent("শেষ দশকে অ্যাপটি চালু রাখতে সাহায্য করুন");
   });
 
   it("shows on Eid", async () => {
@@ -286,7 +288,7 @@ describe("HomeOverview sadaqah card", () => {
     cleanup();
     const onDismissSadaqah = vi.fn();
     await renderHome("20:00", { onDismissSadaqah });
-    fireEvent.click(screen.getByRole("button", { name: "সাদাকার কার্ডটি এখন লুকান" }));
+    fireEvent.click(screen.getByRole("button", { name: "এখন নয়: সাপোর্ট কার্ডটি লুকান" }));
     expect(onDismissSadaqah).toHaveBeenCalledTimes(1);
     expect(supportCard()).toBeNull();
   });
@@ -309,7 +311,7 @@ describe("sadaqah dismissal storage", () => {
     await renderInRouter(<Harness />);
     expect(screen.getByTestId("dismissed")).toHaveTextContent("none");
     act(() => {
-      fireEvent.click(screen.getByRole("button", { name: "সাদাকার কার্ডটি এখন লুকান" }));
+      fireEvent.click(screen.getByRole("button", { name: "এখন নয়: সাপোর্ট কার্ডটি লুকান" }));
     });
     expect(localStorage.getItem(SADAQAH_DISMISSED_KEY)).toBe("2027-03-01T14:00:00.000Z");
     expect(screen.getByTestId("dismissed")).toHaveTextContent("2027-03-01T14:00:00.000Z");
@@ -346,7 +348,7 @@ describe("today's plan preview (a small link; tracking lives on /plan)", () => {
     const section = screen.getByTestId("plan-preview");
     expect(within(section).getByRole("heading")).toHaveTextContent("আজকের আমল · ২/৪");
     expect(within(section).queryAllByRole("checkbox")).toHaveLength(0);
-    expect(within(section).getByRole("link", { name: "আজকের আমল খুলুন" })).toHaveAttribute("href", "/plan");
+    expect(within(section).getByRole("link", { name: "সব দেখুন: আজকের আমল" })).toHaveAttribute("href", "/plan");
     expect(screen.getByTestId("plan-preview-next")).toHaveTextContent("এরপর: সেহরি খান");
   });
 

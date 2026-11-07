@@ -1,5 +1,6 @@
+import type { ComponentType } from "react";
 import { useLocale, useTranslations } from "@/i18n/use-intl";
-import { FajrIcon, MaghribIcon } from "@/components/icons/islamic-icons";
+import { CrescentIcon, DatesIcon, type IconProps } from "@/components/icons/islamic-icons";
 import type { PhaseTimings } from "@/lib/prayer-phase";
 import { cn } from "@/lib/utils";
 import { useClockFormat } from "@/hooks/use-clock-format";
@@ -9,12 +10,30 @@ export interface SehriIftarPairProps {
   /** Today's timings; sehri uses `sehriEnd` when it is before fajr (else fajr), iftar uses maghrib. */
   timings: Pick<PhaseTimings, "fajr" | "maghrib" | "sehriEnd">;
   timeZone: string;
-  /** Small label above the times, e.g. "আগামীকাল" when the card shows tomorrow's sehri and iftar. */
+  /** Small label above the times, e.g. "আগামীকাল" when the cards show tomorrow's sehri and iftar. */
   dayLabel?: string;
   className?: string;
 }
 
-/** White card with today's sehri end (left) and iftar (right), split by a 1px rule. */
+function TimeCard({ Icon, label, time, testId }: { Icon: ComponentType<IconProps>; label: string; time: string; testId: string }) {
+  return (
+    <div className="flex min-w-0 flex-1 items-center gap-3 rounded-rp-md bg-rp-surface p-4">
+      <Icon size={24} className="shrink-0 text-rp-icon max-[359px]:hidden" />
+      <div className="min-w-0">
+        <p className="rp-caption whitespace-nowrap text-rp-muted">{label}</p>
+        <p className="rp-h2 whitespace-nowrap tabular-nums text-rp-ink" data-testid={testId}>
+          {time}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The Sehri / Iftar pair (v4): two equal cards, gap 16, padding 16, radius 16. The founder's Hugeicons Islamic icons
+ * at 24 in the accent (ramadan-01 for sehri, dates for iftar: the clearer iftar sign), label Footnote secondary,
+ * time Title 3.
+ */
 export function SehriIftarPair({ timings, timeZone, dayLabel, className }: SehriIftarPairProps) {
   const t = useTranslations("prayer");
   const locale = useLocale();
@@ -26,40 +45,15 @@ export function SehriIftarPair({ timings, timeZone, dayLabel, className }: Sehri
   const iftar = formatPrayerClock(timings.maghrib, timeZone, locale, clockFormat);
 
   return (
-    <div
-      data-day={dayLabel ? "tomorrow" : "today"}
-      className={cn(
-        "grid grid-cols-[1fr_1px_1fr] items-center rounded-rp-lg bg-rp-surface px-4 py-3 text-rp-ink shadow-rp-soft",
-        className,
-      )}
-    >
+    <div data-day={dayLabel ? "tomorrow" : "today"} className={cn("flex flex-col gap-2", className)}>
       {dayLabel ? (
-        <p data-testid="pair-day" className="rp-caption col-span-3 mb-2 text-rp-accent">
+        <p data-testid="pair-day" className="rp-caption px-4 text-rp-accent">
           {dayLabel}
         </p>
       ) : null}
-      <div className="flex min-w-0 items-center gap-3 pr-3">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-rp-full bg-rp-accent-tint text-rp-accent max-[359px]:hidden">
-          <FajrIcon size={22} />
-        </span>
-        <div className="min-w-0">
-          <p className="rp-caption whitespace-nowrap text-rp-muted">{t("sehriEnds")}</p>
-          <p className="rp-h2 whitespace-nowrap tabular-nums" data-testid="pair-sehri">
-            {sehri}
-          </p>
-        </div>
-      </div>
-      <span aria-hidden="true" className="h-10 w-px bg-rp-rule" />
-      <div className="flex min-w-0 items-center gap-3 pl-4">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-rp-full bg-rp-gold-tint text-rp-gold-text max-[359px]:hidden">
-          <MaghribIcon size={22} />
-        </span>
-        <div className="min-w-0">
-          <p className="rp-caption text-rp-muted">{t("iftar")}</p>
-          <p className="rp-h2 whitespace-nowrap tabular-nums" data-testid="pair-iftar">
-            {iftar}
-          </p>
-        </div>
+      <div className="flex gap-4">
+        <TimeCard Icon={CrescentIcon} label={t("sehriEnds")} time={sehri} testId="pair-sehri" />
+        <TimeCard Icon={DatesIcon} label={t("iftar")} time={iftar} testId="pair-iftar" />
       </div>
     </div>
   );

@@ -5,13 +5,13 @@ import { AppHeader } from "@/components/layout/app-header";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { useTranslations } from "@/i18n/use-intl";
 
-// Bottom padding below 1024px clears the floating bottom nav: 16px gap + 72px bar (60px items + 2×6px padding)
-// + 24px breathing room, plus the safe-area inset. Keep it in step with MobileNav.
-const BOTTOM_NAV_CLEARANCE = "pb-[calc(7rem+env(safe-area-inset-bottom))] lg:pb-10";
+// HIG margins: 16 compact (<=430), 24 medium, 48 regular (>=835, beside the 264 sidebar); content max 1200.
+// Below 835px the bottom padding clears the tab bar (56 + the safe-area inset) plus 24. Keep it in step with MobileNav.
+const BOTTOM_NAV_CLEARANCE = "pb-[calc(5rem+env(safe-area-inset-bottom))] regular:pb-12";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const t = useTranslations("common");
-  // Focus order: skip link, side nav (desktop), top bar, content, bottom nav (mobile).
+  // Focus order: skip link, sidebar (regular), header / toolbar, content, tab bar (compact, medium).
   return (
     <div className="min-h-screen bg-rp-page">
       <a
@@ -23,7 +23,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <DesktopSidebar />
       <div className={SIDEBAR_WIDTH_CLASS}>
         <AppHeader />
-        <main id="main-content" tabIndex={-1} className={`px-4 pt-2 outline-none md:px-6 md:pt-4 lg:px-8 ${BOTTOM_NAV_CLEARANCE}`}>
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className={`mx-auto w-full max-w-[1296px] px-4 pt-2 outline-none medium:px-6 regular:px-12 regular:pt-8 ${BOTTOM_NAV_CLEARANCE}`}
+        >
           {children}
         </main>
       </div>
