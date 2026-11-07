@@ -47,12 +47,15 @@ function useTodayCaption(locale: string): string | null {
   }
 }
 
-/** The district chosen on this device, in the UI language (null before mount or when none is stored). */
+/** The place chosen on this device, in the UI language: the district, else the time-zone city for a device position (null before mount or when none). */
 export function useDistrictLabel(): string | null {
   const locale = useLocale();
   const stored = useStoredLocation();
   const d = districtById(stored?.districtId);
-  return d ? districtName(d, locale) : null;
+  if (d) return districtName(d, locale);
+  // A device position outside Bangladesh: the city of the phone's time zone ("Asia/Bangkok" → "Bangkok").
+  if (stored?.kind === "geo") return stored.tz.split("/").pop()!.replace(/_/g, " ");
+  return null;
 }
 
 function AccountButton() {

@@ -28,6 +28,8 @@ export default defineConfig({
       use: {
         ...devices["Desktop Chrome"],
         viewport: { width: 1280, height: 900 },
+        // A Bengali browser by default, so cookie-less tests see the Bengali UI (first visits follow Accept-Language).
+        locale: "bn-BD",
         launchOptions: {
           executablePath: process.env.PWCHROME || undefined,
           // Talk to localhost directly even when the shell has an HTTPS proxy configured.

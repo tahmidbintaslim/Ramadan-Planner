@@ -29,7 +29,7 @@ export const Route = createRootRoute({
     return {
       meta: [
         { charSet: "utf-8" },
-        { name: "viewport", content: "width=device-width, initial-scale=1" },
+        { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
         { title },
         { name: "description", content: common?.metaDescription ?? "" },
         { property: "og:title", content: title },

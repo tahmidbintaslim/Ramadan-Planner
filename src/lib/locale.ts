@@ -1,4 +1,4 @@
-import { getCookie, setCookie } from "@tanstack/react-start/server";
+import { getCookie, getRequestHeader, setCookie } from "@tanstack/react-start/server";
 
 export const LOCALES = ["bn", "en"] as const;
 export type Locale = (typeof LOCALES)[number];
@@ -11,8 +11,25 @@ export function parseLocale(value: string | undefined | null): Locale {
     return LOCALES.includes(value as Locale) ? (value as Locale) : DEFAULT_LOCALE;
 }
 
+/**
+ * First visit (no cookie): Bengali in Bangladesh or when the browser lists Bengali; English for any other browser
+ * language abroad (international users); Bengali when nothing is known. Many Bangladeshi phones are set to English,
+ * so the visitor's country (Vercel's x-vercel-ip-country) wins over the browser language.
+ */
+export function negotiateLocale(acceptLanguage: string | undefined | null, country: string | undefined | null): Locale {
+    if (country?.toUpperCase() === "BD") return "bn";
+    const langs = (acceptLanguage ?? "")
+        .split(",")
+        .map((part) => part.split(";")[0].trim().toLowerCase())
+        .filter((l) => l && l !== "*");
+    if (langs.length === 0) return DEFAULT_LOCALE;
+    return langs.some((l) => l === "bn" || l.startsWith("bn-")) ? "bn" : "en";
+}
+
 export async function getUserLocale(): Promise<Locale> {
-    return parseLocale(getCookie(COOKIE_NAME));
+    const cookie = getCookie(COOKIE_NAME);
+    if (cookie) return parseLocale(cookie);
+    return negotiateLocale(getRequestHeader("accept-language"), getRequestHeader("x-vercel-ip-country"));
 }
 
 /** Attributes of the locale cookie: Secure in production (HTTPS only; browsers also accept it on http://localhost). */
