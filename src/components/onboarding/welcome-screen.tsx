@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "@tanstack/react-router";
 import { ChevronLeft } from "lucide-react";
 import { useTranslations } from "@/i18n/use-intl";
@@ -11,14 +11,19 @@ import { PrayerHero } from "@/components/prayer/prayer-hero";
 import { useLiveTimes } from "@/components/today/use-live-times";
 import { defaultLocation, markOnboardingDone, writeStoredLocation, type StoredLocation } from "@/lib/user-location";
 import { LocationPickerFields, useLocationPicker } from "./location-picker";
+import { Walkthrough } from "./walkthrough";
+import { walkthroughSeen } from "./walkthrough-state";
 
-type Step = "language" | "location";
+type Step = "intro" | "language" | "location";
+
+const subscribeNoop = () => () => {};
 
 const backClass =
   "-ml-3 flex size-11 items-center justify-center rounded-rp-full text-rp-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rp-focus";
 
 /**
- * First-run onboarding (v4 welcome steps 3 and 4; no sign-up): choose the language (with a live preview of the
+ * First-run onboarding (no sign-up): on a device's first visit the launch logo and walkthrough (Figma page 14),
+ * then (v4 welcome steps 3 and 4) choose the language (with a live preview of the
  * next-prayer card), then the district. The choice is stored on this device only (see `@/lib/user-location`) and
  * Today uses it for its times. Each step: a 44 nav bar (back, Text & Theme), a Large Title, the content, and the
  * 56 primary action in the lower part of the screen.
@@ -27,8 +32,19 @@ export function WelcomeScreen() {
   const t = useTranslations("onboarding");
   const tCommon = useTranslations("common");
   const router = useRouter();
-  const [step, setStep] = useState<Step>("language");
-  const { phaseTimings, timeZone } = useLiveTimes();
+  // The server and the hydrating render show the launch screen; after mount a device that has seen the
+  // walkthrough goes straight to the language step.
+  const seen = useSyncExternalStore(subscribeNoop, walkthroughSeen, () => false);
+  const [chosen, setStep] = useState<Step>("intro");
+  const step = chosen === "intro" && seen ? "language" : chosen;
+  const { home, phaseTimings, timeZone } = useLiveTimes();
+  const heading = useRef<HTMLHeadingElement>(null);
+  const focusHeading = useRef(false);
+  useEffect(() => {
+    if (!focusHeading.current) return;
+    focusHeading.current = false;
+    heading.current?.focus();
+  }, [step]);
 
   function finish(loc: StoredLocation) {
     writeStoredLocation(loc);
@@ -40,6 +56,23 @@ export function WelcomeScreen() {
   function confirm() {
     const loc = picker.resolve();
     if (loc) finish(loc);
+  }
+
+  if (step === "intro") {
+    const pt = home.timings?.prayerTimes;
+    return (
+      <div className="min-h-dvh bg-rp-page">
+        <main id="main-content" className="mx-auto w-full max-w-[480px]">
+          <Walkthrough
+            times={pt ? { sehri: pt.sehri || pt.fajr, iftar: pt.iftar || pt.maghrib } : null}
+            onDone={() => {
+              focusHeading.current = true;
+              setStep("language");
+            }}
+          />
+        </main>
+      </div>
+    );
   }
 
   return (
@@ -61,7 +94,9 @@ export function WelcomeScreen() {
         {step === "language" ? (
           <>
             <div className="flex flex-col gap-2 pt-2 pb-6">
-              <h1 className="rp-large-title text-rp-ink">{t("languageTitle")}</h1>
+              <h1 ref={heading} tabIndex={-1} className="rp-large-title text-rp-ink focus:outline-none">
+                {t("languageTitle")}
+              </h1>
               <p className="rp-body text-rp-muted">{t("languageSubtitle")}</p>
             </div>
             <LanguageSegmented className="w-full" />
