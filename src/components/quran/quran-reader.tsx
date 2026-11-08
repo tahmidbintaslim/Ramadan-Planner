@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { Fragment, useEffect, useState, useCallback, useRef } from "react";
 import { useLocale, useTranslations } from "@/i18n/use-intl";
 import { Link } from "@/components/shared/link";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -623,31 +623,32 @@ export function QuranReader({ surahNumber, initialText = null }: QuranReaderProp
               <CardContent className="space-y-3">
                 {/* Arabic text */}
                 <p
-                  className="font-quran text-right text-[28px] leading-[56px]"
+                  className="font-quran text-right text-[28px] leading-[56px] [overflow-wrap:anywhere]"
                   dir="rtl"
                   lang="ar"
                 >
                   {ayah.textArabic}
                 </p>
 
-                {/* Bengali translation */}
-                {ayah.textBengali && (
-                  <>
-                    <Separator />
-                    <p className="rp-reading text-rp-ink">
-                      {ayah.textBengali}
-                    </p>
-                  </>
-                )}
-
-                {/* English translation */}
-                {ayah.textEnglish && (
-                  <>
-                    <Separator />
-                    <p lang="en" className="rp-reading-small text-rp-muted">
-                      {ayah.textEnglish}
-                    </p>
-                  </>
+                {/* Translations: the UI language first (#31). */}
+                {(showBengaliName
+                  ? ([
+                      ["bn", ayah.textBengali],
+                      ["en", ayah.textEnglish],
+                    ] as const)
+                  : ([
+                      ["en", ayah.textEnglish],
+                      ["bn", ayah.textBengali],
+                    ] as const)
+                ).map(([lang, text], i) =>
+                  text ? (
+                    <Fragment key={lang}>
+                      <Separator />
+                      <p lang={lang} className={cn("[overflow-wrap:anywhere]", i === 0 ? "rp-reading text-rp-ink" : "rp-reading-small text-rp-muted")}>
+                        {text}
+                      </p>
+                    </Fragment>
+                  ) : null,
                 )}
               </CardContent>
             </Card>
@@ -656,7 +657,7 @@ export function QuranReader({ surahNumber, initialText = null }: QuranReaderProp
       </div>
 
       {/* Navigation */}
-      <div className="flex items-center justify-between py-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 py-6">
         {surahNumber > 1 ? (
           <Button variant="outline" asChild>
             <Link href={`/quran/${surahNumber - 1}`}>

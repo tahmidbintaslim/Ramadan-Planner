@@ -23,7 +23,23 @@ for (const path of ["/", "/today"]) {
   });
 }
 
-test("no cookie renders Bengali", async ({ page }) => {
-  await visit(page, "/");
-  await expect(page.locator("html")).toHaveAttribute("lang", "bn");
+test.describe("first visit, no locale cookie", () => {
+  test.use({ appLocale: undefined, locale: "en-US" });
+
+  test("Bangladesh gets Bengali even with an English browser", async ({ page }) => {
+    await page.setExtraHTTPHeaders({ "x-vercel-ip-country": "BD" });
+    await visit(page, "/");
+    await expect(page.locator("html")).toHaveAttribute("lang", "bn");
+  });
+
+});
+
+test.describe("first visit abroad, no locale cookie", () => {
+  // The browser locale sets Accept-Language (an extra header cannot override it).
+  test.use({ appLocale: undefined, locale: "th-TH", extraHTTPHeaders: { "x-vercel-ip-country": "TH" } });
+
+  test("a Thai browser in Thailand gets English", async ({ page }) => {
+    await visit(page, "/");
+    await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  });
 });
