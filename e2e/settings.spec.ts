@@ -16,3 +16,28 @@ test("grouped list: text & theme opens its dialog; reminders and support are row
   // Profile fields are for signed-in users only.
   await expect(page.getByLabel("Latitude")).toHaveCount(0);
 });
+
+test("reminders: add from the sheet, the row shows when and how, the switch turns it off, delete from the sheet", async ({ page }) => {
+  await visit(page, "/reminders");
+  await page.getByTestId("reminder-add").click();
+  const form = page.getByTestId("reminder-form");
+  await form.locator("#new-reminder-type").selectOption("iftar");
+  await form.locator("#new-reminder-offset").fill("-10");
+  await form.getByRole("button", { name: "Add Reminder" }).click();
+  await expect(form).toBeHidden();
+
+  const rows = page.getByTestId("reminder-rules");
+  await expect(rows.getByText("Iftar", { exact: true })).toBeVisible();
+  await expect(rows.getByText("10 min before · Notification")).toBeVisible();
+  const toggle = rows.getByRole("switch", { name: "Iftar" });
+  await expect(toggle).toHaveAttribute("aria-checked", "true");
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-checked", "false");
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("rp_reminder_rules") || "[]"))).toEqual([
+    expect.objectContaining({ type: "iftar", offsetMinutes: -10, enabled: false }),
+  ]);
+
+  await rows.getByText("Iftar", { exact: true }).click();
+  await page.getByTestId("reminder-form").getByRole("button", { name: "Delete" }).click();
+  await expect(rows).toBeHidden();
+});
