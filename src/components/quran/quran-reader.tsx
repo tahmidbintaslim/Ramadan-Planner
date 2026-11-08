@@ -45,7 +45,7 @@ const DEFAULT_RECITER = "1";
 // never floats over ayah text. Regular widths (side nav, no tab bar): an in-flow card. The wrapper's pb-32 keeps the
 // last ayahs scrollable clear of the docked bar.
 export const AUDIO_BAR_CLASS =
-  "fixed inset-x-0 bottom-[calc(3.5rem+1px+env(safe-area-inset-bottom))] z-30 mb-0 border-t border-rp-rule bg-rp-bar text-rp-ink regular:static regular:rounded-rp-lg regular:border-0 regular:bg-rp-surface regular:shadow-rp-soft";
+  "fixed inset-x-0 bottom-[calc(3.5rem+1px+env(safe-area-inset-bottom))] z-30 mb-0 border-t border-rp-rule bg-rp-bar text-rp-ink regular:static regular:overflow-hidden regular:rounded-rp-lg regular:border-0 regular:bg-rp-surface regular:shadow-rp-soft";
 
 export function QuranReader({ surahNumber, initialText = null }: QuranReaderProps) {
   const t = useTranslations("quranReader");
