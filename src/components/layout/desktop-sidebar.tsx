@@ -4,7 +4,7 @@ import { Link } from "@/components/shared/link";
 import { usePathname } from "@/hooks/use-pathname";
 import { useTranslations } from "@/i18n/use-intl";
 import { useAuth } from "@/components/providers/auth-provider";
-import { CrescentIcon } from "@/components/icons/islamic-icons";
+import { BrandMark } from "@/components/icons/brand-mark";
 import { cn } from "@/lib/utils";
 import { LUCIDE_STROKE, PRIMARY_NAV, SECONDARY_NAV, SETTINGS_HREF, isNavActive, type NavItem } from "./nav-items";
 
@@ -50,7 +50,7 @@ export function DesktopSidebar() {
         className="mx-4 mt-4 mb-4 flex min-h-14 items-center gap-3 rounded-rp-input focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rp-focus"
       >
         <span className="flex size-10 shrink-0 items-center justify-center rounded-rp-input bg-rp-live text-rp-on-live">
-          <CrescentIcon size={24} aria-hidden />
+          <BrandMark size={24} />
         </span>
         <span className="rp-headline min-w-0 text-rp-ink">{tCommon("appName")}</span>
       </Link>

@@ -23,12 +23,16 @@ test("favicon is served from public/", async ({ request }) => {
   const res = await request.get("/favicon.ico");
   expect(res.status()).toBe(200);
   expect(res.headers()["content-type"]).toMatch(/icon/);
+  const svg = await request.get("/favicon.svg");
+  expect(svg.status()).toBe(200);
+  expect(svg.headers()["content-type"]).toMatch(/image\/svg\+xml/);
 });
 
 test("landing and /quran are indexable; signed-in pages are noindex", async ({ page }) => {
   await visit(page, "/");
   await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
-  await expect(page.locator('link[rel="icon"]')).toHaveAttribute("href", "/favicon.ico");
+  await expect(page.locator('link[rel="icon"][sizes="any"]')).toHaveAttribute("href", "/favicon.ico");
+  await expect(page.locator('link[rel="icon"][type="image/svg+xml"]')).toHaveAttribute("href", "/favicon.svg");
   await visit(page, "/quran");
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "index, follow");
   await visit(page, "/timetable");

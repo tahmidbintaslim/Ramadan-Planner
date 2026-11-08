@@ -1,8 +1,10 @@
-// Renders the v2 brand assets from their SVG sources in scripts/brand/ (teal #0E7C6B, white crescent, subtle
-// mihrab arch). Re-run after editing a source; the output names are the ones the manifest and the head reference:
-//   public/icons/icon-192.png, icon-512.png (icon.svg, transparent corners)
-//   public/icons/icon-512-maskable.png, apple-touch-icon.png (icon-maskable.svg, full bleed)
-//   public/favicon.ico (16/32/48 PNG entries from icon.svg)
+// Renders the web brand assets from their SVG sources in scripts/brand/ (Logo A: Hugeicons ramadan-01, MIT, white
+// crescent + gold star on the teal gradient; see public/LICENSES/hugeicons-MIT.txt). Re-run after editing a source;
+// the output names are the ones the manifest and the head reference:
+//   public/icons/icon-192.png, icon-512.png (icon.svg, full bleed)
+//   public/icons/icon-512-maskable.png (icon-maskable.svg, glyph inside the safe circle)
+//   public/icons/apple-touch-icon.png (apple-touch-icon.svg)
+//   public/favicon.ico (16 from favicon-16.svg, 32/48 from favicon.svg) and public/favicon.svg
 //   public/og.png 1200x630 (og.svg, with the self-hosted Anek Bangla files from @fontsource-variable)
 // Needs the `playwright` package and a Chrome:
 //   PWCHROME=/usr/bin/google-chrome node scripts/generate-brand-assets.mjs
@@ -88,10 +90,12 @@ try {
   write("icons/icon-192.png", await render(icon, 192, 192, { transparent: true }));
   write("icons/icon-512.png", await render(icon, 512, 512, { transparent: true }));
   write("icons/icon-512-maskable.png", await render(maskable, 512, 512));
-  write("icons/apple-touch-icon.png", await render(maskable, 180, 180));
-  const favicons = [];
-  for (const size of [16, 32, 48]) favicons.push({ size, data: await render(icon, size, size, { transparent: true }) });
+  write("icons/apple-touch-icon.png", await render(read("apple-touch-icon.svg"), 180, 180));
+  const favicon = read("favicon.svg");
+  const favicons = [{ size: 16, data: await render(read("favicon-16.svg"), 16, 16, { transparent: true }) }];
+  for (const size of [32, 48]) favicons.push({ size, data: await render(favicon, size, size, { transparent: true }) });
   write("favicon.ico", ico(favicons));
+  write("favicon.svg", Buffer.from(favicon));
   write("og.png", await render(read("og.svg"), 1200, 630));
 } finally {
   await browser.close();
