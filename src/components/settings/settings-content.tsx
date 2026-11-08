@@ -5,9 +5,12 @@ import { Link } from "@/components/shared/link";
 import { useEffect, useState, useTransition } from "react";
 import { useClerk } from "@clerk/tanstack-react-start";
 import { useLocale, useTranslations } from "@/i18n/use-intl";
-import { useRouter, useSearch } from "@tanstack/react-router";
-import { Bell, CalendarClock, Clock, Globe, LogIn, LogOut, UserPlus } from "lucide-react";
-import { switchLocaleAction } from "@/actions/locale";
+import { useSearch } from "@tanstack/react-router";
+import { Bell, CalendarClock, ChevronRight, Clock, Globe, Heart, LogIn, LogOut, Type, UserPlus } from "lucide-react";
+import { LanguageSegmented } from "@/components/layout/shell-actions";
+import { AccessibilityDialog } from "@/components/shared/accessibility-sidebar";
+import { LUCIDE_STROKE } from "@/components/layout/nav-items";
+import { cn } from "@/lib/utils";
 import { getUserProfileAction, updateUserProfileAction } from "@/actions/planner";
 import {
   disconnectGoogleCalendarAction,
@@ -22,13 +25,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
 import { Chip } from "@/components/ui/chip";
 import { useClockFormat } from "@/hooks/use-clock-format";
 import { formatDateTime } from "@/lib/clock-format";
 import { CLOCK_FORMATS } from "@/lib/clock-format";
 import { formatLocalizedNumber } from "@/lib/locale-number";
-import { LocationPrayerCard } from "./location-prayer-card";
+import { DIVIDER, LocationPrayerCard, ROW } from "./location-prayer-card";
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -45,28 +47,24 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 }
 
 /** 12-hour (default) or 24-hour clock, kept on this device; every time on every screen follows it. */
-function ClockFormatCard() {
+function ClockFormatRow() {
   const t = useTranslations("settings");
   const [format, setFormat] = useClockFormat();
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle id="clock-format-title" className="flex items-center gap-2 text-base">
-          <Clock className="h-4 w-4 text-primary" aria-hidden="true" />
-          {t("clockFormat")}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        <div role="group" aria-labelledby="clock-format-title" className="flex flex-wrap gap-2" data-testid="clock-format">
-          {CLOCK_FORMATS.map((f) => (
-            <Chip key={f} selected={format === f} onClick={() => setFormat(f)}>
-              {t(f === "12h" ? "clockFormat12" : "clockFormat24")}
-            </Chip>
-          ))}
-        </div>
-        {format === "12h" ? <p className="rp-small text-rp-muted">{t("clockFormatHint")}</p> : null}
-      </CardContent>
-    </Card>
+    <li className={cn(DIVIDER, "flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2")}>
+      <Clock size={24} strokeWidth={LUCIDE_STROKE} aria-hidden className="shrink-0 text-rp-icon" />
+      <span id="clock-format-title" className="rp-row min-w-0 flex-1 text-rp-ink">
+        {t("clockFormat")}
+      </span>
+      <div role="group" aria-labelledby="clock-format-title" className="flex gap-2" data-testid="clock-format">
+        {CLOCK_FORMATS.map((f) => (
+          <Chip key={f} selected={format === f} onClick={() => setFormat(f)}>
+            {t(f === "12h" ? "clockFormat12" : "clockFormat24")}
+          </Chip>
+        ))}
+      </div>
+      {format === "12h" ? <p className="rp-small basis-full ps-10 text-rp-muted">{t("clockFormatHint")}</p> : null}
+    </li>
   );
 }
 
@@ -74,6 +72,8 @@ export function SettingsContent() {
   const t = useTranslations("settings");
   const tAuth = useTranslations("auth");
   const tCommon = useTranslations("common");
+  const tNav = useTranslations("nav");
+  const tA11y = useTranslations("accessibility");
   const locale = useLocale();
   const [clockFormat] = useClockFormat();
   // Only the `google` result param is read (set by the Google OAuth callback redirect).
@@ -81,7 +81,6 @@ export function SettingsContent() {
   const { signOut } = useClerk();
 
   const [isPending, startTransition] = useTransition();
-  const router = useRouter();
   const { user, isGuest, loading } = useAuth();
   // The guest-only sign-in notes wait for auth, so a signed-in user never sees them while Clerk loads.
   const showSignInNote = !loading && isGuest;
@@ -142,14 +141,6 @@ export function SettingsContent() {
     googleStatusParam && googleStatusParam !== "connected"
       ? t("googleConnectError")
       : null;
-
-  const handleLocaleSwitch = () => {
-    startTransition(async () => {
-      await switchLocaleAction();
-      // Re-run the root loader so the new locale's messages render (Next refreshed automatically).
-      await router.invalidate();
-    });
-  };
 
   const handleLogout = () => {
     startTransition(async () => {
@@ -325,7 +316,7 @@ export function SettingsContent() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
+      <h1 className="rp-large-title text-rp-ink">{t("title")}</h1>
 
       {error && (
         <p className="text-sm text-destructive bg-destructive/10 rounded-md px-3 py-2">
@@ -348,36 +339,96 @@ export function SettingsContent() {
         </p>
       )}
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Globe className="h-4 w-4 text-primary" />
-            {t("language")}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <Label className="text-sm">{t("language")}</Label>
-            <Button variant="outline" size="sm" onClick={handleLocaleSwitch} disabled={isPending}>
-              বাংলা / English
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Grouped list (Figma page 12, D2). */}
+      <ul className="overflow-hidden rounded-rp-md bg-rp-surface">
+        <li className={cn(DIVIDER, "flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2")}>
+          <Globe size={24} strokeWidth={LUCIDE_STROKE} aria-hidden className="shrink-0 text-rp-icon" />
+          <span className="rp-row min-w-0 flex-1 text-rp-ink">{t("language")}</span>
+          <LanguageSegmented className="w-full sm:w-auto" />
+        </li>
+        <li className={DIVIDER}>
+          <AccessibilityDialog
+            trigger={
+              <button type="button" className={ROW} data-testid="settings-text-theme">
+                <Type size={24} strokeWidth={LUCIDE_STROKE} aria-hidden className="shrink-0 text-rp-icon" />
+                <span className="min-w-0 flex-1">{tA11y("title")}</span>
+                <ChevronRight size={20} strokeWidth={LUCIDE_STROKE} aria-hidden className="shrink-0 text-rp-muted" />
+              </button>
+            }
+          />
+        </li>
+      </ul>
 
       <LocationPrayerCard />
 
-      <ClockFormatCard />
+      <ul className="overflow-hidden rounded-rp-md bg-rp-surface">
+        <ClockFormatRow />
+        <li className={DIVIDER}>
+          <Link href="/reminders" className={ROW}>
+            <Bell size={24} strokeWidth={LUCIDE_STROKE} aria-hidden className="shrink-0 text-rp-icon" />
+            <span className="min-w-0 flex-1">{tNav("remindersShort")}</span>
+            <ChevronRight size={20} strokeWidth={LUCIDE_STROKE} aria-hidden className="shrink-0 text-rp-muted" />
+          </Link>
+        </li>
+      </ul>
 
+      {!loading ? (
+        <section aria-labelledby="settings-account" className="space-y-2">
+          <h2 id="settings-account" className="rp-caption px-4 text-rp-muted">
+            {t("account")}
+          </h2>
+          <ul className="overflow-hidden rounded-rp-md bg-rp-surface">
+            {isGuest ? (
+              <>
+                <li className={DIVIDER}>
+                  <Link href="/sign-in" className={ROW}>
+                    <LogIn size={24} strokeWidth={LUCIDE_STROKE} aria-hidden className="shrink-0 text-rp-icon" />
+                    <span className="min-w-0 flex-1">{t("signInToSync")}</span>
+                    <ChevronRight size={20} strokeWidth={LUCIDE_STROKE} aria-hidden className="shrink-0 text-rp-muted" />
+                  </Link>
+                </li>
+                <li className={DIVIDER}>
+                  <Link href="/sign-up" className={ROW}>
+                    <UserPlus size={24} strokeWidth={LUCIDE_STROKE} aria-hidden className="shrink-0 text-rp-icon" />
+                    <span className="min-w-0 flex-1">{tAuth("signup")}</span>
+                    <ChevronRight size={20} strokeWidth={LUCIDE_STROKE} aria-hidden className="shrink-0 text-rp-muted" />
+                  </Link>
+                </li>
+              </>
+            ) : (
+              <>
+                <li className={cn(DIVIDER, ROW, "hover:bg-transparent")}>
+                  <span className="min-w-0 flex-1 truncate text-rp-muted">{user?.email}</span>
+                </li>
+                <li className={DIVIDER}>
+                  <button type="button" onClick={handleLogout} disabled={isPending} className={cn(ROW, "text-destructive")}>
+                    <LogOut size={24} strokeWidth={LUCIDE_STROKE} aria-hidden className="shrink-0" />
+                    <span className="min-w-0 flex-1">{tAuth("logout")}</span>
+                  </button>
+                </li>
+              </>
+            )}
+          </ul>
+          {isGuest ? <p className="rp-small px-4 text-rp-muted">{t("guestNote")}</p> : null}
+        </section>
+      ) : null}
+
+      <ul className="overflow-hidden rounded-rp-md bg-rp-surface">
+        <li className={DIVIDER}>
+          <Link href="/support" className={ROW}>
+            <Heart size={24} strokeWidth={LUCIDE_STROKE} aria-hidden className="shrink-0 text-rp-icon" />
+            <span className="min-w-0 flex-1">{tNav("support")}</span>
+            <ChevronRight size={20} strokeWidth={LUCIDE_STROKE} aria-hidden className="shrink-0 text-rp-muted" />
+          </Link>
+        </li>
+      </ul>
+
+      {!isGuest ? (
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">{t("profileSettings")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {isGuest ? (
-            <p className="text-sm text-muted-foreground">{t("loginToManage")}</p>
-          ) : (
-            <>
               <div className="space-y-2">
                 <Label htmlFor="display-name">{t("displayName")}</Label>
                 <Input id="display-name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder={t("displayName")} />
@@ -405,10 +456,9 @@ export function SettingsContent() {
               </div>
 
               <Button onClick={saveProfile} disabled={isPending}>{tCommon("save")}</Button>
-            </>
-          )}
         </CardContent>
       </Card>
+      ) : null}
 
       <Card>
         <CardHeader className="pb-3">
@@ -498,39 +548,6 @@ export function SettingsContent() {
         </CardContent>
       </Card>
 
-      <Separator />
-
-      {!loading && (
-        <Card>
-          <CardContent className="pt-6 space-y-3">
-            {isGuest ? (
-              <>
-                <p className="text-sm text-muted-foreground mb-4">{t("profile")}</p>
-                <Button className="w-full" asChild>
-                  <Link href="/sign-up">
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    {tAuth("signup")}
-                  </Link>
-                </Button>
-                <Button variant="outline" className="w-full" asChild>
-                  <Link href="/sign-in">
-                    <LogIn className="h-4 w-4 mr-2" />
-                    {tAuth("login")}
-                  </Link>
-                </Button>
-              </>
-            ) : (
-              <>
-                <p className="text-sm text-muted-foreground">{user?.email}</p>
-                <Button variant="destructive" className="w-full" onClick={handleLogout} disabled={isPending}>
-                  <LogOut className="h-4 w-4 mr-2" />
-                  {tAuth("logout")}
-                </Button>
-              </>
-            )}
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

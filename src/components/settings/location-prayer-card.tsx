@@ -17,9 +17,9 @@ import { readHijriAdjust, subscribeStoredLocation, writeHijriAdjust, writeStored
 import { LUCIDE_STROKE } from "@/components/layout/nav-items";
 import { cn } from "@/lib/utils";
 
-const ROW =
+export const ROW =
   "rp-row flex min-h-[52px] w-full items-center gap-4 px-4 text-left text-rp-ink transition-colors hover:bg-rp-accent-tint/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-rp-focus";
-const DIVIDER = "relative after:absolute after:right-0 after:bottom-0 after:left-4 after:h-px after:bg-rp-rule last:after:hidden";
+export const DIVIDER = "relative after:absolute after:right-0 after:bottom-0 after:left-4 after:h-px after:bg-rp-rule last:after:hidden";
 const ADJUSTMENTS = [-2, -1, 0, 1, 2] as const;
 
 /**
