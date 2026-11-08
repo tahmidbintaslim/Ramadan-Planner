@@ -42,11 +42,11 @@ interface QuranReaderProps {
 // Default reciter id (Mishary Rashid Al Afasy)
 const DEFAULT_RECITER = "1";
 
-// Below 1024px the audio controls float 16px above the floating bottom nav (16px gap + 72px bar, safe-area aware),
-// leaving the right 72px free for the accessibility button; from 1024px (side nav, no bottom nav) they sit in flow.
-// The wrapper's pb-32 below 1024px keeps the last ayahs clear of the floating bar.
+// Compact widths: an opaque mini-player docked on top of the tab bar (56px + 1px rule + safe area), full width, so it
+// never floats over ayah text. Regular widths (side nav, no tab bar): an in-flow card. The wrapper's pb-32 keeps the
+// last ayahs scrollable clear of the docked bar.
 export const AUDIO_BAR_CLASS =
-  "fixed left-4 right-[4.5rem] bottom-[calc(6.5rem+env(safe-area-inset-bottom))] z-30 mx-auto max-w-[900px] lg:static lg:inset-auto lg:w-auto";
+  "fixed inset-x-0 bottom-[calc(3.5rem+1px+env(safe-area-inset-bottom))] z-30 rounded-none border-x-0 border-b-0 border-t border-rp-rule bg-rp-bar shadow-none regular:static regular:rounded-rp-lg regular:border regular:bg-rp-surface";
 
 export function QuranReader({ surahNumber, initialText = null }: QuranReaderProps) {
   const t = useTranslations("quranReader");
@@ -379,7 +379,7 @@ export function QuranReader({ surahNumber, initialText = null }: QuranReaderProp
   }
 
   return (
-    <div className="space-y-6 max-w-3xl mx-auto pb-32 lg:pb-0">
+    <div className="space-y-6 max-w-3xl mx-auto pb-32 regular:pb-0">
       {/* Header */}
       <div className="flex flex-col items-center gap-2">
         <Button variant="ghost" size="icon" asChild className="self-start">
@@ -457,7 +457,7 @@ export function QuranReader({ surahNumber, initialText = null }: QuranReaderProp
 
       {/* Audio controls (mobile-friendly) */}
       <Card data-quran-audio-bar="" className={AUDIO_BAR_CLASS}>
-        <CardContent className="py-3">
+        <CardContent className="mx-auto w-full max-w-3xl py-3">
           <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
             <div className="flex items-center gap-2">
               {!isPlayingAudio && !isAudioPaused ? (
