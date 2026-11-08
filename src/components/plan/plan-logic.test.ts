@@ -67,7 +67,7 @@ describe("progressCopy", () => {
 describe("windows and grouping", () => {
   it("guesses a window from Bengali and English titles", () => {
     expect(windowFromTitle("সেহরি ও নিয়ত")).toBe("sehriToDhuhr");
-    expect(windowFromTitle("ফজর জামাতে")).toBe("sehriToDhuhr");
+    expect(windowFromTitle("ফজরের নামাজ")).toBe("sehriToDhuhr");
     expect(windowFromTitle("Morning dhikr")).toBe("sehriToDhuhr");
     expect(windowFromTitle("তারাবি")).toBe("afterIftar");
     expect(windowFromTitle("ঘুমের আগের যিকির")).toBe("afterIftar");
@@ -99,7 +99,7 @@ describe("windows and grouping", () => {
   });
 
   it("matches a suggestion by remembered key, then by title", () => {
-    const titles = { sehri: ["সেহরি ও নিয়ত"], fajr: ["ফজর জামাতে"] };
+    const titles = { sehri: ["সেহরি ও নিয়ত"], fajr: ["ফজরের নামাজ"] };
     expect(matchDefaultKey("anything", "fajr", titles)).toBe("fajr");
     expect(matchDefaultKey(" সেহরি ও নিয়ত ", undefined, titles)).toBe("sehri");
     expect(matchDefaultKey("নিজের আমল", undefined, titles)).toBeUndefined();

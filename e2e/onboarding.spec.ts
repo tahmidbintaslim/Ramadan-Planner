@@ -28,13 +28,13 @@ async function mockApis(page: Page) {
 const hero = (page: Page) => page.getByRole("region", { name: /নামাজের সময় ও কাউন্টডাউন|Prayer time and countdown/ });
 /** The district in Today's header (v4: the location button above the next-prayer card). */
 const place = (page: Page) => page.getByTestId("today-location");
-const CONFIRM = "নিশ্চিত করুন";
+const CONFIRM = "আমার সময় দেখুন";
 
 /** The welcome flow starts with the language step; Continue leads to the district. */
 async function toLocationStep(page: Page) {
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("ভাষা বেছে নিন");
   await page.getByRole("button", { name: "চালিয়ে যান" }).click();
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("আপনার এলাকা");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("আপনার জেলা বেছে নিন");
 }
 
 test.use({ timezoneId: "Asia/Dhaka", viewport: { width: 390, height: 844 } });
@@ -122,7 +122,7 @@ test.describe("first run", () => {
     await visit(page, "/welcome");
     await toLocationStep(page);
     await page.getByRole("button", { name: "আমার অবস্থান ব্যবহার করুন" }).click();
-    await expect(page.getByRole("status")).toHaveText(/অনুমতি পাওয়া যায়নি.*জেলা বেছে নিন/);
+    await expect(page.getByRole("status")).toHaveText(/অনুমতি মেলেনি.*জেলা বেছে নিন/);
   });
 });
 
@@ -153,7 +153,7 @@ test("Today's location button opens the location sheet; Done saves the district 
   await visit(page, "/today");
   await expect(place(page)).toHaveText("ঢাকা");
   await place(page).click();
-  const sheet = page.getByRole("dialog", { name: "আপনার এলাকা" });
+  const sheet = page.getByRole("dialog", { name: "আপনার জেলা বেছে নিন" });
   await expect(sheet).toBeVisible();
   await sheet.getByRole("button", { name: "সিলেট", exact: true }).click();
   await sheet.getByRole("button", { name: "সম্পন্ন" }).click();

@@ -37,7 +37,7 @@ describe("ProgressCard", () => {
     );
     expect(screen.getByRole("img", { name: "৭টির মধ্যে ৩টি আমল হয়েছে" })).toHaveTextContent("৩/৭");
     expect(screen.getByTestId("plan-progress-copy")).toHaveTextContent("আলহামদুলিল্লাহ, ভালো চলছে");
-    expect(screen.getByText("কুরআন ১২/৩০ পারা · ১২ দিন ধারাবাহিক")).toBeInTheDocument();
+    expect(screen.getByText("কুরআন ১২/৩০ পারা · টানা ১২ দিন")).toBeInTheDocument();
   });
 
   it("starts gently and celebrates the end; a neutral line without Quran data", () => {
@@ -47,13 +47,13 @@ describe("ProgressCard", () => {
       </WithIntl>,
     );
     expect(screen.getByTestId("plan-progress-copy")).toHaveTextContent("বিসমিল্লাহ, শুরু করা যাক");
-    expect(screen.getByText("প্রতিটি ছোট আমলও গণ্য")).toBeInTheDocument();
+    expect(screen.getByText("ছোট আমলও গুরুত্বপূর্ণ")).toBeInTheDocument();
     rerender(
       <WithIntl locale="en">
         <ProgressCard done={4} total={4} quranPara={3} streak={0} />
       </WithIntl>,
     );
-    expect(screen.getByTestId("plan-progress-copy")).toHaveTextContent("MashaAllah, all of today's amal is done");
+    expect(screen.getByTestId("plan-progress-copy")).toHaveTextContent("Alhamdulillah, all of today's amal is done");
     expect(screen.getByText("Quran 3/30 juz")).toBeInTheDocument();
   });
 

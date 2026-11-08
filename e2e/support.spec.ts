@@ -32,7 +32,7 @@ test.describe("Quran list (mobile)", () => {
     const rows = page.getByTestId("surah-list").getByRole("link");
     await expect(rows.nth(2)).toBeVisible();
     await expect(rows.nth(1)).toHaveAttribute("href", "/quran/2");
-    await expect(rows.nth(1)).toContainText("মাদানী · ২৮৬ আয়াত");
+    await expect(rows.nth(1)).toContainText("মাদানি · ২৮৬ আয়াত");
     await expect(page.getByTestId("last-read-card")).toHaveCount(0);
     // Para / page / bookmark have no data yet: present but disabled.
     await expect(page.getByRole("button", { name: /পারা/ })).toBeDisabled();
@@ -72,13 +72,13 @@ test.describe("Support page (mobile)", () => {
     expect(res?.status()).toBe(200);
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "index, follow");
     await expect(page.getByRole("heading", { level: 1, name: "সাপোর্ট ও অবদান" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "এই আমল চলমান থাকুক" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "সবার জন্য বিনামূল্যে থাকুক" })).toBeVisible();
     await expect(page.getByText("রমজান ২০২৭-এর খরচ")).toBeVisible();
-    await expect(page.getByTestId("cost-server")).toHaveText("শীঘ্রই প্রকাশ করা হবে");
+    await expect(page.getByTestId("cost-server")).toHaveText("শিগগিরই প্রকাশ করা হবে");
 
     const wallet = page.getByTestId("wallet-button");
     await expect(wallet).toBeDisabled();
-    await expect(wallet).toHaveText("শীঘ্রই চালু হবে");
+    await expect(wallet).toHaveText("শিগগিরই চালু হবে");
     if (await stripeOn(page)) {
       // The Stripe form replaces the "coming soon" card button.
       await expect(page.getByTestId("card-button")).toHaveCount(0);

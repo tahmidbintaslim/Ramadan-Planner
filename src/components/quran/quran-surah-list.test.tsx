@@ -54,8 +54,8 @@ describe("Quran list", () => {
     expect(rows).toHaveLength(10);
     expect(rows[1]).toHaveAttribute("href", "/quran/2");
     expect(rows[1]).toHaveTextContent("আল-বাকারা");
-    expect(rows[1]).toHaveTextContent("মাদানী · ২৮৬ আয়াত");
-    expect(rows[0]).toHaveTextContent("মাক্কী · ৭ আয়াত");
+    expect(rows[1]).toHaveTextContent("মাদানি · ২৮৬ আয়াত");
+    expect(rows[0]).toHaveTextContent("মাক্কি · ৭ আয়াত");
     expect(within(rows[1]).getAllByText("২").length).toBeGreaterThan(0);
   });
 
@@ -67,7 +67,7 @@ describe("Quran list", () => {
     for (const name of [/পারা/, /পৃষ্ঠা/, /বুকমার্ক/]) {
       const tab = within(group).getByRole("button", { name });
       expect(tab).toBeDisabled();
-      expect(tab).toHaveTextContent("শীঘ্রই");
+      expect(tab).toHaveTextContent("শিগগিরই");
     }
   });
 

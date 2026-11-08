@@ -65,9 +65,9 @@ describe("ClerkGate", () => {
     act(() => vi.advanceTimersByTime(CLERK_FALLBACK_MS + 10));
     const card = await screen.findByTestId("clerk-unavailable");
     expect(card).toHaveTextContent("এই মুহূর্তে সাইন ইন করা যাচ্ছে না");
-    expect(card).toHaveTextContent("অ্যাকাউন্ট ছাড়াও অ্যাপটি কাজ করে");
+        expect(card).toHaveTextContent("অ্যাকাউন্ট ছাড়াও অ্যাপটি পুরোপুরি চলে");
     // Account data is not implied to be on the device.
-    expect(card).toHaveTextContent("অ্যাকাউন্টে সংরক্ষিত তথ্য দেখতে পরে সাইন ইন করতে হবে");
+    expect(card).toHaveTextContent("অ্যাকাউন্টে রাখা তথ্য দেখতে পরে আবার সাইন ইন করুন");
     expect(screen.getByRole("link", { name: "অ্যাকাউন্ট ছাড়াই চালিয়ে যান" })).toHaveAttribute("href", "/today");
     expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
   });
@@ -75,7 +75,7 @@ describe("ClerkGate", () => {
   it("shows the fallback at once when Clerk fails, and never once it is ready", async () => {
     clerk.status = "error";
     await renderGate("signUp", "en");
-    expect(screen.getByTestId("clerk-unavailable")).toHaveTextContent("Sign-up is unavailable right now");
+    expect(screen.getByTestId("clerk-unavailable")).toHaveTextContent("Account sign-up is unavailable right now");
     cleanup();
     clerk.status = "ready";
     vi.useFakeTimers({ shouldAdvanceTime: true });

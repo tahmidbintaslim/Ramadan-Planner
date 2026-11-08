@@ -36,7 +36,7 @@ test("/hadith and its sub-routes show the coming-soon page, noindex, and nothing
     const res = await visit(page, path);
     expect(res?.status(), path).toBe(200);
     await expect(page.getByTestId("coming-soon")).toBeVisible();
-    await expect(page.getByTestId("coming-soon")).toContainText("শীঘ্রই আসছে");
+    await expect(page.getByTestId("coming-soon")).toContainText("শিগগিরই আসছে");
     expect(await page.locator('meta[name="robots"]').last().getAttribute("content")).toMatch(/noindex/);
     expect(await page.content()).not.toMatch(LEAK);
   }
