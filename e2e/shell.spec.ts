@@ -65,7 +65,7 @@ test.describe("mobile shell", () => {
       }),
     );
     await page.route(/\/api\/quran\?reciters=true$/, (r) => r.fulfill({ json: [{ id: 1, name: "R" }] }));
-    // 390px phone and 800px tablet: both have the floating bottom nav (it goes at 1024px).
+    // 390px phone and 800px tablet: both have the bottom tab bar (it goes at 835px) and the docked mini-player.
     for (const width of [390, 800]) {
       await page.setViewportSize({ width, height: 844 });
       await visit(page, "/quran/1");
@@ -75,10 +75,13 @@ test.describe("mobile shell", () => {
       const [b, n] = [await bar.boundingBox(), await nav.boundingBox()];
       expect(b && n).toBeTruthy();
       expect(b!.y + b!.height).toBeLessThanOrEqual(n!.y);
+      // Docked: no gap between the bar and the tab bar for text to show through.
+      expect(b!.y + b!.height).toBeGreaterThanOrEqual(n!.y - 1);
       // No floating accessibility button inside the shell any more (it lives in the More sheet), so the bar only
       // has to stay inside the viewport.
       expect(b!.x + b!.width).toBeLessThanOrEqual(width);
-      // The last ayah can be scrolled clear of the floating bar.
+      // The last ayah can be scrolled clear of the docked bar, and the bar is opaque (never shows text through it).
+      expect(await bar.evaluate((el) => getComputedStyle(el).backgroundColor)).not.toMatch(/rgba\(0, 0, 0, 0\)|transparent/);
       await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
       const lastAyah = page.locator("main [dir=rtl]").last();
       const a = await lastAyah.boundingBox();

@@ -192,6 +192,7 @@ test.describe("mobile Home", () => {
 
   test("guests see the email channel disabled with a sign-in hint", async ({ page }) => {
     await visit(page, "/reminders");
+    await page.getByTestId("reminder-add").click();
     const email = page.locator("#new-reminder-email");
     await expect(email).toBeDisabled();
     await expect(page.locator("#new-reminder-email-hint")).toHaveText(

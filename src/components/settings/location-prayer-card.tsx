@@ -3,7 +3,6 @@
 import { useState, useSyncExternalStore } from "react";
 import { Check, ChevronRight, MapPin } from "lucide-react";
 import { useLocale, useTranslations } from "@/i18n/use-intl";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
 import { LocationSheet } from "@/components/onboarding/location-sheet";
 import { useDistrictLabel } from "@/components/layout/app-header";
@@ -17,9 +16,9 @@ import { readHijriAdjust, subscribeStoredLocation, writeHijriAdjust, writeStored
 import { LUCIDE_STROKE } from "@/components/layout/nav-items";
 import { cn } from "@/lib/utils";
 
-const ROW =
+export const ROW =
   "rp-row flex min-h-[52px] w-full items-center gap-4 px-4 text-left text-rp-ink transition-colors hover:bg-rp-accent-tint/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-rp-focus";
-const DIVIDER = "relative after:absolute after:right-0 after:bottom-0 after:left-4 after:h-px after:bg-rp-rule last:after:hidden";
+export const DIVIDER = "relative after:absolute after:right-0 after:bottom-0 after:left-4 after:h-px after:bg-rp-rule last:after:hidden";
 const ADJUSTMENTS = [-2, -1, 0, 1, 2] as const;
 
 /**
@@ -56,17 +55,15 @@ export function LocationPrayerCard() {
   const signed = (n: number) => (n > 0 ? "+" : "") + formatLocalizedNumber(n, locale);
 
   return (
-    <Card data-testid="location-prayer-card">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <MapPin className="h-4 w-4 text-primary" aria-hidden="true" />
-          {t("sectionTitle")}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <section data-testid="location-prayer-card" aria-labelledby="location-prayer-title" className="space-y-2">
+      <h2 id="location-prayer-title" className="rp-caption px-4 text-rp-muted">
+        {t("sectionTitle")}
+      </h2>
+      <div className="space-y-4">
         <ul className="overflow-hidden rounded-rp-md bg-rp-surface">
           <li className={DIVIDER}>
             <button type="button" onClick={() => setSheetOpen(true)} className={ROW}>
+              <MapPin size={24} strokeWidth={LUCIDE_STROKE} aria-hidden className="shrink-0 text-rp-icon" />
               <span className="min-w-0 flex-1">{t("location")}</span>
               <span className="rp-small min-w-0 truncate text-rp-muted">{place ?? t("chooseLocation")}</span>
               <ChevronRight size={20} strokeWidth={LUCIDE_STROKE} aria-hidden className="shrink-0 text-rp-muted" />
@@ -119,6 +116,7 @@ export function LocationPrayerCard() {
           </div>
         ) : null}
 
+        <div className="space-y-4 rounded-rp-md bg-rp-surface p-4">
         <div className="space-y-2">
           <p id="calc-asr-title" className="rp-small px-1 text-rp-muted">
             {t("asr")}
@@ -151,9 +149,10 @@ export function LocationPrayerCard() {
           <p className="rp-small px-1 text-rp-muted">{t("hijriAdjustHint")}</p>
         </div>
 
-        <p className="rp-caption px-1 text-rp-muted">{t("footer")}</p>
-      </CardContent>
+        </div>
+        <p className="rp-caption px-4 text-rp-muted">{t("footer")}</p>
+      </div>
       <LocationSheet open={sheetOpen} onOpenChange={setSheetOpen} />
-    </Card>
+    </section>
   );
 }

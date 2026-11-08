@@ -2,8 +2,11 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useLocale, useTranslations } from "@/i18n/use-intl";
-import { BellIcon } from "@/components/icons/islamic-icons";
-import { Card } from "@/components/ui/card";
+import { Plus } from "lucide-react";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Switch } from "@/components/ui/switch";
+import { DIVIDER, ROW } from "@/components/settings/location-prayer-card";
+import { LUCIDE_STROKE } from "@/components/layout/nav-items";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input, fieldClass } from "@/components/ui/input";
@@ -35,42 +38,25 @@ const REMINDER_TYPES = [
   "custom",
 ] as const;
 
+type Draft = { rule: ReminderRuleDTO; isNew: boolean; offset: string };
+
 export function RemindersContent() {
   const t = useTranslations("reminders");
   const tCommon = useTranslations("common");
   const tSalah = useTranslations("salah");
+  const tNav = useTranslations("nav");
   const locale = useLocale();
   const num = (n: number) => formatLocalizedNumber(n, locale);
   const { isGuest, loading, user } = useAuth();
 
   const [serverRules, setServerRules] = useState<ReminderRuleDTO[]>([]);
-  const {
-    data: guestRules,
-    updateData: updateGuestRules,
-  } = useGuestReminderRules();
-  const [newType, setNewType] = useState<ReminderRuleDTO["type"]>("fajr");
-  const [newLabel, setNewLabel] = useState("");
-  const [newOffset, setNewOffset] = useState(() => formatLocalizedNumber(-15, locale));
-  // Offsets as typed in the rule list (so "-" or "" can be typed); the rule keeps the parsed number.
-  const [offsetDrafts, setOffsetDrafts] = useState<Record<string, string>>({});
-  const [newPush, setNewPush] = useState(true);
-  const [newCalendar, setNewCalendar] = useState(false);
-  const [newEmail, setNewEmail] = useState(false);
+  const { data: guestRules, updateData: updateGuestRules } = useGuestReminderRules();
+  // The edit sheet's working copy: a new rule (Add) or a copy of a listed one (tap a row).
+  const [draft, setDraft] = useState<Draft | null>(null);
 
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const rules = isGuest ? guestRules : serverRules;
-  const setAllRules = (
-    updater:
-      | ReminderRuleDTO[]
-      | ((prev: ReminderRuleDTO[]) => ReminderRuleDTO[]),
-  ) => {
-    if (isGuest) {
-      updateGuestRules(updater);
-      return;
-    }
-    setServerRules(updater);
-  };
   const notifyTrackerUpdate = () => {
     if (typeof window !== "undefined") {
       window.dispatchEvent(new Event("rp-tracker-updated"));
@@ -91,101 +77,57 @@ export function RemindersContent() {
     });
   }, [isGuest, loading, t]);
 
-  const addRule = () => {
-    const channels = [newPush ? "push" : null, newCalendar ? "calendar" : null, newEmail && !isGuest ? "email" : null]
-      .filter((value): value is ReminderChannel => Boolean(value));
+  /** Create or update one rule (guest: on the device; signed in: on the server). */
+  const persist = (rule: ReminderRuleDTO, isNew: boolean, onDone?: () => void) => {
+    setError(null);
+    if (isGuest) {
+      updateGuestRules((prev) => (isNew ? [...prev, rule] : prev.map((item) => (item.id === rule.id ? rule : item))));
+      notifyTrackerUpdate();
+      onDone?.();
+      return;
+    }
+    startTransition(async () => {
+      const res = isNew
+        ? await createReminderRuleAction({
+            type: rule.type,
+            label: rule.label,
+            offsetMinutes: rule.offsetMinutes,
+            channels: rule.channels,
+            enabled: rule.enabled,
+          })
+        : await updateReminderRuleAction(rule);
+      if (!res.ok) {
+        setError(t("genericError"));
+        return;
+      }
+      setServerRules((prev) => (isNew ? [...prev, res.data] : prev.map((item) => (item.id === rule.id ? res.data : item))));
+      notifyTrackerUpdate();
+      onDone?.();
+    });
+  };
 
+  const saveDraft = () => {
+    if (!draft) return;
+    const channels = isGuest ? draft.rule.channels.filter((c) => c !== "email") : draft.rule.channels;
     if (channels.length === 0) {
       setError(t("chooseChannel"));
       return;
     }
-
     // Either digit set ("-১৫" or "-15"); an invalid draft is an error, never a silent default.
-    const offset = parseOffsetMinutes(newOffset);
-    if (offset === null) {
+    const offsetMinutes = parseOffsetMinutes(draft.offset);
+    if (offsetMinutes === null) {
       setError(t("offsetInvalid", { limit: num(OFFSET_LIMIT) }));
       return;
     }
-
-    if (isGuest) {
-      const next: ReminderRuleDTO = {
-        id: crypto.randomUUID(),
-        type: newType,
-        label: newLabel.trim(),
-        offsetMinutes: offset,
-        channels,
-        enabled: true,
-      };
-      setAllRules((prev) => [...prev, next]);
-      setNewLabel("");
-      setNewOffset(formatLocalizedNumber(-15, locale));
-      setNewPush(true);
-      setNewCalendar(false);
-      notifyTrackerUpdate();
-      return;
-    }
-
-    setError(null);
-    startTransition(async () => {
-      const res = await createReminderRuleAction({
-        type: newType,
-        label: newLabel.trim(),
-        offsetMinutes: offset,
-        channels,
-        enabled: true,
-      });
-
-      if (!res.ok) {
-        setError(t("genericError"));
-        return;
-      }
-
-      setServerRules((prev) => [...prev, res.data]);
-      setNewLabel("");
-      setNewOffset(formatLocalizedNumber(-15, locale));
-      setNewPush(true);
-      setNewCalendar(false);
-      setNewEmail(false);
-      notifyTrackerUpdate();
-    });
-  };
-
-  const saveRule = (rule: ReminderRuleDTO) => {
-    if (rule.channels.length === 0) {
-      setError(t("chooseChannel"));
-      return;
-    }
-    // The offset field keeps what was typed; an invalid draft blocks the save instead of saving 0.
-    const draft = offsetDrafts[rule.id];
-    if (draft !== undefined && parseOffsetMinutes(draft) === null) {
-      setError(t("offsetInvalid", { limit: num(OFFSET_LIMIT) }));
-      return;
-    }
-    setError(null);
-
-    if (isGuest) {
-      setAllRules((prev) =>
-        prev.map((item) => (item.id === rule.id ? rule : item)),
-      );
-      notifyTrackerUpdate();
-      return;
-    }
-
-    startTransition(async () => {
-      const res = await updateReminderRuleAction(rule);
-      if (!res.ok) {
-        setError(t("genericError"));
-        return;
-      }
-      setServerRules((prev) => prev.map((item) => (item.id === rule.id ? res.data : item)));
-      notifyTrackerUpdate();
-    });
+    persist({ ...draft.rule, label: draft.rule.label.trim(), channels, offsetMinutes }, draft.isNew, () => setDraft(null));
   };
 
   const removeRule = (id: string) => {
+    setError(null);
     if (isGuest) {
-      setAllRules((prev) => prev.filter((item) => item.id !== id));
+      updateGuestRules((prev) => prev.filter((item) => item.id !== id));
       notifyTrackerUpdate();
+      setDraft(null);
       return;
     }
 
@@ -197,37 +139,40 @@ export function RemindersContent() {
       }
       setServerRules((prev) => prev.filter((item) => item.id !== id));
       notifyTrackerUpdate();
+      setDraft(null);
     });
   };
+
+  const openNew = () => {
+    setError(null);
+    setDraft({
+      rule: { id: crypto.randomUUID(), type: "fajr", label: "", offsetMinutes: -15, channels: ["push"], enabled: true },
+      isNew: true,
+      offset: num(-15),
+    });
+  };
+  const openRule = (rule: ReminderRuleDTO) => {
+    setError(null);
+    setDraft({ rule, isNew: false, offset: num(rule.offsetMinutes) });
+  };
+  const patchDraft = (patch: Partial<ReminderRuleDTO>) => setDraft((d) => (d ? { ...d, rule: { ...d.rule, ...patch } } : d));
 
   const typeLabel = (type: string): string => {
     if (type in { sehri: true, iftar: true, custom: true }) {
       return t(type as "sehri" | "iftar" | "custom");
     }
-    if (
-      type in
-      {
-        fajr: true,
-        dhuhr: true,
-        asr: true,
-        maghrib: true,
-        isha: true,
-        taraweeh: true,
-        tahajjud: true,
-      }
-    ) {
-      return tSalah(
-        type as
-          | "fajr"
-          | "dhuhr"
-          | "asr"
-          | "maghrib"
-          | "isha"
-          | "taraweeh"
-          | "tahajjud",
-      );
+    if (type in { fajr: true, dhuhr: true, asr: true, maghrib: true, isha: true, taraweeh: true, tahajjud: true }) {
+      return tSalah(type as "fajr" | "dhuhr" | "asr" | "maghrib" | "isha" | "taraweeh" | "tahajjud");
     }
     return type;
+  };
+  // "15 min before · Notification": the second line of a row.
+  const ruleSummary = (rule: ReminderRuleDTO) => {
+    const when =
+      rule.offsetMinutes === 0
+        ? t("atTime")
+        : t(rule.offsetMinutes < 0 ? "minutesBefore" : "minutesAfter", { n: num(Math.abs(rule.offsetMinutes)) });
+    return [when, ...rule.channels.map((c) => t(c))].join(" · ");
   };
 
   const selectClass = cn(fieldClass, "w-full appearance-auto");
@@ -270,180 +215,175 @@ export function RemindersContent() {
     ? { disabled: true, hint: t("emailGuestHint") }
     : { hint: user?.email ? t("emailHintAddress", { email: user.email }) : t("emailHint") };
 
-  const offsetField = (id: string, value: string, onChange: (v: string) => void) => (
-    <div className="space-y-1.5">
-      <Label htmlFor={id} className="rp-small text-rp-ink">
-        {t("offsetLabel")}
-      </Label>
-      <div className="relative">
-        <Input
-          id={id}
-          inputMode="numeric"
-          autoComplete="off"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          aria-describedby={`${id}-hint`}
-          aria-invalid={parseOffsetMinutes(value) === null}
-          className={cn(fieldClass, "pe-20")}
-        />
-        <span aria-hidden="true" className="rp-small pointer-events-none absolute inset-y-0 end-4 flex items-center text-rp-muted">
-          {t("minutesUnit")}
-        </span>
-      </div>
-      <p id={`${id}-hint`} className="rp-caption text-rp-muted">
-        {t("offsetHint", { example: num(-15), minutes: num(15) })}
-      </p>
-    </div>
-  );
+  const toggleChannel = (channel: ReminderChannel, on: boolean) =>
+    setDraft((d) => {
+      if (!d) return d;
+      const next = new Set(d.rule.channels);
+      if (on) next.add(channel);
+      else next.delete(channel);
+      return { ...d, rule: { ...d.rule, channels: Array.from(next) } };
+    });
+
+  // Field ids keep the "new-reminder-" prefix for a new rule (stable for tests and labels).
+  const fid = (name: string) => (draft?.isNew ? `new-reminder-${name}` : `rule-${draft?.rule.id}-${name}`);
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
-      <h1 className="rp-h1 text-rp-ink">{t("title")}</h1>
+      <h1 className="rp-large-title text-rp-ink">{tNav("remindersShort")}</h1>
 
       {!loading && isGuest && (
         <p className="rp-small rounded-rp-md bg-rp-accent-tint px-4 py-3 text-rp-ink">{t("guestLocalNotice")}</p>
       )}
 
-      {error && (
+      {error && !draft && (
         <p role="alert" className="rp-small rounded-rp-md bg-destructive/10 px-4 py-3 text-destructive">
           {error}
         </p>
       )}
 
-      <Card className="px-5" data-testid="reminder-form">
-        <h2 className="rp-h2 flex items-center gap-2 text-rp-ink">
-          <BellIcon size={24} className="text-rp-accent" />
-          {t("addReminder")}
+      {/* Rules (Figma page 12, D7): tap a row to edit, the switch turns it on or off at once. */}
+      <section aria-labelledby="reminder-rules" className="space-y-2">
+        <h2 id="reminder-rules" className="rp-caption px-4 text-rp-muted">
+          {t("rules")}
         </h2>
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="new-reminder-type" className="rp-small text-rp-ink">
-              {t("typeLabel")}
-            </Label>
-            <select
-              id="new-reminder-type"
-              value={newType}
-              onChange={(e) => setNewType(e.target.value as ReminderRuleDTO["type"])}
-              className={selectClass}
-            >
-              {REMINDER_TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {typeLabel(type)}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="new-reminder-label" className="rp-small text-rp-ink">
-              {t("label")}
-            </Label>
-            <Input
-              id="new-reminder-label"
-              value={newLabel}
-              onChange={(e) => setNewLabel(e.target.value)}
-              placeholder={t("labelPlaceholder")}
-              className={fieldClass}
-            />
-          </div>
-          {offsetField("new-reminder-offset", newOffset, setNewOffset)}
-        </div>
-        <fieldset className="space-y-2">
-          <legend className="rp-small mb-1.5 text-rp-ink">{t("channelsLabel")}</legend>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {channelToggle("new-reminder-push", t("push"), newPush, setNewPush)}
-            {channelToggle("new-reminder-calendar", t("calendar"), newCalendar, setNewCalendar)}
-            {channelToggle("new-reminder-email", t("email"), newEmail && !isGuest, setNewEmail, emailOpts)}
-          </div>
-        </fieldset>
-        <Button onClick={addRule} disabled={isPending} className="w-full sm:w-auto sm:self-start">
-          {t("addReminder")}
-        </Button>
-      </Card>
-
-      <Card className="px-5">
-        <h2 className="rp-h2 text-rp-ink">{t("rules")}</h2>
         {rules.length === 0 ? (
-          <p className="rp-small text-rp-muted">{t("noRules")}</p>
+          <p className="rp-small rounded-rp-md bg-rp-surface px-4 py-3 text-rp-muted">{t("noRules")}</p>
         ) : (
-          <ul className="flex flex-col gap-3">
-            {rules.map((rule) => (
-              <li key={rule.id} className="space-y-4 rounded-rp-md border border-rp-rule p-4">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label htmlFor={`rule-${rule.id}-type`} className="rp-small text-rp-ink">
-                      {t("typeLabel")}
-                    </Label>
-                    <select
-                      id={`rule-${rule.id}-type`}
-                      value={rule.type}
-                      onChange={(e) => {
-                        const type = e.target.value as ReminderRuleDTO["type"];
-                        setAllRules((prev) => prev.map((item) => (item.id === rule.id ? { ...item, type } : item)));
-                      }}
-                      className={selectClass}
-                    >
-                      {REMINDER_TYPES.map((type) => (
-                        <option key={type} value={type}>
-                          {typeLabel(type)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor={`rule-${rule.id}-label`} className="rp-small text-rp-ink">
-                      {t("label")}
-                    </Label>
-                    <Input
-                      id={`rule-${rule.id}-label`}
-                      value={rule.label}
-                      onChange={(e) => {
-                        const label = e.target.value;
-                        setAllRules((prev) => prev.map((item) => (item.id === rule.id ? { ...item, label } : item)));
-                      }}
-                      placeholder={t("labelPlaceholder")}
-                      className={fieldClass}
-                    />
-                  </div>
-                  {offsetField(`rule-${rule.id}-offset`, offsetDrafts[rule.id] ?? num(rule.offsetMinutes), (value) => {
-                    setOffsetDrafts((prev) => ({ ...prev, [rule.id]: value }));
-                    // Only a valid offset reaches the rule; an invalid draft stays in the field and blocks the save.
-                    const offsetMinutes = parseOffsetMinutes(value);
-                    if (offsetMinutes === null) return;
-                    setAllRules((prev) => prev.map((item) => (item.id === rule.id ? { ...item, offsetMinutes } : item)));
-                  })}
-                </div>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {channelToggle(`rule-${rule.id}-enabled`, t("enabled"), rule.enabled, (checked) =>
-                    setAllRules((prev) => prev.map((item) => (item.id === rule.id ? { ...item, enabled: checked } : item))),
-                  )}
-                  {(["push", "calendar", "email"] as const).map((channel) =>
-                    channelToggle(`rule-${rule.id}-${channel}`, t(channel), rule.channels.includes(channel), (checked) =>
-                      setAllRules((prev) =>
-                        prev.map((item) => {
-                          if (item.id !== rule.id) return item;
-                          const next = new Set(item.channels);
-                          if (checked) next.add(channel);
-                          else next.delete(channel);
-                          return { ...item, channels: Array.from(next) };
-                        }),
-                      ),
-                      channel === "email" ? emailOpts : undefined,
-                    ),
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button variant="soft" onClick={() => saveRule(rule)} disabled={isPending}>
-                    {tCommon("save")}
-                  </Button>
-                  <Button variant="quiet" className="text-destructive" onClick={() => removeRule(rule.id)} disabled={isPending}>
-                    {tCommon("delete")}
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <>
+            <ul className="overflow-hidden rounded-rp-md bg-rp-surface" data-testid="reminder-rules">
+              {rules.map((rule) => (
+                <li key={rule.id} className={cn(DIVIDER, "flex items-center gap-2 pe-4")}>
+                  <button
+                    type="button"
+                    onClick={() => openRule(rule)}
+                    className="flex min-h-[60px] min-w-0 flex-1 flex-col items-start justify-center px-4 py-2 text-left transition-colors hover:bg-rp-accent-tint/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-rp-focus"
+                  >
+                    <span className={cn("rp-row truncate", rule.enabled ? "text-rp-ink" : "text-rp-muted")}>
+                      {rule.label || typeLabel(rule.type)}
+                    </span>
+                    <span className="rp-footnote truncate text-rp-muted">{ruleSummary(rule)}</span>
+                  </button>
+                  <Switch
+                    checked={rule.enabled}
+                    disabled={isPending}
+                    onCheckedChange={(enabled) => persist({ ...rule, enabled }, false)}
+                    aria-label={rule.label || typeLabel(rule.type)}
+                  />
+                </li>
+              ))}
+            </ul>
+            <p className="rp-small px-4 text-rp-muted">{t("rowHint")}</p>
+          </>
         )}
-      </Card>
+      </section>
+
+      <ul className="overflow-hidden rounded-rp-md bg-rp-surface">
+        <li>
+          <button type="button" onClick={openNew} className={cn(ROW, "text-rp-accent")} data-testid="reminder-add">
+            <Plus size={24} strokeWidth={LUCIDE_STROKE} aria-hidden className="shrink-0" />
+            <span className="min-w-0 flex-1">{t("addReminder")}</span>
+          </button>
+        </li>
+      </ul>
+
+      <Sheet open={draft !== null} onOpenChange={(open) => !open && setDraft(null)}>
+        <SheetContent side="bottom" className="max-h-[90dvh] overflow-y-auto rounded-t-rp-xl" data-testid="reminder-form">
+          <SheetHeader>
+            <SheetTitle>{draft?.isNew ? t("addReminder") : t("editReminder")}</SheetTitle>
+            <SheetDescription className="sr-only">{t("channelsLabel")}</SheetDescription>
+          </SheetHeader>
+          {draft ? (
+            <div className="flex flex-col gap-4 px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+              {error && (
+                <p role="alert" className="rp-small rounded-rp-md bg-destructive/10 px-4 py-3 text-destructive">
+                  {error}
+                </p>
+              )}
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor={fid("type")} className="rp-small text-rp-ink">
+                    {t("typeLabel")}
+                  </Label>
+                  <select
+                    id={fid("type")}
+                    value={draft.rule.type}
+                    onChange={(e) => patchDraft({ type: e.target.value as ReminderRuleDTO["type"] })}
+                    className={selectClass}
+                  >
+                    {REMINDER_TYPES.map((type) => (
+                      <option key={type} value={type}>
+                        {typeLabel(type)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor={fid("label")} className="rp-small text-rp-ink">
+                    {t("label")}
+                  </Label>
+                  <Input
+                    id={fid("label")}
+                    value={draft.rule.label}
+                    onChange={(e) => patchDraft({ label: e.target.value })}
+                    placeholder={t("labelPlaceholder")}
+                    className={fieldClass}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor={fid("offset")} className="rp-small text-rp-ink">
+                    {t("offsetLabel")}
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id={fid("offset")}
+                      inputMode="numeric"
+                      autoComplete="off"
+                      value={draft.offset}
+                      onChange={(e) => {
+                        const offset = e.target.value;
+                        setDraft((d) => (d ? { ...d, offset } : d));
+                      }}
+                      aria-describedby={`${fid("offset")}-hint`}
+                      aria-invalid={parseOffsetMinutes(draft.offset) === null}
+                      className={cn(fieldClass, "pe-20")}
+                    />
+                    <span aria-hidden="true" className="rp-small pointer-events-none absolute inset-y-0 end-4 flex items-center text-rp-muted">
+                      {t("minutesUnit")}
+                    </span>
+                  </div>
+                  <p id={`${fid("offset")}-hint`} className="rp-caption text-rp-muted">
+                    {t("offsetHint", { example: num(-15), minutes: num(15) })}
+                  </p>
+                </div>
+              </div>
+              <fieldset className="space-y-2">
+                <legend className="rp-small mb-1.5 text-rp-ink">{t("channelsLabel")}</legend>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {channelToggle(fid("push"), t("push"), draft.rule.channels.includes("push"), (c) => toggleChannel("push", c))}
+                  {channelToggle(fid("calendar"), t("calendar"), draft.rule.channels.includes("calendar"), (c) =>
+                    toggleChannel("calendar", c),
+                  )}
+                  {channelToggle(
+                    fid("email"),
+                    t("email"),
+                    draft.rule.channels.includes("email") && !isGuest,
+                    (c) => toggleChannel("email", c),
+                    emailOpts,
+                  )}
+                </div>
+              </fieldset>
+              <Button onClick={saveDraft} disabled={isPending} className="w-full">
+                {draft.isNew ? t("addReminder") : tCommon("save")}
+              </Button>
+              {!draft.isNew ? (
+                <Button variant="quiet" className="w-full text-destructive" onClick={() => removeRule(draft.rule.id)} disabled={isPending}>
+                  {tCommon("delete")}
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

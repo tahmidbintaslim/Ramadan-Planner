@@ -12,7 +12,7 @@ import {
   PlusIcon,
   ResetIcon,
 } from "@/components/icons/islamic-icons";
-import { ALargeSmall } from "lucide-react";
+import { SettingsIcon } from "@/components/icons/islamic-icons";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -230,7 +230,7 @@ export function TextThemeButton({ className, tone = "page" }: { className?: stri
             className,
           )}
         >
-          <ALargeSmall size={24} strokeWidth={1.75} aria-hidden />
+          <SettingsIcon size={24} aria-hidden />
         </button>
       }
     />
