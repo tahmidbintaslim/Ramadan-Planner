@@ -19,6 +19,8 @@ import {
   createReminderSchema,
   updateReminderSchema,
   updateProfileSchema,
+  REMINDER_CHANNELS,
+  type ReminderChannel,
   type ActionResult,
   type DailyLogDTO,
   type PrayerGoalDTO,
@@ -423,7 +425,7 @@ function toReminderDTO(row: Prisma.ReminderRuleGetPayload<{ select: typeof remin
     label: String(row.label ?? ""),
     offsetMinutes: typeof row.offsetMinutes === "number" ? row.offsetMinutes : -15,
     channels: Array.isArray(row.channels)
-      ? row.channels.filter((c): c is "push" | "calendar" => c === "push" || c === "calendar")
+      ? row.channels.filter((c): c is ReminderChannel => REMINDER_CHANNELS.includes(c as ReminderChannel))
       : ["push"],
     enabled: Boolean(row.enabled),
   };

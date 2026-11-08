@@ -17,6 +17,9 @@ export const CSRF_EXEMPT_PATHS: ReadonlySet<string> = new Set([
   // POST /api/donations/checkout and /api/donations/portal are NOT exempt: they are same-origin calls from
   // /support and stay origin-checked.
   "/api/stripe/webhook",
+  // Reminder email unsubscribe (src/server/api/reminder-unsubscribe.ts): mail clients POST the RFC 8058
+  // one-click cross-site with no cookies; the HMAC in the query string authenticates it, no session.
+  "/api/reminders/unsubscribe",
 ]);
 
 /**

@@ -102,7 +102,7 @@ export type ReminderType =
     | "tahajjud"
     | "custom";
 
-export type ReminderChannel = "push" | "calendar";
+export type ReminderChannel = "push" | "calendar" | "email";
 
 export interface ReminderRule {
     id: string;
