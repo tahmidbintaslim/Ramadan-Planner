@@ -1,5 +1,6 @@
 import { cachedFetch } from "@/lib/ttl-cache";
-import { ALADHAN_METHOD_PARAMS } from "@/lib/fast-times";
+import { aladhanParams } from "@/lib/calc-method";
+import { resolveCountryCode } from "@/lib/hijri-offsets";
 import { addDays } from "date-fns";
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 
@@ -115,7 +116,9 @@ async function fetchMonthCalendar(
   longitude: number,
   timezone: string,
 ): Promise<AlAdhanCalendarDay[]> {
-  const url = `${ALADHAN_BASE}/${year}/${month}?latitude=${latitude}&longitude=${longitude}&${ALADHAN_METHOD_PARAMS}&timezonestring=${encodeURIComponent(timezone)}`;
+  // Profiles have no country or method column: the zone (else the coordinates) gives the country's method.
+  const country = resolveCountryCode({ timezone, latitude, longitude });
+  const url = `${ALADHAN_BASE}/${year}/${month}?latitude=${latitude}&longitude=${longitude}&${aladhanParams({ country })}&timezonestring=${encodeURIComponent(timezone)}`;
   const res = await cachedFetch(url, 3600);
   if (!res.ok) {
     throw new Error(`Calendar API failed (${res.status})`);

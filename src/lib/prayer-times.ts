@@ -1,9 +1,9 @@
 import { cachedFetch } from "@/lib/ttl-cache";
-import { ALADHAN_METHOD_PARAMS, cleanAlAdhanTime, fastTimesFromAlAdhan } from "@/lib/fast-times";
+import { cleanAlAdhanTime, fastTimesFromAlAdhan } from "@/lib/fast-times";
+import { aladhanParams, resolveCalc, type CalcOptions } from "@/lib/calc-method";
 import type { PrayerTimes, TimingData } from "@/types/database";
-import { fetchIslamicApiPrayerTimes } from "./islamic-api";
 import { HIJRI_MONTHS_BN } from "./hijri-months";
-import { getHijriAdjustmentParams, getHijriOffsetForLocation, getCountryCodeForTimezone } from "./hijri-offsets";
+import { getHijriAdjustmentParams, hijriOffsetWithAdjust, resolveCountryCode } from "./hijri-offsets";
 
 // AlAdhan API response types
 interface AlAdhanTiming {
@@ -54,10 +54,11 @@ interface AlAdhanResponse {
 const cache = new Map<string, { data: TimingData; expiresAt: number }>();
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-function cacheKey(lat: number, lng: number, date: string, timezone: string): string {
+function cacheKey(lat: number, lng: number, date: string, timezone: string, upstream: string): string {
     // Round to 2 decimal places for sensible cache hits. The timezone is part of the key: the upstream answers
     // in that zone's wall-clock times, so the same coordinates asked with another tz must not share an entry.
-    return `${lat.toFixed(2)},${lng.toFixed(2)},${date},${timezone}`;
+    // So are the method, school, tune and Hijri adjustment (`upstream`).
+    return `${lat.toFixed(2)},${lng.toFixed(2)},${date},${timezone},${upstream}`;
 }
 
 function getFromCache(key: string): TimingData | null {
@@ -80,8 +81,8 @@ function setCache(key: string, data: TimingData): void {
 }
 
 // ── Fetch from AlAdhan API ────────────────────────────
-// method=1 → University of Islamic Sciences, Karachi (commonly used in BD)
-// school=1 → Hanafi (standard for Bangladesh)
+// Method and school come from the place's country (src/lib/calc-method.ts) unless the user picked others.
+// IslamicAPI is no longer tried first: it cannot be asked for a method, so it would ignore the country's.
 const ALADHAN_BASE = "https://api.aladhan.com/v1/timings";
 
 export async function fetchPrayerTimes(
@@ -89,46 +90,29 @@ export async function fetchPrayerTimes(
     longitude: number,
     date: string, // DD-MM-YYYY
     timezone: string,
-    locationLabel: string
+    locationLabel: string,
+    calc: CalcOptions = {},
 ): Promise<TimingData> {
-    const key = cacheKey(latitude, longitude, date, timezone);
+    const country = resolveCountryCode({ country: calc.country, timezone, latitude, longitude });
+    const methodParams = aladhanParams({ ...calc, country });
+    const adjustmentParams = getHijriAdjustmentParams(hijriOffsetWithAdjust(country, calc.hijriAdjust));
+    const key = cacheKey(latitude, longitude, date, timezone, methodParams + adjustmentParams);
     const cached = getFromCache(key);
     if (cached) return cached;
 
-    // Try IslamicAPI (if key present) then fall back to AlAdhan
-    let timings: AlAdhanTiming | null = null;
-    let dateInfo: AlAdhanDate | null = null;
-    let source: TimingData["source"] = "islamicapi";
-    try {
-        const ia = await fetchIslamicApiPrayerTimes(latitude, longitude, date, timezone);
-        // Map IslamicAPI v1 response to our expected shape if possible
-        if (ia && ia.data && ia.data.timings) {
-            timings = ia.data.timings as unknown as AlAdhanTiming;
-            dateInfo = ia.data.date as unknown as AlAdhanDate;
-        }
-    } catch {
-        // ignore and fallback to AlAdhan
+    const url = `${ALADHAN_BASE}/${date}?latitude=${latitude}&longitude=${longitude}&${methodParams}&timezonestring=${encodeURIComponent(timezone)}${adjustmentParams}`;
+    const res = await cachedFetch(url, 86400); // cached 24h
+    if (!res.ok) {
+        throw new Error(`AlAdhan API error: ${res.status} ${res.statusText}`);
     }
 
-    if (!timings || !dateInfo) {
-        source = "aladhan";
-        const country = getCountryCodeForTimezone(timezone) ?? "DEFAULT";
-        const offset = getHijriOffsetForLocation(country);
-        const adjustmentParams = getHijriAdjustmentParams(offset);
-        const url = `${ALADHAN_BASE}/${date}?latitude=${latitude}&longitude=${longitude}&${ALADHAN_METHOD_PARAMS}&timezonestring=${encodeURIComponent(timezone)}${adjustmentParams}`;
-        const res = await cachedFetch(url, 86400); // cached 24h
-        if (!res.ok) {
-            throw new Error(`AlAdhan API error: ${res.status} ${res.statusText}`);
-        }
-
-        const json: AlAdhanResponse = await res.json();
-        if (json.code !== 200) {
-            throw new Error(`AlAdhan API returned code ${json.code}`);
-        }
-
-        timings = json.data.timings;
-        dateInfo = json.data.date;
+    const json: AlAdhanResponse = await res.json();
+    if (json.code !== 200) {
+        throw new Error(`AlAdhan API returned code ${json.code}`);
     }
+
+    const timings = json.data.timings;
+    const dateInfo = json.data.date;
 
     // Strip " (BST)" etc. timezone suffixes from time strings
     const clean = cleanAlAdhanTime;
@@ -160,7 +144,8 @@ export async function fetchPrayerTimes(
         gregorianDate: dateInfo.gregorian.date,
         timezone,
         location: locationLabel,
-        source,
+        source: "aladhan",
+        calc: { ...resolveCalc({ ...calc, country }), ...(country ? { country } : {}) },
     };
 
     setCache(key, timingData);

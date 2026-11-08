@@ -5,6 +5,14 @@ export const HIJRI_OFFSETS: Record<string, number> = {
   IN: -1,
   BD: -1,
   PK: -1,
+  // The same -1 the zone table gives these countries, so a stored country and its zone agree.
+  AF: -1,
+  ID: -1,
+  MY: -1,
+  SG: -1,
+  LK: -1,
+  OM: -1,
+  AU: -1,
   SA: 0,
   AE: 0,
   DEFAULT: 0,
@@ -159,7 +167,32 @@ const TIMEZONE_TO_COUNTRY: Record<string, string> = {
   "America/Los_Angeles": "US",
   "America/Toronto": "CA",
   "Australia/Sydney": "AU",
+  "Asia/Dacca": "BD",
+  "Asia/Istanbul": "TR",
+  "Asia/Ujung_Pandang": "ID",
+  "America/Montreal": "CA",
 };
+
+// Every zone of the countries with their own calculation method (src/lib/calc-method.ts), from the tz database's
+// zone.tab, so a device position or a zone-only request finds its country offline.
+const COUNTRY_ZONES: Record<string, string> = {
+  TR: "Europe/Istanbul",
+  MY: "Asia/Kuching",
+  ID: "Asia/Pontianak Asia/Makassar Asia/Jayapura",
+  US:
+    "America/Detroit America/Kentucky/Louisville America/Kentucky/Monticello America/Indiana/Indianapolis " +
+    "America/Indiana/Vincennes America/Indiana/Winamac America/Indiana/Marengo America/Indiana/Petersburg " +
+    "America/Indiana/Vevay America/Indiana/Tell_City America/Indiana/Knox America/Menominee " +
+    "America/North_Dakota/Center America/North_Dakota/New_Salem America/North_Dakota/Beulah America/Denver " +
+    "America/Boise America/Phoenix America/Anchorage America/Juneau America/Sitka America/Metlakatla " +
+    "America/Yakutat America/Nome America/Adak Pacific/Honolulu",
+  CA:
+    "America/St_Johns America/Halifax America/Glace_Bay America/Moncton America/Goose_Bay America/Blanc-Sablon " +
+    "America/Iqaluit America/Atikokan America/Winnipeg America/Resolute America/Rankin_Inlet America/Regina " +
+    "America/Swift_Current America/Edmonton America/Cambridge_Bay America/Inuvik America/Vancouver " +
+    "America/Creston America/Dawson_Creek America/Fort_Nelson America/Whitehorse America/Dawson",
+};
+for (const [cc, zones] of Object.entries(COUNTRY_ZONES)) for (const z of zones.split(" ")) TIMEZONE_TO_COUNTRY[z] = cc;
 
 export function getCountryCodeForTimezone(timezone?: string): string | undefined {
   if (!timezone) return undefined;
@@ -179,4 +212,29 @@ export function getCountryCodeForTimezone(timezone?: string): string | undefined
     Calcutta: "IN",
   };
   return rev[city];
+}
+
+/**
+ * The country a request is for: the stored one when the client sends it, else the zone's (zones are per country,
+ * so this is reliable), else the coarse coordinate boxes. Coordinates come last: the boxes overlap neighbours
+ * (the Saudi box covers Dubai, Doha and Kuwait).
+ */
+export function resolveCountryCode(input: {
+  country?: string;
+  timezone?: string;
+  latitude?: number;
+  longitude?: number;
+}): string | undefined {
+  if (input.country) return input.country.toUpperCase();
+  const byZone = getCountryCodeForTimezone(input.timezone);
+  if (byZone) return byZone;
+  if (Number.isFinite(input.latitude) && Number.isFinite(input.longitude)) {
+    return getCountryCodeForCoordinates(input.latitude!, input.longitude!);
+  }
+  return undefined;
+}
+
+/** The Hijri offset for a country plus the user's own adjustment (days). */
+export function hijriOffsetWithAdjust(countryCode: string | undefined, userAdjust = 0): number {
+  return getHijriOffsetForLocation(countryCode ?? "DEFAULT") + userAdjust;
 }

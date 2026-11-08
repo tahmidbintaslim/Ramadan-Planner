@@ -209,4 +209,6 @@ export interface TimingData {
     location: string;
     /** Which upstream calculated the times (AlAdhan: Karachi method, Hanafi Asr). Absent in older caches. */
     source?: "islamicapi" | "aladhan";
+    /** The AlAdhan method id, Asr school (0 Standard, 1 Hanafi) and country the times were calculated for. */
+    calc?: { method: number; school: number; country?: string };
 }

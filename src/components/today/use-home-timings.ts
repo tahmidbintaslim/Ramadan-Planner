@@ -3,7 +3,7 @@ import type { TimingData } from "@/types/database";
 import type { RamadanStatus } from "@/lib/ramadan-date";
 import { readKnownTimings, rememberTimings } from "@/lib/auto-night";
 import { todayISOInZone } from "@/lib/prayer-phase";
-import { readStoredLocation, subscribeStoredLocation, type StoredLocation } from "@/lib/user-location";
+import { calcRequestParams, readStoredLocation, subscribeStoredLocation, type StoredLocation } from "@/lib/user-location";
 
 export type HomeTimingsStatus = "loading" | "ready" | "error";
 
@@ -34,12 +34,15 @@ export function homeRequestUrls(
   tz: string,
   todayISO: string,
   coords?: { lat: number; lng: number },
+  calc: Record<string, string> = {},
 ): { today: string; tomorrow: string; ramadan: string } {
   const base = new URLSearchParams({ tz });
   if (coords) {
     base.set("lat", coarseCoord(coords.lat));
     base.set("lng", coarseCoord(coords.lng));
   }
+  // Country, method, school and Hijri adjustment (calcRequestParams); the server defaults any that are absent.
+  for (const [k, v] of Object.entries(calc)) base.set(k, v);
   const withParam = (key: string, value: string) => {
     const p = new URLSearchParams(base);
     p.set(key, value);
@@ -145,7 +148,7 @@ export function useHomeTimings(
     const valid = (d: TimingData | null) => (d?.prayerTimes ? d : null);
 
     const load = async (coords?: { lat: number; lng: number }) => {
-      const urls = homeRequestUrls(tz, todayISO, coords);
+      const urls = homeRequestUrls(tz, todayISO, coords, calcRequestParams(stored));
       const [timingsRes, tomorrowRes, ramadanRes] = await Promise.all([
         fetch(urls.today, { signal }).catch(() => null),
         fetch(urls.tomorrow, { signal }).catch(() => null),

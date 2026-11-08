@@ -1,4 +1,5 @@
 import { useState, useSyncExternalStore, type ComponentType, type ReactNode } from "react";
+import { useCalcSource } from "@/components/prayer/use-calc-source";
 import { ArrowRight, CalendarClock, ListChecks, MapPin, Monitor, Smartphone } from "lucide-react";
 import { useLocale, useTranslations } from "@/i18n/use-intl";
 import { formatLocalizedNumber } from "@/lib/locale-number";
@@ -224,6 +225,7 @@ export function LandingPage({ serverYear = new Date().getFullYear(), initialNow 
   const year = useFooterYear(serverYear);
   const [sheetOpen, setSheetOpen] = useState(false);
   const { home, phaseTimings, timeZone, now } = useLiveTimes(initialNow);
+  const calcSource = useCalcSource();
   const chosen = useDistrictLabel();
   const timings = home.timings;
   // The chosen district, else Dhaka (the times' fallback) in the UI language; a device position outside the
@@ -235,7 +237,9 @@ export function LandingPage({ serverYear = new Date().getFullYear(), initialNow 
   const hijri = timings ? hijriLabelOf(timings, locale, (v) => tHome("hijri", v)) : undefined;
   const fresh = !home.cached && timings?.source;
   const source = tPrayer(fresh ? "source" : "sampleSource", {
-    source: fresh ? tHome(timings.source === "islamicapi" ? "sourceIslamicApi" : "sourceAladhan") : tHome("sourceUnverified"),
+    source: fresh
+      ? (calcSource(timings.calc) ?? tHome(timings.source === "islamicapi" ? "sourceIslamicApi" : "sourceAladhan"))
+      : tHome("sourceUnverified"),
   });
   const weekday = (() => {
     try {

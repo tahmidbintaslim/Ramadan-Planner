@@ -17,3 +17,18 @@ describe("timingsParamError", () => {
     expect(err(`location=${"a".repeat(121)}`)).toBe("Invalid location");
   });
 });
+
+describe("calculation params", () => {
+  it("accepts allowlisted method, school, country and Hijri adjustment", () => {
+    expect(err("tz=America/Chicago&method=2&school=0&cc=US&hadj=-1")).toBeNull();
+    expect(err("method=0&school=1&hadj=2")).toBeNull();
+  });
+  it("rejects anything else before it reaches AlAdhan", () => {
+    expect(err("method=6")).toBe("Invalid method");
+    expect(err("method=99")).toBe("Invalid method");
+    expect(err("method=1%26tune%3D9")).toBe("Invalid method");
+    expect(err("school=2")).toBe("Invalid school");
+    expect(err("cc=usa")).toBe("Invalid country");
+    expect(err("hadj=3")).toBe("Invalid Hijri adjustment");
+  });
+});

@@ -53,8 +53,8 @@ export function useDistrictLabel(): string | null {
   const stored = useStoredLocation();
   const d = districtById(stored?.districtId);
   if (d) return districtName(d, locale);
-  // A device position outside Bangladesh: the city of the phone's time zone ("Asia/Bangkok" → "Bangkok").
-  if (stored?.kind === "geo") return stored.tz.split("/").pop()!.replace(/_/g, " ");
+  // A searched city's name, or for a device position the city of the phone's time zone ("Asia/Bangkok" → "Bangkok").
+  if (stored?.label) return stored.label;
   return null;
 }
 

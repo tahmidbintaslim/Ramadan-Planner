@@ -138,6 +138,7 @@ export async function dispatchDueReminders(now: Date) {
             toAlAdhanDate(day),
             user.timezone,
             user.locationLabel,
+            // Profiles have no country or method column: fetchPrayerTimes derives them from the zone, else coordinates.
           );
           days.push({ day, prayerTimes: timings.prayerTimes });
         } catch {
