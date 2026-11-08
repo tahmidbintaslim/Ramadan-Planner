@@ -15,32 +15,14 @@ import {
   type DayPrayerTimes,
 } from "@/lib/push-schedule";
 import { isAllowedPushEndpoint, validPushKeys } from "@/lib/push-endpoint";
+import {
+  composeReminderEmail,
+  createEmailSender,
+  emailIdempotencyKey,
+  pushPayload,
+  reminderLocale,
+} from "@/server/reminder-email";
 import { guarded, json } from "./http";
-
-function displayName(type: string): string {
-  switch (type) {
-    case "sehri":
-      return "Sehri";
-    case "iftar":
-      return "Iftar";
-    case "fajr":
-      return "Fajr";
-    case "dhuhr":
-      return "Dhuhr";
-    case "asr":
-      return "Asr";
-    case "maghrib":
-      return "Maghrib";
-    case "isha":
-      return "Isha";
-    case "taraweeh":
-      return "Taraweeh";
-    case "tahajjud":
-      return "Tahajjud";
-    default:
-      return "Reminder";
-  }
-}
 
 function isUniqueError(error: unknown): boolean {
   return (
@@ -83,10 +65,15 @@ function configureWebPush(): void {
   webpush.setVapidDetails(subject, publicKey, privateKey);
 }
 
-export async function dispatchDueReminders(now: Date) {
+const hasChannel = (rule: { channels: unknown }, channel: string) =>
+  Array.isArray(rule.channels) && rule.channels.includes(channel);
+
+export async function dispatchDueReminders(now: Date, options: { push?: boolean } = {}) {
+  const pushEnabled = options.push ?? true;
   const users = await prisma.userProfile.findMany({
     select: {
       id: true,
+      locale: true,
       timezone: true,
       latitude: true,
       longitude: true,
@@ -111,7 +98,13 @@ export async function dispatchDueReminders(now: Date) {
     },
   });
 
+  const emailUsers = new Set(
+    users.filter((u) => u.reminderRules.some((rule) => hasChannel(rule, "email"))).map((u) => u.id),
+  );
+  const email = createEmailSender({ wanted: emailUsers });
+
   let delivered = 0;
+  let emailed = 0;
   let checked = 0;
   let skippedUsers = 0;
   const invalidSubscriptions = new Set<string>();
@@ -119,13 +112,12 @@ export async function dispatchDueReminders(now: Date) {
   for (const user of users) {
     // One user's bad data (e.g. an invalid stored time zone) must never abort the run for everyone else.
     try {
-      if (user.pushSubscriptions.length === 0) continue;
-
-      const pushRules = user.reminderRules.filter((rule) => {
-        const channels = Array.isArray(rule.channels) ? rule.channels : [];
-        return channels.includes("push");
-      });
-      if (pushRules.length === 0) continue;
+      const canPush = pushEnabled && user.pushSubscriptions.length > 0;
+      const rules = user.reminderRules.filter(
+        (rule) => (canPush && hasChannel(rule, "push")) || (email.enabled && hasChannel(rule, "email")),
+      );
+      if (rules.length === 0) continue;
+      const locale = reminderLocale(user.locale);
 
       // Usually one local date; two just after local midnight. Each date gets
       // its own prayer times (see dueOccurrenceForRule).
@@ -150,12 +142,35 @@ export async function dispatchDueReminders(now: Date) {
         continue;
       }
 
-      for (const rule of pushRules) {
+      for (const rule of rules) {
         const due = dueOccurrenceForRule(rule, days, user.timezone, now);
         if (!due) continue;
         const { scheduledAt } = due;
 
         checked += 1;
+        const copy = {
+          type: rule.type,
+          label: rule.label,
+          offsetMinutes: rule.offsetMinutes,
+          scheduledAt,
+          timeZone: user.timezone,
+          locationLabel: user.locationLabel,
+          locale,
+        };
+
+        if (email.enabled && hasChannel(rule, "email")) {
+          // Its own try/catch: a failed email must not stop this rule's push or the next user.
+          try {
+            const result = await email.send(user.id, emailIdempotencyKey(rule.id, scheduledAt), () =>
+              composeReminderEmail({ ...copy, userId: user.id, ruleId: rule.id }),
+            );
+            if (result === "sent") emailed += 1;
+          } catch (error) {
+            console.error("[push/dispatch] email failed", user.id, error instanceof Error ? error.message : "unknown");
+          }
+        }
+
+        if (!canPush || !hasChannel(rule, "push")) continue;
 
         for (const subscription of user.pushSubscriptions) {
           // Re-validate before any outbound request: rows stored before the allowlist existed (or written by
@@ -186,12 +201,7 @@ export async function dispatchDueReminders(now: Date) {
 
           const { p256dh, auth } = pushKeys;
 
-          const payload = JSON.stringify({
-            title: "Ramadan Planner",
-            body:
-              (rule.label?.trim() || displayName(rule.type)) +
-              ` • ${user.locationLabel}`,
-          });
+          const payload = JSON.stringify(pushPayload(copy));
 
           try {
             await webpush.sendNotification(
@@ -227,7 +237,7 @@ export async function dispatchDueReminders(now: Date) {
     console.warn(`[push/dispatch] removed ${invalidSubscriptions.size} invalid push subscription(s)`);
   }
 
-  return { checked, delivered, skippedUsers };
+  return { checked, delivered, emailed, skippedUsers };
 }
 
 async function runDispatch(): Promise<Response> {
@@ -240,14 +250,19 @@ async function runDispatch(): Promise<Response> {
     );
   }
 
+  let push = true;
   try {
     configureWebPush();
   } catch {
-    return json({ ok: false, error: "Push config missing" }, { status: 500 });
+    // Without VAPID keys, email reminders still go out when Resend is configured.
+    if (!process.env.RESEND_API_KEY?.trim()) {
+      return json({ ok: false, error: "Push config missing" }, { status: 500 });
+    }
+    push = false;
   }
 
   try {
-    const result = await dispatchDueReminders(new Date());
+    const result = await dispatchDueReminders(new Date(), { push });
     return json({ ok: true, ...result });
   } catch (error) {
     console.error("[push/dispatch] dispatch failed", error);

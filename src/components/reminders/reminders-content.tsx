@@ -20,6 +20,7 @@ import {
   updateReminderRuleAction,
   type ReminderRuleDTO,
 } from "@/actions/planner";
+import type { ReminderChannel } from "@/actions/planner-schemas";
 
 const REMINDER_TYPES = [
   "sehri",
@@ -40,7 +41,7 @@ export function RemindersContent() {
   const tSalah = useTranslations("salah");
   const locale = useLocale();
   const num = (n: number) => formatLocalizedNumber(n, locale);
-  const { isGuest, loading } = useAuth();
+  const { isGuest, loading, user } = useAuth();
 
   const [serverRules, setServerRules] = useState<ReminderRuleDTO[]>([]);
   const {
@@ -54,6 +55,7 @@ export function RemindersContent() {
   const [offsetDrafts, setOffsetDrafts] = useState<Record<string, string>>({});
   const [newPush, setNewPush] = useState(true);
   const [newCalendar, setNewCalendar] = useState(false);
+  const [newEmail, setNewEmail] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -90,8 +92,8 @@ export function RemindersContent() {
   }, [isGuest, loading, t]);
 
   const addRule = () => {
-    const channels = [newPush ? "push" : null, newCalendar ? "calendar" : null]
-      .filter((value): value is "push" | "calendar" => Boolean(value));
+    const channels = [newPush ? "push" : null, newCalendar ? "calendar" : null, newEmail && !isGuest ? "email" : null]
+      .filter((value): value is ReminderChannel => Boolean(value));
 
     if (channels.length === 0) {
       setError(t("chooseChannel"));
@@ -143,6 +145,7 @@ export function RemindersContent() {
       setNewOffset(formatLocalizedNumber(-15, locale));
       setNewPush(true);
       setNewCalendar(false);
+      setNewEmail(false);
       notifyTrackerUpdate();
     });
   };
@@ -229,15 +232,43 @@ export function RemindersContent() {
 
   const selectClass = cn(fieldClass, "w-full appearance-auto");
 
-  const channelToggle = (id: string, label: string, checked: boolean, onChange: (checked: boolean) => void) => (
+  const channelToggle = (
+    id: string,
+    label: string,
+    checked: boolean,
+    onChange: (checked: boolean) => void,
+    opts: { disabled?: boolean; hint?: string } = {},
+  ) => (
     <label
       htmlFor={id}
-      className="flex min-h-12 cursor-pointer items-center gap-3 rounded-rp-md border border-rp-rule bg-rp-surface px-4 text-rp-ink has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring"
+      className={cn(
+        "flex min-h-12 items-center gap-3 rounded-rp-md border border-rp-rule bg-rp-surface px-4 py-2 text-rp-ink has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring",
+        opts.disabled ? "cursor-not-allowed" : "cursor-pointer",
+      )}
     >
-      <Checkbox id={id} checked={checked} onCheckedChange={(c) => onChange(Boolean(c))} className="size-5" />
-      <span className="rp-row">{label}</span>
+      <Checkbox
+        id={id}
+        checked={checked}
+        disabled={opts.disabled}
+        onCheckedChange={(c) => onChange(Boolean(c))}
+        aria-describedby={opts.hint ? `${id}-hint` : undefined}
+        className="size-5"
+      />
+      <span className="flex min-w-0 flex-col">
+        <span className={cn("rp-row", opts.disabled && "text-rp-muted")}>{label}</span>
+        {opts.hint && (
+          <span id={`${id}-hint`} className="rp-caption break-words text-rp-muted">
+            {opts.hint}
+          </span>
+        )}
+      </span>
     </label>
   );
+
+  // Email goes to the account's address, so guests (no account) can't turn it on.
+  const emailOpts = isGuest
+    ? { disabled: true, hint: t("emailGuestHint") }
+    : { hint: user?.email ? t("emailHintAddress", { email: user.email }) : t("emailHint") };
 
   const offsetField = (id: string, value: string, onChange: (v: string) => void) => (
     <div className="space-y-1.5">
@@ -321,6 +352,7 @@ export function RemindersContent() {
           <div className="grid gap-2 sm:grid-cols-2">
             {channelToggle("new-reminder-push", t("push"), newPush, setNewPush)}
             {channelToggle("new-reminder-calendar", t("calendar"), newCalendar, setNewCalendar)}
+            {channelToggle("new-reminder-email", t("email"), newEmail && !isGuest, setNewEmail, emailOpts)}
           </div>
         </fieldset>
         <Button onClick={addRule} disabled={isPending} className="w-full sm:w-auto sm:self-start">
@@ -380,11 +412,11 @@ export function RemindersContent() {
                     setAllRules((prev) => prev.map((item) => (item.id === rule.id ? { ...item, offsetMinutes } : item)));
                   })}
                 </div>
-                <div className="grid gap-2 sm:grid-cols-3">
+                <div className="grid gap-2 sm:grid-cols-2">
                   {channelToggle(`rule-${rule.id}-enabled`, t("enabled"), rule.enabled, (checked) =>
                     setAllRules((prev) => prev.map((item) => (item.id === rule.id ? { ...item, enabled: checked } : item))),
                   )}
-                  {(["push", "calendar"] as const).map((channel) =>
+                  {(["push", "calendar", "email"] as const).map((channel) =>
                     channelToggle(`rule-${rule.id}-${channel}`, t(channel), rule.channels.includes(channel), (checked) =>
                       setAllRules((prev) =>
                         prev.map((item) => {
@@ -395,6 +427,7 @@ export function RemindersContent() {
                           return { ...item, channels: Array.from(next) };
                         }),
                       ),
+                      channel === "email" ? emailOpts : undefined,
                     ),
                   )}
                 </div>
