@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import type { TimingData } from "@/types/database";
 import type { RamadanStatus } from "@/lib/ramadan-date";
 import { readKnownTimings, rememberTimings } from "@/lib/auto-night";
 import { todayISOInZone } from "@/lib/prayer-phase";
+import { fetchCached, peekCached } from "@/lib/data-cache";
 import { calcRequestParams, readStoredLocation, subscribeStoredLocation, type StoredLocation } from "@/lib/user-location";
 
 export type HomeTimingsStatus = "loading" | "ready" | "error";
@@ -105,26 +106,53 @@ function cachedTimings(tz: string): TimingData | null {
   };
 }
 
+
+const LOADING: HomeTimings = { status: "loading", timings: null, tomorrow: null, cached: false, ramadan: null, location: null };
+const subscribeNoop = () => () => {};
+const validTimings = (d: TimingData | null | undefined) => (d?.prayerTimes ? d : null);
+
+/** The place the Home asks for: the stored location, else `fallback`, else the device zone (browser only). */
+function homeRequest(todayISO: string, fallback: StoredLocation | undefined, coords?: { lat: number; lng: number }) {
+  const own = readStoredLocation();
+  const stored = own ?? fallback ?? null;
+  const tz = stored?.tz ?? deviceTimeZone();
+  const at = stored ? { lat: stored.lat, lng: stored.lng } : coords;
+  return { own, stored, tz, urls: homeRequestUrls(tz, todayISO, at, calcRequestParams(stored)) };
+}
+
+/** The Home's data straight from the shared cache (a revisit or a reload), or null when today's times are not there. */
+function homeFromCache(todayISO: string, fallback: StoredLocation | undefined): HomeTimings | null {
+  const { stored, urls } = homeRequest(todayISO, fallback);
+  const timings = validTimings(peekCached<TimingData>(urls.today));
+  if (!timings) return null;
+  return {
+    status: "ready",
+    timings,
+    tomorrow: validTimings(peekCached<TimingData>(urls.tomorrow)),
+    cached: false,
+    ramadan: peekCached<RamadanStatus>(urls.ramadan) ?? null,
+    location: stored,
+  };
+}
+
 /**
  * Home data: today's timings and the Ramadan status. With a location chosen at onboarding (district or coarse
  * device position) the requests use it and nothing prompts. Without one: first the device timezone (fast, no
  * prompt), then refined with the device location when the user allows it.
  * Refetches when `todayISO` changes (local midnight) and when the stored location changes (the location sheet).
  * `enabled: false` holds every request. `fallback` stands in when nothing is stored (the landing page: Dhaka, so it
- * never prompts for geolocation). Fresh timings are remembered for Auto Night mode.
+ * never prompts for geolocation). Fresh timings are remembered for Auto Night mode. Answers come through the shared
+ * data cache: a revisit renders them at once, and the shell's identical requests are not sent twice.
  */
 export function useHomeTimings(
   todayISO: string,
   { enabled = true, fallback }: { enabled?: boolean; fallback?: StoredLocation } = {},
 ): HomeTimings & { retry: () => void } {
-  const [state, setState] = useState<HomeTimings>({
-    status: "loading",
-    timings: null,
-    tomorrow: null,
-    cached: false,
-    ramadan: null,
-    location: null,
-  });
+  // True on a client navigation's first render (not while hydrating): the cache can then be read at once.
+  const mounted = useSyncExternalStore(subscribeNoop, () => true, () => false);
+  const [state, setState] = useState<HomeTimings>(
+    () => (enabled && mounted ? homeFromCache(todayISO, fallback) : null) ?? LOADING,
+  );
   const [attempt, setAttempt] = useState(0);
   const retry = useCallback(() => {
     setState((prev) => ({ ...prev, status: "loading" }));
@@ -136,34 +164,24 @@ export function useHomeTimings(
   useEffect(() => {
     // Nothing is fetched (and nothing prompts) until the caller says so, e.g. while the first-run gate decides.
     if (!enabled) return;
-    const controller = new AbortController();
-    const { signal } = controller;
+    let aborted = false;
     // Effects run only in the browser, after hydration: reading localStorage here cannot cause a mismatch.
-    const own = readStoredLocation();
-    const stored = own ?? fallback ?? null;
-    const tz = stored?.tz ?? deviceTimeZone();
-
-    const json = async <T,>(res: Response | null): Promise<T | null> =>
-      res?.ok ? ((await res.json().catch(() => null)) as T | null) : null;
-    const valid = (d: TimingData | null) => (d?.prayerTimes ? d : null);
+    const { own, stored, tz } = homeRequest(todayISO, fallback);
 
     const load = async (coords?: { lat: number; lng: number }) => {
-      const urls = homeRequestUrls(tz, todayISO, coords, calcRequestParams(stored));
-      const [timingsRes, tomorrowRes, ramadanRes] = await Promise.all([
-        fetch(urls.today, { signal }).catch(() => null),
-        fetch(urls.tomorrow, { signal }).catch(() => null),
-        fetch(urls.ramadan, { signal }).catch(() => null),
+      const { urls } = homeRequest(todayISO, fallback, coords);
+      const get = <T,>(url: string) => fetchCached<T>(url).catch(() => null);
+      const [timings, tomorrow, ramadan] = await Promise.all([
+        get<TimingData>(urls.today),
+        get<TimingData>(urls.tomorrow),
+        get<RamadanStatus>(urls.ramadan),
       ]);
-      return {
-        timings: valid(await json<TimingData>(timingsRes)),
-        tomorrow: valid(await json<TimingData>(tomorrowRes)),
-        ramadan: await json<RamadanStatus>(ramadanRes),
-      };
+      return { timings: validTimings(timings), tomorrow: validTimings(tomorrow), ramadan };
     };
 
     const run = async () => {
-      const first = await load(stored ? { lat: stored.lat, lng: stored.lng } : undefined);
-      if (signal.aborted) return;
+      const first = await load();
+      if (aborted) return;
       if (first.timings) {
         // Fallback (landing) times are not this visitor's: Auto Night keeps its own.
         if (own || !fallback) rememberTimings(first.timings, stored ? "geo" : "tz");
@@ -189,9 +207,9 @@ export function useHomeTimings(
       // A chosen location is final: no geolocation prompt on the Home.
       if (stored) return;
       const pos = await getPosition();
-      if (!pos || signal.aborted) return;
+      if (!pos || aborted) return;
       const better = await load({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-      if (signal.aborted || !better.timings) return;
+      if (aborted || !better.timings) return;
       rememberTimings(better.timings, "geo");
       setState((prev) => ({
         status: "ready",
@@ -204,7 +222,9 @@ export function useHomeTimings(
     };
 
     void run();
-    return () => controller.abort();
+    return () => {
+      aborted = true;
+    };
     // `fallback` is a module constant at its one call site.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [todayISO, attempt, enabled]);

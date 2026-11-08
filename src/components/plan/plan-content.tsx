@@ -66,7 +66,8 @@ function deviceZone(): string {
   }
 }
 
-export function PlanContent() {
+/** `cookieGuest`: the request has no session cookie (the route loader reads it on the server and in the browser). */
+export function PlanContent({ cookieGuest = false }: { cookieGuest?: boolean }) {
   const t = useTranslations("plan");
   const tChecklist = useTranslations("checklist");
   const locale = useLocale() as Locale;
@@ -296,7 +297,8 @@ export function PlanContent() {
         <div aria-hidden="true" className="h-10" data-testid="plan-views-placeholder" />
       ) : null}
 
-      {plan.ready && plan.isGuest ? (
+      {/* Before the list is known, the request's session cookie says whether this is a guest: the notice holds its place. */}
+      {(plan.ready ? plan.isGuest : cookieGuest) ? (
         <p className="rp-caption rounded-rp-md bg-rp-accent-tint px-3 py-2 text-rp-ink">{t("guestLocalNotice")}</p>
       ) : null}
       {plan.error ? (
@@ -342,6 +344,10 @@ export function PlanContent() {
             <h2 id="plan-today-amal" className="rp-h2 text-rp-ink">
               {t("todayAmal")}
             </h2>
+            {!plan.ready ? (
+              // The empty-list card's height, until the list is known (most first visits end there).
+              <div aria-hidden="true" data-testid="plan-list-skeleton" className="h-[178px] rounded-rp-lg bg-rp-surface shadow-rp-soft motion-safe:animate-pulse regular:h-[156px]" />
+            ) : null}
             {items.length === 0 && plan.ready ? (
               <div className="flex flex-col gap-3 rounded-rp-lg bg-rp-surface p-5 shadow-rp-soft">
                 <h3 className="rp-row font-semibold text-rp-ink">{t("emptyTitle")}</h3>

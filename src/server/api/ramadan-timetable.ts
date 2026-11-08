@@ -6,7 +6,7 @@ import { guarded, json } from "./http";
 import { TIMEZONE_DEFAULT_COORDS } from "./timezone-defaults";
 import { calcFromSearchParams } from "./calc-params";
 
-export const RAMADAN_TIMETABLE_CACHE_CONTROL = "public, s-maxage=86400, stale-while-revalidate=604800";
+export const RAMADAN_TIMETABLE_CACHE_CONTROL = "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800";
 
 export function handleRamadanTimetable(request: Request): Promise<Response> {
   return guarded("api/ramadan-timetable", () => run(request));

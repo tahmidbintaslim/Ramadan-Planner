@@ -2,10 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Expected header values copied from the Next handlers in src/app/api/**/route.ts (not from the new constants),
 // so a drift in the port fails here.
-const NEXT_TIMINGS_CC = "public, s-maxage=3600, stale-while-revalidate=300";
-const NEXT_RAMADAN_CC = "public, s-maxage=3600, stale-while-revalidate=300";
-const NEXT_TIMETABLE_CC = "public, s-maxage=86400, stale-while-revalidate=604800";
-const NEXT_QURAN_CC = "public, s-maxage=604800, stale-while-revalidate=2592000";
+const NEXT_TIMINGS_CC = "public, max-age=300, s-maxage=3600, stale-while-revalidate=300";
+const NEXT_RAMADAN_CC = "public, max-age=300, s-maxage=3600, stale-while-revalidate=300";
+const NEXT_TIMETABLE_CC = "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800";
+const NEXT_QURAN_CC = "public, max-age=86400, s-maxage=604800, stale-while-revalidate=2592000";
 const NEXT_DAILY_CC = "public, s-maxage=3600, stale-while-revalidate=86400";
 
 const m = vi.hoisted(() => ({

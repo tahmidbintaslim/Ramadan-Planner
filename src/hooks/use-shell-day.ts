@@ -9,36 +9,22 @@ import {
   type KnownTimings,
 } from "@/lib/auto-night";
 import { todayISOInZone } from "@/lib/prayer-phase";
-import { calcRequestParams, readStoredLocation } from "@/lib/user-location";
+import { calcRequestParams, readStoredLocation, subscribeStoredLocation } from "@/lib/user-location";
+import { fetchCached, useCached } from "@/lib/data-cache";
+import { deviceTimeZone, homeRequestUrls } from "@/components/today/use-home-timings";
 
 // Small, once-a-day data the app shell needs: the user's known prayer timings (Auto Night) and the Ramadan day
 // (top bar caption). Both use the stored location, else the device timezone (no geolocation prompt from the
-// shell), with the stored country's calculation (shellRequestParams), and are cached in
-// localStorage, so navigation never refetches. Screens that fetch better (location-based) timings call
-// rememberTimings(data, "geo"); the shell re-reads on KNOWN_TIMINGS_EVENT.
+// shell), with the stored country's calculation, spelled exactly as the Home spells them (homeRequestUrls), so
+// both go through one entry of the shared data cache: navigation never refetches and the Home never asks twice.
+// Screens that fetch better (location-based) timings call rememberTimings(data, "geo"); the shell re-reads on
+// KNOWN_TIMINGS_EVENT.
 
-const RAMADAN_DAY_KEY = "rp_shell_ramadan_day";
-const RAMADAN_DAY_EVENT = "rp:ramadan-day";
-
-function deviceTimeZone(): string {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Dhaka";
-  } catch {
-    return "Asia/Dhaka";
-  }
-}
-
-/** The stored location's zone, coordinates and calculation, else just the device zone. */
-function shellRequestParams(date: (tz: string) => string): URLSearchParams {
+/** The Home's request URLs for today at the stored location (else the device zone). Browser only. */
+export function shellUrls(): ReturnType<typeof homeRequestUrls> {
   const loc = readStoredLocation();
   const tz = loc?.tz ?? deviceTimeZone();
-  const p = new URLSearchParams({ tz, date: date(tz) });
-  if (loc) {
-    p.set("lat", loc.lat.toFixed(2));
-    p.set("lng", loc.lng.toFixed(2));
-  }
-  for (const [k, v] of Object.entries(calcRequestParams(loc))) p.set(k, v);
-  return p;
+  return homeRequestUrls(tz, todayISOInZone(new Date(), tz), loc ?? undefined, calcRequestParams(loc));
 }
 
 function readRaw(key: string): string | null {
@@ -74,7 +60,7 @@ function safeParse(raw: string | null): unknown {
   }
 }
 
-/** Last known timings; when `enabled` and none are cached for today, fetches /api/timings for the device timezone. */
+/** Last known timings; when `enabled` and none are cached for today, fetches today's /api/timings (shared cache). */
 export function useKnownTimings(enabled: boolean): KnownTimings | null {
   const raw = useStoredRaw(KNOWN_TIMINGS_KEY, KNOWN_TIMINGS_EVENT);
   const known = useMemo(() => parseKnownTimings(safeParse(raw)), [raw]);
@@ -83,58 +69,30 @@ export function useKnownTimings(enabled: boolean): KnownTimings | null {
     if (!enabled) return;
     const cached = readKnownTimings();
     if (cached && cached.date === todayISOInZone(new Date(), cached.timezone)) return;
-    const controller = new AbortController();
-    const params = shellRequestParams((zone) => todayISOInZone(new Date(), zone));
-    const tz = params.get("tz")!;
-    fetch(`/api/timings?${params}`, { signal: controller.signal })
-      .then((res) => (res.ok ? (res.json() as Promise<TimingData>) : null))
+    let live = true;
+    const urls = shellUrls();
+    const tz = new URL(urls.today, "http://x").searchParams.get("tz")!;
+    fetchCached<TimingData>(urls.today)
       .then((data) => {
-        if (data?.prayerTimes) rememberTimings({ prayerTimes: data.prayerTimes, timezone: data.timezone || tz }, "tz");
+        if (live && data?.prayerTimes) rememberTimings({ prayerTimes: data.prayerTimes, timezone: data.timezone || tz }, "tz");
       })
       .catch(() => {
         // Offline or upstream down: Auto keeps the cached or fallback window.
       });
-    return () => controller.abort();
+    return () => {
+      live = false;
+    };
   }, [enabled]);
 
   return known;
 }
 
-/** Current Ramadan day (1-30), or null outside Ramadan / while unknown. Fetched at most once per local day. */
+/** Current Ramadan day (1-30), or null outside Ramadan / while unknown. One cached request per local day. */
 export function useRamadanDay(): number | null {
-  const raw = useStoredRaw(RAMADAN_DAY_KEY, RAMADAN_DAY_EVENT);
-  const cached = useMemo(() => safeParse(raw) as { date?: string; day?: unknown } | null, [raw]);
-
-  useEffect(() => {
-    const tz = deviceTimeZone();
-    const today = todayISOInZone(new Date(), tz);
-    const current = safeParse(readRaw(RAMADAN_DAY_KEY)) as { date?: string } | null;
-    if (current?.date === today) return;
-    const controller = new AbortController();
-    fetch(`/api/ramadan?${shellRequestParams((zone) => todayISOInZone(new Date(), zone))}`, { signal: controller.signal })
-      .then((res) => (res.ok ? (res.json() as Promise<{ phase?: string; currentDay?: number | null }>) : null))
-      .then((data) => {
-        if (!data) return;
-        const day =
-          data.phase === "ramadan" && typeof data.currentDay === "number" && data.currentDay >= 1 && data.currentDay <= 30
-            ? data.currentDay
-            : null;
-        try {
-          localStorage.setItem(RAMADAN_DAY_KEY, JSON.stringify({ date: today, day }));
-          window.dispatchEvent(new Event(RAMADAN_DAY_EVENT));
-        } catch {
-          // Storage unavailable: no caption suffix.
-        }
-      })
-      .catch(() => {});
-    return () => controller.abort();
-  }, []);
-
-  // A cached day from an earlier date is stale (the effect refetches); never show it.
-  if (!cached || typeof cached.day !== "number") return null;
-  try {
-    return cached.date === todayISOInZone(new Date(), deviceTimeZone()) ? cached.day : null;
-  } catch {
-    return null;
-  }
+  // The URL carries today's date: any render after local midnight asks for the new day.
+  const url = useSyncExternalStore(subscribeStoredLocation, () => shellUrls().ramadan, () => null);
+  const { data } = useCached<{ phase?: string; currentDay?: number | null }>(url);
+  return data?.phase === "ramadan" && typeof data.currentDay === "number" && data.currentDay >= 1 && data.currentDay <= 30
+    ? data.currentDay
+    : null;
 }

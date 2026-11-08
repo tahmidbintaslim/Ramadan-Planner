@@ -520,6 +520,27 @@
     animation: sway-slow 3.6s ease-in-out infinite;
   }
 
+  /* Route progress bar (router pending state): a teal sweep; a still bar under reduced motion. */
+  @keyframes rp-progress {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(250%);
+    }
+  }
+
+  .rp-progress-bar {
+    animation: rp-progress 1.1s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rp-progress-bar {
+      animation: none;
+      width: 100%;
+    }
+  }
+
   @media (max-width: 640px) {
     .mobile-comfy {
       padding: 1rem;

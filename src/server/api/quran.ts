@@ -2,7 +2,7 @@
 import "@tanstack/react-start/server-only";
 import { guarded, json } from "./http";
 
-export const QURAN_CACHE_LONG = "public, s-maxage=604800, stale-while-revalidate=2592000";
+export const QURAN_CACHE_LONG = "public, max-age=86400, s-maxage=604800, stale-while-revalidate=2592000";
 const NO_STORE = "no-store";
 
 // The Quran service already falls back to the external API when the DB is

@@ -3,9 +3,10 @@ import { CLOCK_FORMAT_KEY } from "@/lib/clock-format";
 import { KNOWN_TIMINGS_KEY } from "@/lib/auto-night";
 import { LOCAL_DAY_MIGRATION_KEY } from "@/lib/local-day";
 import { LOCATION_STORAGE_KEY } from "@/lib/user-location";
+import { DATA_CACHE_KEY } from "@/lib/data-cache";
 
-/** Device settings that stay (place, clock, cached times); every other rp_* key is personal and goes. */
-const KEEP = new Set([LOCATION_STORAGE_KEY, CLOCK_FORMAT_KEY, KNOWN_TIMINGS_KEY, LOCAL_DAY_MIGRATION_KEY, "rp_shell_ramadan_day"]);
+/** Device settings that stay (place, clock, cached public data); every other rp_* key is personal and goes. */
+const KEEP = new Set([LOCATION_STORAGE_KEY, CLOCK_FORMAT_KEY, KNOWN_TIMINGS_KEY, LOCAL_DAY_MIGRATION_KEY, DATA_CACHE_KEY]);
 
 export function personalStorageKeys(keys: string[]): string[] {
   return keys.filter((k) => k.startsWith("rp_") && !KEEP.has(k));

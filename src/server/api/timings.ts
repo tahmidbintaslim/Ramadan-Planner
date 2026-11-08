@@ -10,7 +10,7 @@ import { guarded, isValidDateParam, isValidTimeZoneParam, json } from "./http";
 import { TIMEZONE_DEFAULT_COORDS } from "./timezone-defaults";
 import { CALC_PARAM_KEYS, calcFromSearchParams } from "./calc-params";
 
-export const TIMINGS_CACHE_CONTROL = "public, s-maxage=3600, stale-while-revalidate=300";
+export const TIMINGS_CACHE_CONTROL = "public, max-age=300, s-maxage=3600, stale-while-revalidate=300";
 
 /** YYYY-MM-DD (validated) to AlAdhan's DD-MM-YYYY. */
 function normalizeAlAdhanDate(rawDate: string): string {

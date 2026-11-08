@@ -5,7 +5,7 @@ import { getCountryCodeForCoordinates, getCountryCodeForTimezone } from "@/lib/h
 import { guarded, isValidDateParam, isValidTimeZoneParam, json } from "./http";
 import { calcFromSearchParams } from "./calc-params";
 
-export const RAMADAN_CACHE_CONTROL = "public, s-maxage=3600, stale-while-revalidate=300";
+export const RAMADAN_CACHE_CONTROL = "public, max-age=300, s-maxage=3600, stale-while-revalidate=300";
 
 export function handleRamadan(request: Request): Promise<Response> {
   return guarded("api/ramadan", () => run(request));

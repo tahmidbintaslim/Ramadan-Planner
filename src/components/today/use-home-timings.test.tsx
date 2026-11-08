@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { resetDataCacheForTests } from "@/lib/data-cache";
 import { homeRequestUrls, nextDayISO, useHomeTimings } from "./use-home-timings";
 
 const TIMINGS = {
@@ -14,6 +15,7 @@ const TIMINGS = {
 afterEach(() => {
   vi.unstubAllGlobals();
   localStorage.clear();
+  resetDataCacheForTests();
 });
 
 describe("homeRequestUrls", () => {
@@ -32,7 +34,7 @@ describe("homeRequestUrls", () => {
 });
 
 describe("useHomeTimings", () => {
-  it("requests today's date and refetches with the new date after midnight", async () => {
+  it("requests today's date and refetches with the new date after midnight (yesterday's 'tomorrow' is reused)", async () => {
     const fetchMock = vi.fn(async (url: string) =>
       new Response(JSON.stringify(url.startsWith("/api/timings") ? TIMINGS : { phase: "ramadan", currentDay: 12 }), {
         status: 200,
@@ -50,9 +52,10 @@ describe("useHomeTimings", () => {
 
     fetchMock.mockClear();
     rerender({ day: "2027-02-21" });
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
     const second = fetchMock.mock.calls.map(([u]) => u);
-    expect(second.filter((u) => u.includes("date=2027-02-21"))).toHaveLength(2);
+    // Today's timings were fetched yesterday as "tomorrow": only the Ramadan status is new for this date.
+    expect(second.filter((u) => u.includes("date=2027-02-21"))).toEqual([expect.stringMatching(/^\/api\/ramadan/)]);
     expect(second.some((u) => u.includes("date=2027-02-22"))).toBe(true);
     expect(second.some((u) => u.includes("2027-02-20"))).toBe(false);
   });

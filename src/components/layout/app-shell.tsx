@@ -1,9 +1,12 @@
 "use client";
 
+import { useEffect } from "react";
+
 import { DesktopSidebar, SIDEBAR_WIDTH_CLASS } from "@/components/layout/desktop-sidebar";
 import { AppHeader } from "@/components/layout/app-header";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { useTranslations } from "@/i18n/use-intl";
+import { prefetchAppData } from "@/lib/prefetch-app-data";
 
 // HIG margins: 16 compact (<=430), 24 medium, 48 regular (>=835, beside the 264 sidebar); content max 1200.
 // Below 835px the bottom padding clears the tab bar (56 + the safe-area inset) plus 24. Keep it in step with MobileNav.
@@ -11,6 +14,13 @@ const BOTTOM_NAV_CLEARANCE = "pb-[calc(5rem+env(safe-area-inset-bottom))] regula
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const t = useTranslations("common");
+  // App start: once the browser is idle, warm the shared data cache for the main tabs (stored place).
+  useEffect(() => {
+    const idle = window.requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 1500));
+    const cancel = window.cancelIdleCallback ?? window.clearTimeout;
+    const id = idle(() => prefetchAppData());
+    return () => cancel(id);
+  }, []);
   // Focus order: skip link, sidebar (regular), header / toolbar, content, tab bar (compact, medium).
   return (
     <div className="min-h-screen bg-rp-page">
