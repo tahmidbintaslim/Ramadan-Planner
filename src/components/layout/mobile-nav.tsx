@@ -18,7 +18,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { LUCIDE_STROKE, MORE_ICON, PRIMARY_NAV, SECONDARY_NAV, isNavActive, type NavItem } from "./nav-items";
+import { LUCIDE_STROKE, MORE_ICON, PRIMARY_NAV, SECONDARY_NAV, SETTINGS_HREF, isNavActive, type NavItem } from "./nav-items";
 import { GuestAuthButtons, LanguageSegmented } from "./shell-actions";
 
 // Tab bar (compact and medium, below 835px; v4): full width on bg/bar with a hairline rule, 56 tall plus the safe
@@ -38,6 +38,9 @@ function TabContent({ icon: Icon, label }: { icon: NavItem["icon"]; label: strin
   );
 }
 
+// The app's own pages; everything else in the More sheet is a tool.
+const APP_HREFS = new Set(["/support", SETTINGS_HREF, "/admin/announcements"]);
+
 function MoreSheetBody({ onNavigate }: { onNavigate: () => void }) {
   const t = useTranslations("nav");
   const tCommon = useTranslations("common");
@@ -48,30 +51,43 @@ function MoreSheetBody({ onNavigate }: { onNavigate: () => void }) {
 
   return (
     <div className="flex flex-col gap-6 px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
-      <nav aria-label={t("more")}>
-        <ul className="overflow-hidden rounded-rp-md bg-rp-surface">
-          {items.map((item) => {
-            const active = isNavActive(pathname, item.href);
-            const Icon = item.icon;
-            return (
-              <li key={item.href} className="relative after:absolute after:right-0 after:bottom-0 after:left-14 after:h-px after:bg-rp-rule last:after:hidden">
-                <Link
-                  href={item.href}
-                  onClick={onNavigate}
-                  aria-current={active ? "page" : undefined}
-                  className={cn(
-                    "rp-row flex min-h-[52px] items-center gap-4 px-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-rp-focus",
-                    active ? "bg-rp-accent-tint font-semibold text-rp-selected" : "text-rp-ink hover:bg-rp-accent-tint/60",
-                  )}
-                >
-                  <Icon size={24} strokeWidth={LUCIDE_STROKE} className="shrink-0 text-rp-icon" />
-                  <span className="min-w-0 flex-1">{t(item.labelKey)}</span>
-                  <ChevronRight size={20} strokeWidth={LUCIDE_STROKE} aria-hidden className="shrink-0 text-rp-muted" />
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+      {/* Grouped like Figma page 12, D6: tools, then the app's own pages. */}
+      <nav aria-label={t("more")} className="flex flex-col gap-6">
+        {(
+          [
+            ["tools", t("moreTools"), items.filter((i) => !APP_HREFS.has(i.href))],
+            ["app", tCommon("app"), items.filter((i) => APP_HREFS.has(i.href))],
+          ] as const
+        ).map(([key, caption, group]) => (
+          <section key={key} aria-labelledby={`more-${key}`} className="flex flex-col gap-2">
+            <h3 id={`more-${key}`} className="rp-caption px-4 text-rp-muted">
+              {caption}
+            </h3>
+            <ul className="overflow-hidden rounded-rp-md bg-rp-surface">
+              {group.map((item) => {
+                const active = isNavActive(pathname, item.href);
+                const Icon = item.icon;
+                return (
+                  <li key={item.href} className="relative after:absolute after:right-0 after:bottom-0 after:left-14 after:h-px after:bg-rp-rule last:after:hidden">
+                    <Link
+                      href={item.href}
+                      onClick={onNavigate}
+                      aria-current={active ? "page" : undefined}
+                      className={cn(
+                        "rp-row flex min-h-[52px] items-center gap-4 px-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-rp-focus",
+                        active ? "bg-rp-accent-tint font-semibold text-rp-selected" : "text-rp-ink hover:bg-rp-accent-tint/60",
+                      )}
+                    >
+                      <Icon size={24} strokeWidth={LUCIDE_STROKE} className="shrink-0 text-rp-icon" />
+                      <span className="min-w-0 flex-1">{t(item.href === "/reminders" ? "remindersShort" : item.labelKey)}</span>
+                      <ChevronRight size={20} strokeWidth={LUCIDE_STROKE} aria-hidden className="shrink-0 text-rp-muted" />
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ))}
       </nav>
       <section aria-labelledby="more-language" className="flex flex-col gap-2">
         <h3 id="more-language" className="rp-caption px-4 text-rp-muted">
