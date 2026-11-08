@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "
 import { useAuth } from "@/components/providers/auth-provider";
 import { useGuestData } from "@/hooks/use-guest-data";
 import { GUEST_PLAN_GOALS_KEY, GUEST_PLAN_TASKS_KEY, migrateGuestPlanList } from "@/lib/guest-plan";
+import { signedInFromCookie } from "@/lib/user-location";
 import {
   createPlanTaskAction,
   createPrayerGoalAction,
@@ -76,8 +77,9 @@ export function usePlanItems(): PlanItemsState {
 
   // Guest data lives in localStorage: the server render and the hydrating render show none, then it appears.
   const mounted = useSyncExternalStore(subscribeNoop, () => true, () => false);
-  // While the auth client loads it is not yet known whose list this is.
-  const guest = isGuest && (!loading || authTimedOut);
+  // While the auth client loads it is not yet known whose list this is, unless the browser has no session cookie:
+  // then it is a guest's (the device list shows at once instead of after the auth client or the timeout).
+  const guest = isGuest && (!loading || authTimedOut || (mounted && !signedInFromCookie(document.cookie)));
   const goals = guest ? (mounted ? guestGoals : EMPTY_GOALS) : serverGoals;
   const tasks = guest ? (mounted ? guestTasks : EMPTY_TASKS) : serverTasks;
   const ready = mounted && (guest || (!loading && !isGuest && serverLoaded));

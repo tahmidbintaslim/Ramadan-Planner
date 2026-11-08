@@ -1,16 +1,19 @@
 // The guest's chosen location (first-run onboarding), kept on the device only (localStorage). The Home reads it
 // to request /api/timings for that place without a geolocation prompt.
 import { DEFAULT_DISTRICT_ID, districtById, nearestDistrict, type District } from "@/lib/districts";
+import { defaultMethodForCountry, isCountryCode, isMethodId, isSchool, type MethodId, type School } from "@/lib/calc-method";
+import { getCountryCodeForCoordinates, getCountryCodeForTimezone } from "@/lib/hijri-offsets";
 
 export const LOCATION_STORAGE_KEY = "rp_location";
 /** Bangladesh's zone: district times are requested for it whatever the device zone is. */
 export const BD_TIME_ZONE = "Asia/Dhaka";
 
-export type LocationKind = "district" | "geo" | "default";
+/** district = picked from the list; geo = the device position (coarse); city = a place found by search; default = "later", Dhaka. */
+export type LocationKind = "district" | "geo" | "city" | "default";
 
+/** v2 adds the place name, country and calculation; a stored v1 value is migrated when read. */
 export interface StoredLocation {
-  v: 1;
-  /** district = picked from the list; geo = the device position (coarse); default = "later", Dhaka. */
+  v: 2;
   kind: LocationKind;
   /** The district picked, or the one nearest the device position (none outside Bangladesh). */
   districtId?: string;
@@ -19,7 +22,29 @@ export interface StoredLocation {
   lng: number;
   /** IANA zone for the timings request. */
   tz: string;
+  /** Place name (a searched city's, or the zone's city for a device position); districts are named from districtId. */
+  label?: string;
+  /** ISO 3166-1 alpha-2 country: picks the calculation method and the Hijri offset. */
+  country?: string;
+  /** AlAdhan method and Asr school (the country's default, or the user's choice in Settings). */
+  method?: MethodId;
+  school?: School;
   savedAt: string;
+}
+
+/** The country's default method and school, as stored with a new location. */
+function withCountry(country: string | undefined): Pick<StoredLocation, "country" | "method" | "school"> {
+  return country ? { country, ...defaultMethodForCountry(country) } : { ...defaultMethodForCountry(undefined) };
+}
+
+/** The country of a zone (offline, from the tz database's zones), else of the coarse coordinates. */
+export function countryForPlace(tz: string, lat: number, lng: number): string | undefined {
+  return getCountryCodeForTimezone(tz) ?? getCountryCodeForCoordinates(lat, lng);
+}
+
+/** "Asia/Dhaka" -> "Dhaka". */
+export function zoneCity(tz: string): string {
+  return (tz.split("/").pop() ?? tz).replace(/_/g, " ");
 }
 
 /** Round to 2 decimals (about 1 km): enough for prayer times, kinder to privacy and the CDN cache. */
@@ -28,7 +53,36 @@ export function coarse(value: number): number {
 }
 
 export function locationFromDistrict(d: District, kind: "district" | "default" = "district", now = new Date()): StoredLocation {
-  return { v: 1, kind, districtId: d.id, lat: coarse(d.lat), lng: coarse(d.lng), tz: BD_TIME_ZONE, savedAt: now.toISOString() };
+  return {
+    v: 2,
+    kind,
+    districtId: d.id,
+    lat: coarse(d.lat),
+    lng: coarse(d.lng),
+    tz: BD_TIME_ZONE,
+    ...withCountry("BD"),
+    savedAt: now.toISOString(),
+  };
+}
+
+/** A place found by the city search (Open-Meteo geocoding). */
+export function locationFromCity(
+  city: { name: string; country_code?: string; latitude: number; longitude: number; timezone?: string },
+  now = new Date(),
+): StoredLocation | null {
+  if (!isValidTimeZone(city.timezone)) return null;
+  const cc = city.country_code?.toUpperCase();
+  const country = isCountryCode(cc) ? cc : countryForPlace(city.timezone, city.latitude, city.longitude);
+  return {
+    v: 2,
+    kind: "city",
+    lat: coarse(city.latitude),
+    lng: coarse(city.longitude),
+    tz: city.timezone,
+    label: city.name.slice(0, 80),
+    ...withCountry(country),
+    savedAt: now.toISOString(),
+  };
 }
 
 /** The "পরে করব" choice: Dhaka, marked as the default so the UI can say so. */
@@ -59,35 +113,52 @@ export function locationFromCoords(lat: number, lng: number, deviceTz: string, n
   const tz = isValidTimeZone(deviceTz) ? deviceTz : BD_TIME_ZONE;
   const near = tz === BD_TIME_ZONE || tz === "Asia/Dacca" ? nearestDistrict(lat, lng, DISTRICT_LABEL_RADIUS_KM) : undefined;
   return {
-    v: 1,
+    v: 2,
     kind: "geo",
     ...(near ? { districtId: near.id } : {}),
     lat: coarse(lat),
     lng: coarse(lng),
     tz,
+    // No free reverse geocoder without a key (Open-Meteo has none): the zone's city names the place.
+    label: zoneCity(tz),
+    ...withCountry(near ? "BD" : countryForPlace(tz, lat, lng)),
     savedAt: now.toISOString(),
   };
 }
 
 const finite = (n: unknown): n is number => typeof n === "number" && Number.isFinite(n);
 
-/** Parse a stored value; anything malformed is treated as "no location" (onboarding shows again). */
+/** Parse a stored value (v2, or v1 migrated); anything malformed is treated as "no location" (onboarding shows again). */
 export function parseStoredLocation(raw: string | null | undefined): StoredLocation | null {
   if (!raw) return null;
   try {
-    const v = JSON.parse(raw) as Partial<StoredLocation>;
-    if (v?.v !== 1 || !["district", "geo", "default"].includes(v.kind as string)) return null;
+    const v = JSON.parse(raw) as Omit<Partial<StoredLocation>, "v"> & { v?: number };
+    if (v?.v !== 1 && v?.v !== 2) return null;
+    if (!["district", "geo", "default", ...(v.v === 2 ? ["city"] : [])].includes(v.kind as string)) return null;
     if (!finite(v.lat) || !finite(v.lng) || Math.abs(v.lat) > 90 || Math.abs(v.lng) > 180) return null;
     if (!isValidTimeZone(v.tz)) return null;
     if (v.districtId !== undefined && !districtById(v.districtId)) return null;
-    if (v.kind !== "geo" && !v.districtId) return null;
+    if ((v.kind === "district" || v.kind === "default") && !v.districtId) return null;
+    // A v1 value (or a v2 one without these) gets its country from the district, else the zone, and that
+    // country's defaults; stored choices are kept when valid.
+    const country = isCountryCode(v.country)
+      ? v.country
+      : v.districtId && v.kind !== "geo"
+        ? "BD"
+        : countryForPlace(v.tz, v.lat, v.lng);
+    const d = withCountry(country);
+    const label = typeof v.label === "string" && v.label ? v.label.slice(0, 80) : v.kind === "geo" ? zoneCity(v.tz) : undefined;
     return {
-      v: 1,
+      v: 2,
       kind: v.kind as LocationKind,
       ...(v.districtId ? { districtId: v.districtId } : {}),
       lat: coarse(v.lat),
       lng: coarse(v.lng),
       tz: v.tz,
+      ...(label ? { label } : {}),
+      ...(country ? { country } : {}),
+      method: isMethodId(v.method) ? v.method : d.method,
+      school: isSchool(v.school) ? v.school : d.school,
       savedAt: typeof v.savedAt === "string" ? v.savedAt : "",
     };
   } catch {
@@ -169,6 +240,45 @@ export function gateDecision(input: {
 export function storedRequestLocation(): { tz: string; lat: number; lng: number } | null {
   const loc = readStoredLocation();
   return loc ? { tz: loc.tz, lat: loc.lat, lng: loc.lng } : null;
+}
+
+// ── Hijri date adjustment (device setting, -2..2 days) ──
+
+export const HIJRI_ADJUST_KEY = "rp_hijri_adjust";
+
+export function readHijriAdjust(): number {
+  try {
+    const n = Number(localStorage.getItem(HIJRI_ADJUST_KEY));
+    return Number.isInteger(n) && Math.abs(n) <= 2 ? n : 0;
+  } catch {
+    return 0;
+  }
+}
+
+/** Saves the adjustment and fires LOCATION_EVENT, so screens refetch as they do for a new location. */
+export function writeHijriAdjust(days: number): void {
+  try {
+    if (days === 0) localStorage.removeItem(HIJRI_ADJUST_KEY);
+    else localStorage.setItem(HIJRI_ADJUST_KEY, String(Math.max(-2, Math.min(2, Math.trunc(days)))));
+  } catch {
+    // Storage unavailable: the adjustment stays 0.
+  } finally {
+    if (typeof window !== "undefined") window.dispatchEvent(new Event(LOCATION_EVENT));
+  }
+}
+
+/**
+ * The calculation params every timings request sends (/api/timings, /api/ramadan, /api/ramadan-timetable): the
+ * stored location's country, method and school, and the device's Hijri adjustment. Without a stored location
+ * only the adjustment is sent; the server takes the country from the zone.
+ */
+export function calcRequestParams(loc: StoredLocation | null | undefined, hijriAdjust = readHijriAdjust()): Record<string, string> {
+  const p: Record<string, string> = {};
+  if (loc?.country) p.cc = loc.country;
+  if (loc?.method !== undefined) p.method = String(loc.method);
+  if (loc?.school !== undefined) p.school = String(loc.school);
+  if (hijriAdjust) p.hadj = String(hijriAdjust);
+  return p;
 }
 
 // Set once the visitor finishes or skips onboarding in this page session, so a failed write (full storage)

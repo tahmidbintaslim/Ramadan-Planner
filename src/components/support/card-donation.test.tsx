@@ -96,7 +96,7 @@ describe("card donations on", () => {
     fireEvent.click(within(form).getByRole("button", { name: "Other" }));
     const input = within(form).getByLabelText("Other amount (GBP)");
     fireEvent.change(input, { target: { value: "0.5" } });
-    expect(within(form).getByRole("alert")).toHaveTextContent("Minimum £1");
+    expect(within(form).getByRole("alert")).toHaveTextContent("At least £1");
     expect(within(form).getByTestId("stripe-button")).toBeDisabled();
     fireEvent.change(input, { target: { value: "12.50" } });
     expect(within(form).queryByRole("alert")).toBeNull();

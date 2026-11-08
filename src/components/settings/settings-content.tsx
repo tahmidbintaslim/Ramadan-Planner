@@ -1,5 +1,6 @@
 "use client";
 
+import { clearPersonalDeviceData } from "@/lib/sign-out-cleanup";
 import { Link } from "@/components/shared/link";
 import { useEffect, useState, useTransition } from "react";
 import { useClerk } from "@clerk/tanstack-react-start";
@@ -27,6 +28,7 @@ import { useClockFormat } from "@/hooks/use-clock-format";
 import { formatDateTime } from "@/lib/clock-format";
 import { CLOCK_FORMATS } from "@/lib/clock-format";
 import { formatLocalizedNumber } from "@/lib/locale-number";
+import { LocationPrayerCard } from "./location-prayer-card";
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -150,8 +152,9 @@ export function SettingsContent() {
   };
 
   const handleLogout = () => {
-    startTransition(() => {
-      void signOut({ redirectUrl: "/" });
+    startTransition(async () => {
+      await clearPersonalDeviceData();
+      await signOut({ redirectUrl: "/" });
     });
   };
 
@@ -361,6 +364,8 @@ export function SettingsContent() {
           </div>
         </CardContent>
       </Card>
+
+      <LocationPrayerCard />
 
       <ClockFormatCard />
 

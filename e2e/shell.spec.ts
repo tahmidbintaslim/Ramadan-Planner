@@ -115,7 +115,7 @@ test.describe("accessibility panel", () => {
         .click();
       const sheet = page.getByRole("dialog");
       await expect(sheet.getByRole("heading", { name: A11Y })).toBeVisible();
-      await sheet.getByRole("button", { name: /ফন্ট বড় করুন|Increase font size/ }).click();
+      await sheet.getByRole("button", { name: /লেখা বড় করুন|Increase text size/ }).click();
       await expect.poll(() => page.evaluate(() => document.documentElement.style.fontSize)).toBe("105%");
       await sheet.getByRole("button", { name: /^(অটো|Auto)$/ }).click();
       await expect.poll(() => page.evaluate(() => localStorage.getItem("theme"))).toBe("auto");
@@ -131,7 +131,7 @@ test.describe("accessibility panel", () => {
       await expect(trigger).not.toHaveCSS("position", "fixed");
       await trigger.click();
       const sheet = page.getByRole("dialog", { name: A11Y });
-      await sheet.getByRole("button", { name: /ফন্ট বড় করুন|Increase font size/ }).click();
+      await sheet.getByRole("button", { name: /লেখা বড় করুন|Increase text size/ }).click();
       await expect.poll(() => page.evaluate(() => document.documentElement.style.fontSize)).toBe("105%");
     });
 

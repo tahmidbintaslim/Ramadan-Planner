@@ -1,36 +1,18 @@
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import type { RamadanTimetable } from "@/lib/ramadan-timetable";
 import { useLocalTodayISO } from "@/hooks/use-local-day";
+import { subscribeStoredLocation } from "@/lib/user-location";
+import { planTimetableUrl, useCached } from "@/lib/data-cache";
 import { paraFromText, quranStreak } from "./plan-logic";
 
 // Data the plan screen reads from elsewhere in the app: the Ramadan timetable (night times and odd-night rows),
 // and the Quran tracker's progress (para and streak, from its localStorage entries).
 
-/** The Ramadan timetable for the device time zone (same public API as the timetable screen). */
+/** The Ramadan timetable for the stored location, else the device time zone (shared data cache; same API as the timetable screen). */
 export function usePlanTimetable(enabled: boolean): { timetable: RamadanTimetable | null; failed: boolean } {
-  const [timetable, setTimetable] = useState<RamadanTimetable | null>(null);
-  const [failed, setFailed] = useState(false);
-  useEffect(() => {
-    if (!enabled) return;
-    const controller = new AbortController();
-    let tz = "Asia/Dhaka";
-    try {
-      tz = Intl.DateTimeFormat().resolvedOptions().timeZone || tz;
-    } catch {
-      // Keep the default zone.
-    }
-    fetch(`/api/ramadan-timetable?${new URLSearchParams({ tz })}`, { signal: controller.signal })
-      .then((res) => (res.ok ? (res.json() as Promise<RamadanTimetable>) : Promise.reject(new Error(String(res.status)))))
-      .then((data) => {
-        if (Array.isArray(data?.days)) setTimetable(data);
-        else setFailed(true);
-      })
-      .catch((e: unknown) => {
-        if (!(e instanceof DOMException && e.name === "AbortError")) setFailed(true);
-      });
-    return () => controller.abort();
-  }, [enabled]);
-  return { timetable, failed };
+  const url = useSyncExternalStore(subscribeStoredLocation, () => (enabled ? planTimetableUrl() : null), () => null);
+  const { data, error } = useCached<RamadanTimetable>(url);
+  return { timetable: data ?? null, failed: error };
 }
 
 // ── Quran tracker progress ──

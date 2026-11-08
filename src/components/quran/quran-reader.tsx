@@ -90,34 +90,53 @@ export function QuranReader({ surahNumber, initialText = null }: QuranReaderProp
       }
     })();
     async function load() {
-      // With server text on screen, the fetch only adds audio: no spinner, and a failure keeps the text.
-      if (!hasText) setLoading(true);
+      setLoading(true);
       setError(null);
-
       try {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 15000);
-
         // Single request – DB returns Arabic, English, Bengali, and audio
-        const res = await fetch(`/api/quran?surah=${surahNumber}`, {
-          signal: controller.signal,
-        });
+        const res = await fetch(`/api/quran?surah=${surahNumber}`, { signal: controller.signal });
         clearTimeout(timeout);
-
         if (!res.ok) throw new Error("Failed to load surah");
         const data: SurahDetail = await res.json();
         setSurah(data);
       } catch {
-        if (!hasText) setError(t("loadError"));
+        setError(t("loadError"));
       } finally {
         setLoading(false);
       }
     }
-    load();
+    // With server text on screen only the audio links are missing (fetched per reciter below).
+    if (!hasText) load();
     return () => {
       mounted = false;
     };
   }, [surahNumber, t, hasText]);
+
+  // Server text has no audio: fetch just the chosen reciter's links (a failure only leaves play disabled).
+  useEffect(() => {
+    if (!hasText) return;
+    const controller = new AbortController();
+    fetch(`/api/quran?surah=${surahNumber}&audioReciter=${encodeURIComponent(selectedReciter)}`, { signal: controller.signal })
+      .then((res) => (res.ok ? (res.json() as Promise<Record<string, QuranAyah["audio"][string] | null>>) : null))
+      .then((links) => {
+        if (!links) return;
+        setSurah((prev) =>
+          prev
+            ? {
+                ...prev,
+                ayahs: prev.ayahs.map((a) => {
+                  const entry = links[a.ayahNo];
+                  return entry ? { ...a, audio: { ...a.audio, [selectedReciter]: entry } } : a;
+                }),
+              }
+            : prev,
+        );
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [hasText, surahNumber, selectedReciter]);
 
   // Cleanup speech & audio on unmount
   useEffect(() => {

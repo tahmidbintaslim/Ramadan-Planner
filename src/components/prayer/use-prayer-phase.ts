@@ -1,4 +1,4 @@
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useRef, useSyncExternalStore } from "react";
 import {
   DEFAULT_CLOCK_FORMAT,
   clockParts,
@@ -96,6 +96,24 @@ const noopSubscribe = () => () => {};
 function readClock(): number {
   if (listeners.size === 0 && Date.now() - clockMs >= 1000) clockMs = Date.now();
   return clockMs;
+}
+
+/**
+ * The live clock, but a component re-renders only when `key(now)` changes (a day, phase or night boundary),
+ * not on every 30 s tick. For screens that derive state from the time but show no ticking countdown.
+ */
+export function useClockWhen(key: (now: Date) => string, initialNow?: Date): Date {
+  const last = useRef<{ key: string; ms: number } | null>(null);
+  const initialMs = initialNow?.getTime();
+  const getSnapshot = () => {
+    const ms = readClock();
+    const k = key(new Date(ms));
+    if (last.current?.key !== k) last.current = { key: k, ms };
+    return last.current.ms;
+  };
+  const getServerSnapshot = useCallback(() => initialMs ?? readClock(), [initialMs]);
+  const ms = useSyncExternalStore(subscribeClock, getSnapshot, getServerSnapshot);
+  return useMemo(() => new Date(ms), [ms]);
 }
 
 /**

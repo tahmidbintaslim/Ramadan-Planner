@@ -27,17 +27,17 @@ describe("SupportPage, nothing configured", () => {
     setup();
     const wallet = screen.getByTestId("wallet-button");
     expect(wallet).toBeDisabled();
-    expect(wallet).toHaveTextContent("শীঘ্রই চালু হবে");
+    expect(wallet).toHaveTextContent("শিগগিরই চালু হবে");
     const card = screen.getByTestId("card-button");
     expect(card).toBeDisabled();
     expect(card).toHaveTextContent("প্রবাস থেকে কার্ডে দিন");
-    expect(card).toHaveTextContent("শীঘ্রই");
+    expect(card).toHaveTextContent("শিগগিরই");
   });
 
   it("shows placeholders in the ledger and hides the receipts link", () => {
     setup();
     for (const k of ["server", "push", "translation"]) {
-      expect(screen.getByTestId(`cost-${k}`)).toHaveTextContent("শীঘ্রই প্রকাশ করা হবে");
+      expect(screen.getByTestId(`cost-${k}`)).toHaveTextContent("শিগগিরই প্রকাশ করা হবে");
     }
     expect(screen.queryByTestId("ledger-link")).toBeNull();
   });
@@ -51,8 +51,8 @@ describe("SupportPage, nothing configured", () => {
 
   it("shows the intro, the repo and translation links, share, and hides the mosque row without an email", () => {
     setup();
-    expect(screen.getByRole("heading", { name: "এই আমল চলমান থাকুক" })).toBeInTheDocument();
-    expect(screen.getByText(/কোনো ফিচার লক নেই/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "সবার জন্য বিনামূল্যে থাকুক" })).toBeInTheDocument();
+    expect(screen.getByText(/সব ফিচার সবার জন্য বিনামূল্যে/)).toBeInTheDocument();
     const repo = screen.getByTestId("repo-link");
     expect(repo).toHaveAttribute("href", "https://github.com/tahmidbintaslim/Ramadan-Planner");
     expect(repo).toHaveAttribute("rel", "noopener noreferrer");
@@ -142,7 +142,7 @@ describe("SupportPage, configured", () => {
   it("shows configured costs and the mosque mailto", () => {
     setup({ costs: { server: "৳১২,০০০", push: "৳৩,০০০", translation: null }, contactEmail: "hello@example.org" });
     expect(screen.getByTestId("cost-server")).toHaveTextContent("৳১২,০০০");
-    expect(screen.getByTestId("cost-translation")).toHaveTextContent("শীঘ্রই প্রকাশ করা হবে");
+    expect(screen.getByTestId("cost-translation")).toHaveTextContent("শিগগিরই প্রকাশ করা হবে");
     expect(screen.getByTestId("mosque-link").getAttribute("href")).toMatch(/^mailto:hello@example\.org\?subject=/);
   });
 

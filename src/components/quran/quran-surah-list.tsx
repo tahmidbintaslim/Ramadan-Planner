@@ -14,6 +14,7 @@ import { Search } from "lucide-react";
 import type { SurahInfo } from "@/lib/quran";
 import { formatLocalizedNumber } from "@/lib/locale-number";
 import { lastReadHref, readLastRead, type LastRead } from "@/lib/quran-last-read";
+import { SURAH_LIST_KEY, isFresh, setCached, useCached } from "@/lib/data-cache";
 
 // Embedded fallback for the first 10 surahs (pre-seed safety net)
 const FALLBACK_SURAHS: SurahInfo[] = [
@@ -186,37 +187,25 @@ export function QuranSurahList({ initialSurahs = [] }: { initialSurahs?: SurahIn
   const t = useTranslations("quranReader");
   const locale = useLocale();
   const showBengaliName = locale.startsWith("bn");
-  const [surahs, setSurahs] = useState<SurahInfo[]>(initialSurahs.length ? initialSurahs : FALLBACK_SURAHS);
-  const [loading, setLoading] = useState(initialSurahs.length === 0);
   const hasList = initialSurahs.length > 0;
+  // Without the loader's list: the shared data cache (filled by an earlier visit), else /api/quran, else the first ten.
+  const cached = useCached<SurahInfo[]>(hasList ? null : SURAH_LIST_KEY);
+  const surahs = hasList ? initialSurahs : (cached.data ?? FALLBACK_SURAHS);
+  const loading = !hasList && cached.data === undefined && !cached.error;
   const [searchQuery, setSearchQuery] = useState("");
   const [lastRead, setLastRead] = useState<LastRead | null>(null);
 
   // localStorage is read after mount so the server and first client render agree (no card until known).
   useEffect(() => {
+    // Reading the device's storage after mount (see above) is a response to external state.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLastRead(readLastRead());
   }, []);
 
+  // A server-rendered list seeds the cache, so the next visit's loader needs no request.
   useEffect(() => {
-    if (hasList) return;
-    async function load() {
-      try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 10000);
-        const res = await fetch("/api/quran", { signal: controller.signal });
-        clearTimeout(timeout);
-        if (res.ok) {
-          const data: SurahInfo[] = await res.json();
-          if (data.length > 0) setSurahs(data);
-        }
-      } catch {
-        // Fallback is already set
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-  }, [hasList]);
+    if (hasList && !isFresh(SURAH_LIST_KEY)) setCached(SURAH_LIST_KEY, initialSurahs);
+  }, [hasList, initialSurahs]);
 
   const q = normalizeSearch(searchQuery);
   const filteredSurahs = surahs.filter((surah) => {

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { auth, getUser, upsert, setResponseStatus } = vi.hoisted(() => ({
+const { auth, getUser, upsert, setResponseStatus, setResponseHeader } = vi.hoisted(() => ({
+  setResponseHeader: vi.fn(),
   auth: vi.fn(),
   getUser: vi.fn(),
   upsert: vi.fn(),
@@ -11,7 +12,7 @@ vi.mock("@clerk/tanstack-react-start/server", () => ({
   clerkClient: () => ({ users: { getUser } }),
 }));
 vi.mock("@/lib/prisma", () => ({ prisma: { userProfile: { upsert } } }));
-vi.mock("@tanstack/react-start/server", () => ({ setResponseStatus }));
+vi.mock("@tanstack/react-start/server", () => ({ setResponseStatus, setResponseHeader }));
 
 import { authMiddleware } from "./auth-middleware";
 
@@ -41,6 +42,7 @@ describe("authMiddleware", () => {
     expect(next).toHaveBeenCalledWith({ context: { userId: "db99edd8-fa85-5bc2-95ec-a499147bb210" } });
     expect(upsert).toHaveBeenCalledTimes(1);
     expect(setResponseStatus).not.toHaveBeenCalled();
+    expect(setResponseHeader).toHaveBeenCalledWith("Cache-Control", "private, no-store");
   });
 
   it("does not call the Clerk Backend API per call (getAppAuthUser withEmail: false)", async () => {

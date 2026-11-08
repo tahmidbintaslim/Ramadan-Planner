@@ -2,7 +2,7 @@
 import "@tanstack/react-start/server-only";
 import { guarded, json } from "./http";
 
-export const QURAN_CACHE_LONG = "public, s-maxage=604800, stale-while-revalidate=2592000";
+export const QURAN_CACHE_LONG = "public, max-age=86400, s-maxage=604800, stale-while-revalidate=2592000";
 const NO_STORE = "no-store";
 
 // The Quran service already falls back to the external API when the DB is
@@ -56,6 +56,15 @@ async function run(request: Request): Promise<Response> {
       const data = await fetchSurah(num);
       if (!data) {
         return unavailable("Surah is temporarily unavailable");
+      }
+      // GET /api/quran?surah=N&audioReciter=R → only that reciter's audio per ayah ({ayahNo: entry}): the page
+      // already has the text from the server render, so it needs a few KB of links, not the whole surah again.
+      const reciter = searchParams.get("audioReciter");
+      if (reciter !== null) {
+        const audio = Object.fromEntries(
+          data.ayahs.map((a) => [a.ayahNo, a.audio[reciter] ?? a.audio["1"] ?? Object.values(a.audio)[0] ?? null]),
+        );
+        return json(audio, { headers: { "Cache-Control": QURAN_CACHE_LONG } });
       }
       return json(data, { headers: { "Cache-Control": QURAN_CACHE_LONG } });
     }

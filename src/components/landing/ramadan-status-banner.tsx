@@ -5,7 +5,7 @@ import { useLocale, useTranslations } from "@/i18n/use-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { CalendarDays, Moon, Star } from "lucide-react";
 import type { RamadanStatus } from "@/lib/ramadan-date";
-import { storedRequestLocation } from "@/lib/user-location";
+import { calcRequestParams, readStoredLocation, storedRequestLocation } from "@/lib/user-location";
 import { localTodayISO } from "@/lib/local-day";
 import {
   formatLocalizedNumber,
@@ -26,7 +26,7 @@ export function RamadanStatusBanner() {
         const stored = storedRequestLocation();
         const tz = stored?.tz ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
         // The local date keys the CDN cache (a new entry at local midnight).
-        const params = new URLSearchParams({ tz, date: localTodayISO(new Date(), tz) });
+        const params = new URLSearchParams({ tz, date: localTodayISO(new Date(), tz), ...calcRequestParams(readStoredLocation()) });
 
         if (stored) {
           params.set("lat", stored.lat.toFixed(2));

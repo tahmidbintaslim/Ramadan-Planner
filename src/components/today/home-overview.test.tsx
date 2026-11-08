@@ -150,7 +150,7 @@ describe("HomeOverview phase card", () => {
     expect(within(card!).getByRole("heading", { name: "রোজার নিয়ত" })).toBeInTheDocument();
     expect(within(card!).getByText("আমি আগামীকাল রমজান মাসের রোজা রাখার নিয়ত করছি")).toBeInTheDocument();
     expect(
-      within(card!).getByText("নিয়ত অন্তরের সংকল্প; মুখে বলা আবশ্যক নয় · স্কলার রিভিউ সাপেক্ষে"),
+      within(card!).getByText("নিয়ত অন্তরের সংকল্প; মুখে বলা আবশ্যক নয় · আলেমদের পর্যালোচনা সাপেক্ষে"),
     ).toHaveClass("text-rp-gold-text");
   });
 
@@ -272,7 +272,7 @@ describe("HomeOverview sadaqah card", () => {
 
   it("shows in the day during the last ten nights, with the last-ten title", async () => {
     await renderHome("13:00", { ramadan: ramadanStatus(25) });
-    expect(within(supportCard()!).getByRole("heading")).toHaveTextContent("শেষ দশকে অ্যাপটি চালু রাখতে সাহায্য করুন");
+    expect(within(supportCard()!).getByRole("heading")).toHaveTextContent("শেষ দশকে এই অ্যাপের পাশে থাকুন");
   });
 
   it("shows on Eid", async () => {
@@ -327,7 +327,7 @@ describe("sadaqah dismissal storage", () => {
 describe("feature tiles", () => {
   it("link to Quran, Duas, Tasbih and Zakat under the companions header", async () => {
     await renderHome("13:00");
-    const section = screen.getByRole("region", { name: "রমজানের সঙ্গী" });
+    const section = screen.getByRole("region", { name: "আরও যা কাজে লাগবে" });
     const links = within(section).getAllByRole("link");
     expect(links.map((a) => a.getAttribute("href"))).toEqual(["/quran", "/duas", "/tasbih", "/zakat"]);
     expect(links.map((a) => a.textContent)).toEqual(["কুরআন", "দোয়া ও যিকির", "তাসবিহ", "যাকাত হিসাব"]);
@@ -360,7 +360,7 @@ describe("today's plan preview (a small link; tracking lives on /plan)", () => {
 
   it("a failed load shows an error and no ০/০ count", async () => {
     await renderInRouter(<PlanPreview state={planState([], { error: true })} />);
-    expect(screen.getByRole("alert")).toHaveTextContent("আজকের পরিকল্পনা এখন লোড বা সংরক্ষণ করা যায়নি।");
+    expect(screen.getByRole("alert")).toHaveTextContent("আজকের আমল এই মুহূর্তে দেখানো যাচ্ছে না। একটু পরে আবার চেষ্টা করুন।");
     expect(screen.getByRole("heading")).toHaveTextContent(/^আজকের আমল$/);
   });
 

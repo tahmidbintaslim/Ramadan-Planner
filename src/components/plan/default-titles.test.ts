@@ -27,7 +27,7 @@ describe("matchDefaultKey across languages", () => {
     expect(matchDefaultKey("Sehri and intention", undefined, titles)).toBe("sehri");
     expect(matchDefaultKey("  Tahajjud ", undefined, titles)).toBe("night:tahajjud");
     expect(matchDefaultKey("তাহাজ্জুদ", undefined, titles)).toBe("night:tahajjud");
-    expect(matchDefaultKey("Laylat al-Qadr dua", undefined, titles)).toBe("night:qadrDua");
+    expect(matchDefaultKey("Laylatul Qadr dua", undefined, titles)).toBe("night:qadrDua");
   });
 
   it("leaves the user's own items alone and prefers the remembered key", () => {
@@ -37,9 +37,9 @@ describe("matchDefaultKey across languages", () => {
   });
 
   it("keeps an extra (current-locale) title and adds no duplicates", () => {
-    const withExtra = defaultTitlesByKey({ sehri: "Sehri ✦", fajr: "ফজর জামাতে" });
+    const withExtra = defaultTitlesByKey({ sehri: "Sehri ✦", fajr: "ফজরের নামাজ" });
     expect(withExtra.sehri).toEqual(["Sehri ✦", "সেহরি ও নিয়ত", "Sehri and intention"]);
-    expect(withExtra.fajr).toEqual(["ফজর জামাতে", "Fajr in congregation"]);
+    expect(withExtra.fajr).toEqual(["ফজরের নামাজ", "Fajr prayer", "ফজর জামাতে", "Fajr in congregation"]);
   });
 
   it("an English-titled suggestion keeps its window and night scope in a Bengali plan", () => {

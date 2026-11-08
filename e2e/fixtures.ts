@@ -24,7 +24,8 @@ function isIgnored(entry: ConsoleEntry, origin: string): boolean {
   return false;
 }
 
-export const BLOCKED_HOSTS = /clerk\.accounts\.dev|clerk\.com|clerk-telemetry|vercel/;
+// Open-Meteo geocoding is blocked too (tests that search cities mock it per page).
+export const BLOCKED_HOSTS = /clerk\.accounts\.dev|clerk\.com|clerk-telemetry|vercel|open-meteo/;
 
 type Fixtures = {
   appLocale: "bn" | "en" | undefined;

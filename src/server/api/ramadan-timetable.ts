@@ -4,8 +4,9 @@ import { fetchRamadanTimetable } from "@/lib/ramadan-timetable";
 import { DHAKA_DEFAULTS, locationLabelFromTimezone } from "@/lib/prayer-times";
 import { guarded, json } from "./http";
 import { TIMEZONE_DEFAULT_COORDS } from "./timezone-defaults";
+import { calcFromSearchParams } from "./calc-params";
 
-export const RAMADAN_TIMETABLE_CACHE_CONTROL = "public, s-maxage=86400, stale-while-revalidate=604800";
+export const RAMADAN_TIMETABLE_CACHE_CONTROL = "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800";
 
 export function handleRamadanTimetable(request: Request): Promise<Response> {
   return guarded("api/ramadan-timetable", () => run(request));
@@ -44,9 +45,11 @@ async function run(request: Request): Promise<Response> {
   if (isNaN(lat) || isNaN(lng)) {
     return json({ error: "Invalid coordinates" }, { status: 400 });
   }
+  const parsed = calcFromSearchParams(searchParams);
+  if ("error" in parsed) return json({ error: parsed.error }, { status: 400 });
 
   try {
-    const timetable = await fetchRamadanTimetable(lat, lng, hijriYear, timezone, location);
+    const timetable = await fetchRamadanTimetable(lat, lng, hijriYear, timezone, location, parsed.calc);
     return json(timetable, { headers: { "Cache-Control": RAMADAN_TIMETABLE_CACHE_CONTROL } });
   } catch (error) {
     console.error("Ramadan timetable error:", error);

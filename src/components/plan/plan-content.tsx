@@ -7,7 +7,7 @@ import { Chip } from "@/components/ui/chip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useKnownTimings, useRamadanDay } from "@/hooks/use-shell-day";
 import { useClockFormat } from "@/hooks/use-clock-format";
-import { useNowTick } from "@/components/prayer/use-prayer-phase";
+import { useClockWhen } from "@/components/prayer/use-prayer-phase";
 import { digits, ddmmyyyyToISO, formatClock, type Locale } from "@/components/timetable/timetable-logic";
 import { shouldShowSadaqah, timingsFromPrayerTimes, todayISOInZone } from "@/lib/prayer-phase";
 import { AddAmalButton, AmalSheet, type AmalDraft, type AmalEditTarget, type AmalSuggestion } from "./add-amal-sheet";
@@ -66,7 +66,8 @@ function deviceZone(): string {
   }
 }
 
-export function PlanContent() {
+/** `cookieGuest`: the request has no session cookie (the route loader reads it on the server and in the browser). */
+export function PlanContent({ cookieGuest = false }: { cookieGuest?: boolean }) {
   const t = useTranslations("plan");
   const tChecklist = useTranslations("checklist");
   const locale = useLocale() as Locale;
@@ -74,7 +75,6 @@ export function PlanContent() {
   const mounted = useSyncExternalStore(subscribeNoop, () => true, () => false);
 
   const ramadanDay = useRamadanDay();
-  const now = useNowTick();
   const { timetable, failed: timetableFailed } = usePlanTimetable(ramadanDay !== null);
   const [viewChoice, setViewChoice] = useState<"day" | "nights" | null>(null);
   const [sheet, setSheet] = useState<{ open: boolean; editing: AmalEditTarget | null }>({ open: false, editing: null });
@@ -90,6 +90,17 @@ export function PlanContent() {
   const todayRow = ramadanDay !== null ? days.find((d) => d.day === ramadanDay) : undefined;
   const fajrToday = rowInstant(todayRow, "fajr", tz);
   const maghribToday = rowInstant(todayRow, "maghrib", tz);
+  // Re-render on a boundary (day/night view, night number, local date), not on every clock tick: this page
+  // has no countdown of its own (the night hero keeps its own live clock).
+  const now = useClockWhen((d) =>
+    [
+      nightsViewAvailable(ramadanDay, d, fajrToday, maghribToday),
+      defaultPlanView(true, d, fajrToday, maghribToday),
+      ramadanDay !== null ? currentNight(ramadanDay, d, fajrToday) : 0,
+      todayISOInZone(d, tz),
+      Math.floor(d.getTime() / 600_000), // the sadaqah card and known-timings date at least every 10 min
+    ].join("|"),
+  );
   const showNights = nightsViewAvailable(ramadanDay, now, fajrToday, maghribToday);
   const view = showNights ? (viewChoice ?? defaultPlanView(true, now, fajrToday, maghribToday)) : "day";
   const night = ramadanDay !== null ? currentNight(ramadanDay, now, fajrToday) : 0;
@@ -286,7 +297,8 @@ export function PlanContent() {
         <div aria-hidden="true" className="h-10" data-testid="plan-views-placeholder" />
       ) : null}
 
-      {plan.ready && plan.isGuest ? (
+      {/* Before the list is known, the request's session cookie says whether this is a guest: the notice holds its place. */}
+      {(plan.ready ? plan.isGuest : cookieGuest) ? (
         <p className="rp-caption rounded-rp-md bg-rp-accent-tint px-3 py-2 text-rp-ink">{t("guestLocalNotice")}</p>
       ) : null}
       {plan.error ? (
@@ -298,7 +310,7 @@ export function PlanContent() {
       {view === "nights" ? (
         <>
           {tonight && timetable ? (
-            <NightHero times={tonight} now={now} night={night} timeZone={tz} location={timetable.location} hijriYear={timetable.hijriYear} />
+            <NightHero times={tonight} night={night} timeZone={tz} location={timetable.location} hijriYear={timetable.hijriYear} />
           ) : timetableFailed || timetable ? (
             <p className="rp-small rounded-rp-lg bg-rp-surface p-5 text-rp-muted shadow-rp-soft">{t("nightsError")}</p>
           ) : (
@@ -332,6 +344,10 @@ export function PlanContent() {
             <h2 id="plan-today-amal" className="rp-h2 text-rp-ink">
               {t("todayAmal")}
             </h2>
+            {!plan.ready ? (
+              // The empty-list card's height, until the list is known (most first visits end there).
+              <div aria-hidden="true" data-testid="plan-list-skeleton" className="h-[178px] rounded-rp-lg bg-rp-surface shadow-rp-soft motion-safe:animate-pulse regular:h-[156px]" />
+            ) : null}
             {items.length === 0 && plan.ready ? (
               <div className="flex flex-col gap-3 rounded-rp-lg bg-rp-surface p-5 shadow-rp-soft">
                 <h3 className="rp-row font-semibold text-rp-ink">{t("emptyTitle")}</h3>

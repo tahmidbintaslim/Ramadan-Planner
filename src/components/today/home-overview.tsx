@@ -1,4 +1,5 @@
 import { useLocale, useTranslations } from "@/i18n/use-intl";
+import { useCalcSource } from "@/components/prayer/use-calc-source";
 import { Button } from "@/components/ui/button";
 import { PrayerHero } from "@/components/prayer/prayer-hero";
 import { SehriIftarPair } from "@/components/prayer/sehri-iftar-pair";
@@ -99,6 +100,7 @@ export function HomeOverview({
   onRetry,
 }: HomeOverviewProps) {
   const t = useTranslations("home");
+  const calcSource = useCalcSource();
   const tToday = useTranslations("today");
   const tPrayer = useTranslations("prayer");
   const locale = useLocale();
@@ -116,12 +118,14 @@ export function HomeOverview({
   const timeZone = timings?.timezone ?? "Asia/Dhaka";
   const knownSource = !cached && timings?.source;
   const source = knownSource
-    ? t(timings.source === "islamicapi" ? "sourceIslamicApi" : "sourceAladhan")
+    ? (calcSource(timings.calc) ?? t(timings.source === "islamicapi" ? "sourceIslamicApi" : "sourceAladhan"))
     : t("sourceUnverified");
   const sourceLine = knownSource ? tPrayer("source", { source }) : tPrayer("sampleSource", { source });
   const place = districtLabel ?? (timings ? districtOf(timings.location) : undefined);
   const hijri = timings ? hijriLabelOf(timings, locale, (v) => t("hijri", v)) : undefined;
   const subtitle = [place, longDateOf(now, timeZone, locale), hijri].filter(Boolean).join(" · ");
+  // Times not here yet (and no error): every late section keeps its slot.
+  const loading = !(timings && phaseTimings) && status !== "error";
 
   return (
     <div className="flex flex-col gap-6">
@@ -153,14 +157,19 @@ export function HomeOverview({
               ) : null}
             </div>
           ) : (
+            // Skeleton at the loaded hero + pair height (274px), so nothing below moves when the times arrive.
             <div
               data-testid="hero-skeleton"
               role="status"
-              className="order-1 flex min-h-[272px] items-end justify-center rounded-rp-lg bg-rp-accent-tint p-6 motion-safe:animate-pulse"
+              className="order-1 flex h-[274px] items-end justify-center rounded-rp-lg bg-rp-accent-tint p-6 motion-safe:animate-pulse"
             >
               <span className="rp-small text-rp-muted">{t("timingsLoading")}</span>
             </div>
           )}
+          {loading ? (
+            // The prayer list's loaded height (five rows and the source line; taller rows at regular).
+            <div aria-hidden="true" data-testid="prayers-skeleton" className="order-2 h-[302px] rounded-rp-md bg-rp-surface motion-safe:animate-pulse regular:h-[342px]" />
+          ) : null}
           {phaseTimings ? (
             <PrayerList
               className="order-2"
@@ -182,6 +191,9 @@ export function HomeOverview({
             ) : (
               <DailyAyahCard className="order-3 regular:order-2" ramadanDay={ramadanDay} />
             )
+          ) : loading ? (
+            // The ayah card's height (title and the fallback ayah), in its own slot: the plan preview and tiles stay put.
+            <div aria-hidden="true" data-testid="ayah-skeleton" className="order-3 h-[208px] rounded-rp-md bg-rp-surface motion-safe:animate-pulse regular:order-2" />
           ) : null}
           <PlanPreview className="order-4 regular:order-1" state={plan} />
           <FeatureTiles className="order-5 regular:order-3" />

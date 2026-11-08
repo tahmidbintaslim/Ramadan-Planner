@@ -1,6 +1,7 @@
 // Types and zod schemas shared by the planner server functions (src/actions/planner.ts) and their
 // server-side implementations (src/server/planner-impl.ts). Pure: safe to import from client code.
 import { z } from "zod";
+import { isValidTimeZone } from "@/lib/user-location";
 
 export type ActionResult<T> =
   | { ok: true; data: T }
@@ -167,7 +168,8 @@ export const updateReminderSchema = z.object({
 
 export const updateProfileSchema = z.object({
   displayName: z.string().trim().max(120),
-  timezone: z.string().trim().min(1).max(120),
+  // A real IANA zone: the push dispatcher formats dates in it.
+  timezone: z.string().trim().refine(isValidTimeZone, "invalid time zone"),
   locationLabel: z.string().trim().min(1).max(180),
   // Rounded to 2 decimals (about 1 km): enough for prayer times, and no precise position is stored.
   latitude: z.number().min(-90).max(90).transform(coarse2),

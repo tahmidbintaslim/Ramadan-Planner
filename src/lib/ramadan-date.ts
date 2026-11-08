@@ -15,6 +15,7 @@ import {
     getConfiguredHijriOffset,
     getCountryCodeForTimezone,
     getHijriOffsetForCoordinates,
+    getHijriOffsetForLocation,
     getHijriOffsetForTimezone,
 } from "./hijri-offsets";
 
@@ -120,13 +121,18 @@ export async function getRamadanStatus(
     timezone: string = "Asia/Dhaka",
     countryCode?: string,
     coordinates?: { latitude: number; longitude: number },
+    /** The user's own Hijri date adjustment (days), added to the place's offset. */
+    hijriAdjust = 0,
 ): Promise<RamadanStatus> {
     const resolvedCountry = (countryCode ?? getCountryCodeForTimezone(timezone))?.toUpperCase();
     const configuredOffset = getConfiguredHijriOffset();
-    const adj =
-        coordinates
+    // A known country (the stored location's) gives its offset; otherwise the coordinates, then the zone.
+    const placeAdj = countryCode
+        ? getHijriOffsetForLocation(countryCode)
+        : coordinates
             ? getHijriOffsetForCoordinates(coordinates.latitude, coordinates.longitude)
             : getHijriOffsetForTimezone(timezone);
+    const adj = placeAdj + hijriAdjust;
     const coordsKey = coordinates
         ? `${coordinates.latitude.toFixed(2)},${coordinates.longitude.toFixed(2)}`
         : "NA";
@@ -140,7 +146,7 @@ export async function getRamadanStatus(
         // Only use the global "official" endpoint for BD (or unknown country).
         // Non-BD locations should prefer location-aware AlAdhan+adjustment logic.
         const useOfficialForCountry =
-            configuredOffset === null && (!resolvedCountry || resolvedCountry === "BD");
+            configuredOffset === null && hijriAdjust === 0 && (!resolvedCountry || resolvedCountry === "BD");
         if (useOfficialForCountry) {
             try {
                 const base = (process.env.RAMADAN_OFFICIAL_API || "https://ramadan.munafio.com").replace(/\/$/, "");

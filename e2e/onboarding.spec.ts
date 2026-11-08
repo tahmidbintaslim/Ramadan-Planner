@@ -28,13 +28,13 @@ async function mockApis(page: Page) {
 const hero = (page: Page) => page.getByRole("region", { name: /নামাজের সময় ও কাউন্টডাউন|Prayer time and countdown/ });
 /** The district in Today's header (v4: the location button above the next-prayer card). */
 const place = (page: Page) => page.getByTestId("today-location");
-const CONFIRM = "নিশ্চিত করুন";
+const CONFIRM = "আমার সময় দেখুন";
 
 /** The welcome flow starts with the language step; Continue leads to the district. */
 async function toLocationStep(page: Page) {
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("ভাষা বেছে নিন");
   await page.getByRole("button", { name: "চালিয়ে যান" }).click();
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("আপনার এলাকা");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("আপনার জেলা বেছে নিন");
 }
 
 test.use({ timezoneId: "Asia/Dhaka", viewport: { width: 390, height: 844 } });
@@ -61,7 +61,9 @@ test.describe("first run", () => {
     // Sylhet's coordinates (2 decimals) and Bangladesh's zone, without a geolocation prompt.
     await expect.poll(() => timingUrls.some((u) => /lat=24\.90&lng=91\.87/.test(u) && /tz=Asia%2FDhaka/.test(u))).toBe(true);
     const stored = await page.evaluate(() => JSON.parse(localStorage.getItem("rp_location") ?? "null"));
-    expect(stored).toMatchObject({ v: 1, kind: "district", districtId: "sylhet", lat: 24.9, lng: 91.87 });
+    expect(stored).toMatchObject({ v: 2, kind: "district", districtId: "sylhet", lat: 24.9, lng: 91.87, country: "BD", method: 1, school: 1 });
+    // Bangladesh keeps Karachi + Hanafi (the server adds the IFB tune).
+    expect(timingUrls.some((u) => /cc=BD/.test(u) && /method=1/.test(u) && /school=1/.test(u))).toBe(true);
 
     await page.reload({ waitUntil: "load" });
     await expect(page).toHaveURL(/\/today$/);
@@ -83,6 +85,43 @@ test.describe("first run", () => {
     await expect(place(page)).toHaveText("চট্টগ্রাম");
   });
 
+  test("search a city worldwide: its zone, country and the country's method are stored and sent", async ({ page }) => {
+    const timingUrls = await mockApis(page);
+    const geocodeUrls: string[] = [];
+    await page.route(/geocoding-api\.open-meteo\.com\/v1\/search/, (r) => {
+      geocodeUrls.push(r.request().url());
+      return r.fulfill({
+        json: {
+          results: [
+            { id: 4887398, name: "শিকাগো", latitude: 41.85003, longitude: -87.65005, timezone: "America/Chicago", country: "যুক্তরাষ্ট্র", admin1: "ইলিনয়", country_code: "US" },
+          ],
+        },
+      });
+    });
+    await visit(page, "/welcome");
+    await toLocationStep(page);
+    const input = page.getByRole("combobox", { name: /জেলা বা শহর/ });
+    await input.fill("Chicago");
+    const option = page.getByRole("option", { name: /শিকাগো/ });
+    await expect(option).toBeVisible();
+    await expect(page.getByText("বিশ্বের শহর")).toBeVisible();
+    // Debounced: one request for the whole word, in the UI language.
+    expect(geocodeUrls).toHaveLength(1);
+    expect(geocodeUrls[0]).toMatch(/name=Chicago&count=8&language=bn/);
+    await input.press("ArrowDown");
+    await input.press("Enter");
+    await expect(input).toHaveValue("শিকাগো");
+    await page.getByRole("button", { name: CONFIRM }).click();
+    await expect(page).toHaveURL(/\/today$/);
+    await expect(place(page)).toHaveText("শিকাগো");
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem("rp_location") ?? "null"))).toMatchObject({
+      v: 2, kind: "city", lat: 41.85, lng: -87.65, tz: "America/Chicago", label: "শিকাগো", country: "US", method: 2, school: 0,
+    });
+    await expect
+      .poll(() => timingUrls.some((u) => /tz=America%2FChicago/.test(u) && /cc=US&method=2&school=0/.test(u)))
+      .toBe(true);
+  });
+
   test("an unknown name is not accepted; 'later' uses the Dhaka default", async ({ page }) => {
     await mockApis(page);
     await visit(page, "/welcome");
@@ -90,7 +129,7 @@ test.describe("first run", () => {
     await page.getByRole("combobox", { name: /জেলা/ }).fill("Atlantis");
     await page.getByRole("button", { name: CONFIRM }).click();
     await expect(page).toHaveURL(/\/welcome$/);
-    await expect(page.getByText(/কোনো জেলা পাওয়া যায়নি/)).toBeVisible();
+    await expect(page.getByText(/কোনো স্থান পাওয়া যায়নি/)).toBeVisible();
 
     await page.getByRole("button", { name: /পরে করব.*ঢাকা/ }).click();
     await expect(page).toHaveURL(/\/today$/);
@@ -122,7 +161,7 @@ test.describe("first run", () => {
     await visit(page, "/welcome");
     await toLocationStep(page);
     await page.getByRole("button", { name: "আমার অবস্থান ব্যবহার করুন" }).click();
-    await expect(page.getByRole("status")).toHaveText(/অনুমতি পাওয়া যায়নি.*জেলা বেছে নিন/);
+    await expect(page.getByRole("status")).toHaveText(/অনুমতি মেলেনি.*জেলা বা শহর খুঁজে নিন/);
   });
 });
 
@@ -153,7 +192,7 @@ test("Today's location button opens the location sheet; Done saves the district 
   await visit(page, "/today");
   await expect(place(page)).toHaveText("ঢাকা");
   await place(page).click();
-  const sheet = page.getByRole("dialog", { name: "আপনার এলাকা" });
+  const sheet = page.getByRole("dialog", { name: "আপনার জেলা বেছে নিন" });
   await expect(sheet).toBeVisible();
   await sheet.getByRole("button", { name: "সিলেট", exact: true }).click();
   await sheet.getByRole("button", { name: "সম্পন্ন" }).click();

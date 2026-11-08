@@ -11,8 +11,8 @@ afterEach(() => {
 });
 
 function setTarget(value: string) {
-  fireEvent.change(screen.getByLabelText("কাস্টম লক্ষ্য নির্ধারণ করুন"), { target: { value } });
-  fireEvent.click(screen.getByRole("button", { name: "লক্ষ্য প্রয়োগ করুন" }));
+  fireEvent.change(screen.getByLabelText("নিজের লক্ষ্য দিন"), { target: { value } });
+  fireEvent.click(screen.getByRole("button", { name: "লক্ষ্য ঠিক করুন" }));
 }
 
 describe("tasbih custom target", () => {

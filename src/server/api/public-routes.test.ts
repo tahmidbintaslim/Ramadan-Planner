@@ -2,10 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Expected header values copied from the Next handlers in src/app/api/**/route.ts (not from the new constants),
 // so a drift in the port fails here.
-const NEXT_TIMINGS_CC = "public, s-maxage=3600, stale-while-revalidate=300";
-const NEXT_RAMADAN_CC = "public, s-maxage=3600, stale-while-revalidate=300";
-const NEXT_TIMETABLE_CC = "public, s-maxage=86400, stale-while-revalidate=604800";
-const NEXT_QURAN_CC = "public, s-maxage=604800, stale-while-revalidate=2592000";
+const NEXT_TIMINGS_CC = "public, max-age=300, s-maxage=3600, stale-while-revalidate=300";
+const NEXT_RAMADAN_CC = "public, max-age=300, s-maxage=3600, stale-while-revalidate=300";
+const NEXT_TIMETABLE_CC = "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800";
+const NEXT_QURAN_CC = "public, max-age=86400, s-maxage=604800, stale-while-revalidate=2592000";
 const NEXT_DAILY_CC = "public, s-maxage=3600, stale-while-revalidate=86400";
 
 const m = vi.hoisted(() => ({
@@ -52,15 +52,24 @@ describe("GET /api/timings", () => {
     expect(res.headers.get("Cache-Control")).toBe(NEXT_TIMINGS_CC);
     expect(res.headers.get("Content-Type")).toMatch(/^application\/json/);
     expect(await res.json()).toEqual({ prayerTimes: { fajr: "04:00" } });
-    expect(m.fetchPrayerTimes).toHaveBeenCalledWith(23.8103, 90.4125, "01-03-2026", "Asia/Dhaka", "ঢাকা, বাংলাদেশ");
+    expect(m.fetchPrayerTimes).toHaveBeenCalledWith(23.81, 90.41, "01-03-2026", "Asia/Dhaka", "ঢাকা, বাংলাদেশ", {});
   });
 
   it("uses timezone defaults and explicit params", async () => {
     m.fetchPrayerTimes.mockResolvedValue({});
     await handleTimings(req("/api/timings?tz=Europe/London&date=2026-03-01"));
-    expect(m.fetchPrayerTimes).toHaveBeenCalledWith(51.5074, -0.1278, "01-03-2026", "Europe/London", "London, UK");
+    expect(m.fetchPrayerTimes).toHaveBeenCalledWith(51.51, -0.13, "01-03-2026", "Europe/London", "London, UK", {});
     await handleTimings(req("/api/timings?tz=Asia/Dhaka&lat=10&lng=20&location=X&date=2026-03-01"));
-    expect(m.fetchPrayerTimes).toHaveBeenLastCalledWith(10, 20, "01-03-2026", "Asia/Dhaka", "X");
+    expect(m.fetchPrayerTimes).toHaveBeenLastCalledWith(10, 20, "01-03-2026", "Asia/Dhaka", "X", {});
+    await handleTimings(req("/api/timings?tz=America/Chicago&lat=41.88&lng=-87.63&method=2&school=1&cc=US&hadj=1&date=2026-03-01"));
+    expect(m.fetchPrayerTimes).toHaveBeenLastCalledWith(41.88, -87.63, "01-03-2026", "America/Chicago", "Chicago", {
+      method: 2,
+      school: 1,
+      country: "US",
+      hijriAdjust: 1,
+    });
+    const bad = await handleTimings(req("/api/timings?method=abc"));
+    expect(bad.status).toBe(400);
   });
 
   it("400 on bad coordinates, 502 on upstream failure (no Cache-Control, as before)", async () => {
@@ -97,7 +106,7 @@ describe("GET /api/ramadan", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("Cache-Control")).toBe(NEXT_RAMADAN_CC);
     expect(await res.json()).toEqual({ isRamadan: false });
-    expect(m.getRamadanStatus).toHaveBeenCalledWith("Asia/Dhaka", "BD", { latitude: 23.8, longitude: 90.4 });
+    expect(m.getRamadanStatus).toHaveBeenCalledWith("Asia/Dhaka", "BD", { latitude: 23.8, longitude: 90.4 }, 0);
   });
 
   it("no coordinates -> undefined; 502 on failure", async () => {
@@ -115,7 +124,7 @@ describe("GET /api/ramadan", () => {
     m.getRamadanStatus.mockResolvedValueOnce({});
     const ok = await handleRamadan(req("/api/ramadan?tz=Asia/Dhaka&date=2027-02-20"));
     expect(ok.status).toBe(200);
-    expect(m.getRamadanStatus).toHaveBeenCalledWith("Asia/Dhaka", "BD", undefined);
+    expect(m.getRamadanStatus).toHaveBeenCalledWith("Asia/Dhaka", "BD", undefined, 0);
     const tz = await handleRamadan(req("/api/ramadan?tz=Mars/Base"));
     expect(tz.status).toBe(400);
     expect(await tz.json()).toEqual({ error: "Invalid timezone" });
@@ -133,7 +142,7 @@ describe("GET /api/ramadan-timetable", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("Cache-Control")).toBe(NEXT_TIMETABLE_CC);
     expect(await res.json()).toEqual({ days: [] });
-    expect(m.fetchRamadanTimetable).toHaveBeenCalledWith(24.8607, 67.0011, "1448", "Asia/Karachi", "Karachi, Pakistan");
+    expect(m.fetchRamadanTimetable).toHaveBeenCalledWith(24.8607, 67.0011, "1448", "Asia/Karachi", "Karachi, Pakistan", {});
   });
 
   it("400 invalid timezone, 400 invalid coordinates, 502 on failure", async () => {
@@ -166,6 +175,17 @@ describe("GET /api/quran", () => {
       expect(await res.json()).toEqual(body);
     }
     expect(m.fetchSurah).toHaveBeenCalledWith(2);
+  });
+
+  it("audioReciter returns only that reciter's link per ayah, falling back to the default reciter", async () => {
+    const e = (url: string) => ({ reciter: "R", url, originalUrl: url });
+    m.fetchSurah.mockResolvedValue({ surahNo: 1, ayahs: [
+      { ayahNo: 1, audio: { "1": e("a1"), "5": e("b1") } },
+      { ayahNo: 2, audio: { "1": e("a2") } },
+    ] });
+    const res = await handleQuran(req("/api/quran?surah=1&audioReciter=5"));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ "1": e("b1"), "2": e("a2") });
   });
 
   it("400 for an out-of-range surah (no Cache-Control)", async () => {

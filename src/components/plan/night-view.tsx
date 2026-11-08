@@ -1,4 +1,5 @@
 import { useLocale, useTranslations } from "@/i18n/use-intl";
+import { useNowTick } from "@/components/prayer/use-prayer-phase";
 import { GirihPattern } from "@/components/design/girih-pattern";
 import { MihrabArch } from "@/components/design/mihrab-arch";
 import { CrescentIcon, PinIcon } from "@/components/icons/islamic-icons";
@@ -41,14 +42,15 @@ function Stars() {
 /** Night hero: suggested tahajjud time (start of the night's last third) and the sehri end. */
 export function NightHero({
   times,
-  now,
+  now: nowOverride,
   night,
   timeZone,
   location,
   hijriYear,
 }: {
   times: NightTimes;
-  now: Date;
+  /** Frozen time (tests); otherwise the live clock. */
+  now?: Date;
   night: number;
   timeZone: string;
   location: string;
@@ -57,6 +59,7 @@ export function NightHero({
   const t = useTranslations("plan");
   const [clockFormat] = useClockFormat();
   const locale = useLocale();
+  const now = useNowTick(nowOverride);
   const progress = nightProgress(now, times);
   const percent = Math.round(progress * 100);
   return (

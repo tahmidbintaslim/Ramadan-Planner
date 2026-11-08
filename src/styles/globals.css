@@ -437,6 +437,25 @@
     box-shadow: var(--rp-shadow-soft);
   }
 
+  /* Press feedback (HIG / Material): every control dims and settles slightly while pressed, so a tap is felt
+     at once on touch screens (hover does nothing there). Links styled as buttons opt in with .rp-pressable. */
+  :is(button, [role="button"], [role="tab"], [role="radio"], [role="switch"], [role="checkbox"], .rp-pressable) {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    transition-property: transform, opacity, background-color, color, border-color, box-shadow;
+    transition-duration: 120ms;
+    transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+  }
+  :is(button, [role="button"], [role="tab"], [role="radio"], [role="switch"], [role="checkbox"], .rp-pressable):active:not(:disabled):not([aria-disabled="true"]) {
+    transform: scale(0.97);
+    opacity: 0.85;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    :is(button, [role="button"], [role="tab"], [role="radio"], [role="switch"], [role="checkbox"], .rp-pressable):active {
+      transform: none;
+    }
+  }
+
   .motion-spring {
     transition-property: transform, opacity, box-shadow, border-color, background-color, color;
     transition-duration: 420ms;
@@ -499,6 +518,27 @@
   .sway-slow {
     transform-origin: top center;
     animation: sway-slow 3.6s ease-in-out infinite;
+  }
+
+  /* Route progress bar (router pending state): a teal sweep; a still bar under reduced motion. */
+  @keyframes rp-progress {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(250%);
+    }
+  }
+
+  .rp-progress-bar {
+    animation: rp-progress 1.1s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rp-progress-bar {
+      animation: none;
+      width: 100%;
+    }
   }
 
   @media (max-width: 640px) {
