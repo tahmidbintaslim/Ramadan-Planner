@@ -52,15 +52,24 @@ describe("GET /api/timings", () => {
     expect(res.headers.get("Cache-Control")).toBe(NEXT_TIMINGS_CC);
     expect(res.headers.get("Content-Type")).toMatch(/^application\/json/);
     expect(await res.json()).toEqual({ prayerTimes: { fajr: "04:00" } });
-    expect(m.fetchPrayerTimes).toHaveBeenCalledWith(23.81, 90.41, "01-03-2026", "Asia/Dhaka", "ঢাকা, বাংলাদেশ");
+    expect(m.fetchPrayerTimes).toHaveBeenCalledWith(23.81, 90.41, "01-03-2026", "Asia/Dhaka", "ঢাকা, বাংলাদেশ", {});
   });
 
   it("uses timezone defaults and explicit params", async () => {
     m.fetchPrayerTimes.mockResolvedValue({});
     await handleTimings(req("/api/timings?tz=Europe/London&date=2026-03-01"));
-    expect(m.fetchPrayerTimes).toHaveBeenCalledWith(51.51, -0.13, "01-03-2026", "Europe/London", "London, UK");
+    expect(m.fetchPrayerTimes).toHaveBeenCalledWith(51.51, -0.13, "01-03-2026", "Europe/London", "London, UK", {});
     await handleTimings(req("/api/timings?tz=Asia/Dhaka&lat=10&lng=20&location=X&date=2026-03-01"));
-    expect(m.fetchPrayerTimes).toHaveBeenLastCalledWith(10, 20, "01-03-2026", "Asia/Dhaka", "X");
+    expect(m.fetchPrayerTimes).toHaveBeenLastCalledWith(10, 20, "01-03-2026", "Asia/Dhaka", "X", {});
+    await handleTimings(req("/api/timings?tz=America/Chicago&lat=41.88&lng=-87.63&method=2&school=1&cc=US&hadj=1&date=2026-03-01"));
+    expect(m.fetchPrayerTimes).toHaveBeenLastCalledWith(41.88, -87.63, "01-03-2026", "America/Chicago", "Chicago", {
+      method: 2,
+      school: 1,
+      country: "US",
+      hijriAdjust: 1,
+    });
+    const bad = await handleTimings(req("/api/timings?method=abc"));
+    expect(bad.status).toBe(400);
   });
 
   it("400 on bad coordinates, 502 on upstream failure (no Cache-Control, as before)", async () => {
@@ -97,7 +106,7 @@ describe("GET /api/ramadan", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("Cache-Control")).toBe(NEXT_RAMADAN_CC);
     expect(await res.json()).toEqual({ isRamadan: false });
-    expect(m.getRamadanStatus).toHaveBeenCalledWith("Asia/Dhaka", "BD", { latitude: 23.8, longitude: 90.4 });
+    expect(m.getRamadanStatus).toHaveBeenCalledWith("Asia/Dhaka", "BD", { latitude: 23.8, longitude: 90.4 }, 0);
   });
 
   it("no coordinates -> undefined; 502 on failure", async () => {
@@ -115,7 +124,7 @@ describe("GET /api/ramadan", () => {
     m.getRamadanStatus.mockResolvedValueOnce({});
     const ok = await handleRamadan(req("/api/ramadan?tz=Asia/Dhaka&date=2027-02-20"));
     expect(ok.status).toBe(200);
-    expect(m.getRamadanStatus).toHaveBeenCalledWith("Asia/Dhaka", "BD", undefined);
+    expect(m.getRamadanStatus).toHaveBeenCalledWith("Asia/Dhaka", "BD", undefined, 0);
     const tz = await handleRamadan(req("/api/ramadan?tz=Mars/Base"));
     expect(tz.status).toBe(400);
     expect(await tz.json()).toEqual({ error: "Invalid timezone" });
@@ -133,7 +142,7 @@ describe("GET /api/ramadan-timetable", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("Cache-Control")).toBe(NEXT_TIMETABLE_CC);
     expect(await res.json()).toEqual({ days: [] });
-    expect(m.fetchRamadanTimetable).toHaveBeenCalledWith(24.8607, 67.0011, "1448", "Asia/Karachi", "Karachi, Pakistan");
+    expect(m.fetchRamadanTimetable).toHaveBeenCalledWith(24.8607, 67.0011, "1448", "Asia/Karachi", "Karachi, Pakistan", {});
   });
 
   it("400 invalid timezone, 400 invalid coordinates, 502 on failure", async () => {

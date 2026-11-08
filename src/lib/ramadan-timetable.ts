@@ -12,10 +12,9 @@
 const ALADHAN_BASE = "https://api.aladhan.com/v1";
 
 import { cachedFetch } from "@/lib/ttl-cache";
-import { ALADHAN_METHOD_PARAMS, fastTimesFromAlAdhan } from "@/lib/fast-times";
-import {
-    getHijriOffsetForTimezone,
-} from "./hijri-offsets";
+import { fastTimesFromAlAdhan } from "@/lib/fast-times";
+import { aladhanParams, resolveCalc, type CalcOptions } from "@/lib/calc-method";
+import { hijriOffsetWithAdjust, resolveCountryCode } from "./hijri-offsets";
 
 // ── Types ─────────────────────────────────────────────
 export interface TimetableDay {
@@ -41,6 +40,8 @@ export interface RamadanTimetable {
     timezone: string;
     hijriYear: string;
     method: string;
+    /** The AlAdhan method id, Asr school and country the times were calculated for. */
+    calc?: { method: number; school: number; country?: string };
 }
 
 // ── Cache ─────────────────────────────────────────────
@@ -149,9 +150,10 @@ async function fetchGregorianMonth(
     latitude: number,
     longitude: number,
     timezone: string,
-    offset: number
+    offset: number,
+    methodParams: string,
 ): Promise<AlAdhanCalendarDay[]> {
-    const url = `${ALADHAN_BASE}/calendar/${year}/${month}?latitude=${latitude}&longitude=${longitude}&${ALADHAN_METHOD_PARAMS}&timezonestring=${encodeURIComponent(timezone)}&calendarMethod=MATHEMATICAL&adjustment=${offset}`;
+    const url = `${ALADHAN_BASE}/calendar/${year}/${month}?latitude=${latitude}&longitude=${longitude}&${methodParams}&timezonestring=${encodeURIComponent(timezone)}&calendarMethod=MATHEMATICAL&adjustment=${offset}`;
     const res = await cachedFetch(url, 86400);
 
     if (!res.ok) {
@@ -180,8 +182,12 @@ export async function fetchRamadanTimetable(
     _hijriYear: string,
     timezone: string,
     locationLabel: string,
+    calc: CalcOptions = {},
 ): Promise<RamadanTimetable> {
-    const cacheKey = `timetable-${latitude.toFixed(2)},${longitude.toFixed(2)},${timezone}`;
+    const country = resolveCountryCode({ country: calc.country, timezone, latitude, longitude });
+    const methodParams = aladhanParams({ ...calc, country });
+    const offset = hijriOffsetWithAdjust(country, calc.hijriAdjust);
+    const cacheKey = `timetable-${latitude.toFixed(2)},${longitude.toFixed(2)},${timezone},${methodParams},${offset}`;
     const cached = cache.get(cacheKey);
     if (cached && Date.now() < cached.expiresAt) {
         return cached.data;
@@ -191,9 +197,8 @@ export async function fetchRamadanTimetable(
     const monthsToScan = getGregorianMonthsToScan(timezone);
 
     const allDays: AlAdhanCalendarDay[] = [];
-    const offset = getHijriOffsetForTimezone(timezone);
     for (const { year, month } of monthsToScan) {
-        const monthData = await fetchGregorianMonth(year, month, latitude, longitude, timezone, offset);
+        const monthData = await fetchGregorianMonth(year, month, latitude, longitude, timezone, offset, methodParams);
         allDays.push(...monthData);
     }
 
@@ -233,7 +238,8 @@ export async function fetchRamadanTimetable(
         location: locationLabel,
         timezone,
         hijriYear,
-        method: "University of Islamic Sciences, Karachi (Hanafi)",
+        method: methodParams,
+        calc: { ...resolveCalc({ ...calc, country }), ...(country ? { country } : {}) },
     };
 
     cache.set(cacheKey, { data: timetable, expiresAt: Date.now() + CACHE_TTL_MS });

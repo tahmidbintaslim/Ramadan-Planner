@@ -8,6 +8,7 @@ import {
 } from "@/lib/prayer-times";
 import { guarded, isValidDateParam, isValidTimeZoneParam, json } from "./http";
 import { TIMEZONE_DEFAULT_COORDS } from "./timezone-defaults";
+import { CALC_PARAM_KEYS, calcFromSearchParams } from "./calc-params";
 
 export const TIMINGS_CACHE_CONTROL = "public, s-maxage=3600, stale-while-revalidate=300";
 
@@ -25,7 +26,7 @@ export function handleTimings(request: Request): Promise<Response> {
   return guarded("api/timings", () => run(request));
 }
 
-const ALLOWED_PARAMS = new Set(["tz", "date", "lat", "lng", "location"]);
+const ALLOWED_PARAMS = new Set<string>(["tz", "date", "lat", "lng", "location", ...CALC_PARAM_KEYS]);
 
 /** Upstream quota guard: only the app's own params (no cache-busting extras), a date within a year of today. */
 export function timingsParamError(searchParams: URLSearchParams, now = new Date()): string | null {
@@ -33,6 +34,8 @@ export function timingsParamError(searchParams: URLSearchParams, now = new Date(
   const date = searchParams.get("date");
   if (date && Math.abs(Date.parse(date) - now.getTime()) > 400 * 86_400_000) return "Date out of range";
   if ((searchParams.get("location") ?? "").length > 120) return "Invalid location";
+  const calc = calcFromSearchParams(searchParams);
+  if ("error" in calc) return calc.error;
   return null;
 }
 
@@ -73,7 +76,9 @@ async function run(request: Request): Promise<Response> {
   try {
     // About 1 km: enough for prayer times, and nearby callers share one upstream request.
     const round = (n: number) => Math.round(n * 100) / 100;
-    const data = await fetchPrayerTimes(round(lat), round(lng), date, timezone, location);
+    const parsed = calcFromSearchParams(searchParams);
+    const calc = "calc" in parsed ? parsed.calc : {};
+    const data = await fetchPrayerTimes(round(lat), round(lng), date, timezone, location, calc);
     return json(data, { headers: { "Cache-Control": TIMINGS_CACHE_CONTROL } });
   } catch (error) {
     console.error("Prayer times fetch error:", error);

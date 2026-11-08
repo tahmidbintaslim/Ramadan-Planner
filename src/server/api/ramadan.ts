@@ -3,6 +3,7 @@ import "@tanstack/react-start/server-only";
 import { getRamadanStatus } from "@/lib/ramadan-date";
 import { getCountryCodeForCoordinates, getCountryCodeForTimezone } from "@/lib/hijri-offsets";
 import { guarded, isValidDateParam, isValidTimeZoneParam, json } from "./http";
+import { calcFromSearchParams } from "./calc-params";
 
 export const RAMADAN_CACHE_CONTROL = "public, s-maxage=3600, stale-while-revalidate=300";
 
@@ -22,9 +23,12 @@ async function run(request: Request): Promise<Response> {
   if (date !== null && !isValidDateParam(date)) {
     return json({ error: "Invalid date" }, { status: 400 });
   }
+  // method/school are accepted (clients send one param set to every timings route) but do not change the date.
+  const parsed = calcFromSearchParams(searchParams);
+  if ("error" in parsed) return json({ error: parsed.error }, { status: 400 });
   const latParam = searchParams.get("lat");
   const lngParam = searchParams.get("lng");
-  const countryQuery = searchParams.get("cc") ?? undefined;
+  const countryQuery = parsed.calc.country;
   const latitude = latParam ? Number.parseFloat(latParam) : null;
   const longitude = lngParam ? Number.parseFloat(lngParam) : null;
   const hasCoordinates =
@@ -43,6 +47,7 @@ async function run(request: Request): Promise<Response> {
       timezone,
       inferredCountry,
       hasCoordinates ? { latitude, longitude } : undefined,
+      parsed.calc.hijriAdjust ?? 0,
     );
     return json(status, { headers: { "Cache-Control": RAMADAN_CACHE_CONTROL } });
   } catch (error) {
