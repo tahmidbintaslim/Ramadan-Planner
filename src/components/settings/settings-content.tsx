@@ -28,6 +28,7 @@ import { useClockFormat } from "@/hooks/use-clock-format";
 import { formatDateTime } from "@/lib/clock-format";
 import { CLOCK_FORMATS } from "@/lib/clock-format";
 import { formatLocalizedNumber } from "@/lib/locale-number";
+import { LocationPrayerCard } from "./location-prayer-card";
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -363,6 +364,8 @@ export function SettingsContent() {
           </div>
         </CardContent>
       </Card>
+
+      <LocationPrayerCard />
 
       <ClockFormatCard />
 

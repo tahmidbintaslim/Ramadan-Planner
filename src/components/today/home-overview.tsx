@@ -1,4 +1,5 @@
 import { useLocale, useTranslations } from "@/i18n/use-intl";
+import { useCalcSource } from "@/components/prayer/use-calc-source";
 import { Button } from "@/components/ui/button";
 import { PrayerHero } from "@/components/prayer/prayer-hero";
 import { SehriIftarPair } from "@/components/prayer/sehri-iftar-pair";
@@ -99,6 +100,7 @@ export function HomeOverview({
   onRetry,
 }: HomeOverviewProps) {
   const t = useTranslations("home");
+  const calcSource = useCalcSource();
   const tToday = useTranslations("today");
   const tPrayer = useTranslations("prayer");
   const locale = useLocale();
@@ -116,7 +118,7 @@ export function HomeOverview({
   const timeZone = timings?.timezone ?? "Asia/Dhaka";
   const knownSource = !cached && timings?.source;
   const source = knownSource
-    ? t(timings.source === "islamicapi" ? "sourceIslamicApi" : "sourceAladhan")
+    ? (calcSource(timings.calc) ?? t(timings.source === "islamicapi" ? "sourceIslamicApi" : "sourceAladhan"))
     : t("sourceUnverified");
   const sourceLine = knownSource ? tPrayer("source", { source }) : tPrayer("sampleSource", { source });
   const place = districtLabel ?? (timings ? districtOf(timings.location) : undefined);

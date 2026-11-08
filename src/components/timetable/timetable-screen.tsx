@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCalcSource } from "@/components/prayer/use-calc-source";
 import { toast } from "sonner";
 import { useLocale, useTranslations } from "@/i18n/use-intl";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,7 @@ import { ShareIcon } from "@/components/icons/islamic-icons";
 import { Printer } from "lucide-react";
 import { oddNightStartingAfter } from "@/lib/ramadan-nights";
 import { todayISOInZone } from "@/lib/prayer-phase";
-import { readStoredLocation, storedRequestLocation } from "@/lib/user-location";
+import { calcRequestParams, readStoredLocation, storedRequestLocation } from "@/lib/user-location";
 import { districtById, districtName } from "@/lib/districts";
 import type { RamadanTimetable, TimetableDay } from "@/lib/ramadan-timetable";
 import { TimetableRow } from "./timetable-row";
@@ -39,6 +40,7 @@ async function loadTimetable(tz: string, coords?: { lat: number; lng: number }):
     params.set("lat", coarse(coords.lat));
     params.set("lng", coarse(coords.lng));
   }
+  for (const [k, v] of Object.entries(calcRequestParams(readStoredLocation()))) params.set(k, v);
   const res = await fetch(`/api/ramadan-timetable?${params.toString()}`);
   if (!res.ok) throw new Error(`timetable ${res.status}`);
   return res.json();
@@ -48,6 +50,7 @@ export function TimetableScreen() {
   const t = useTranslations("timetablePage");
   const tNav = useTranslations("nav");
   const locale = useLocale() as Locale;
+  const calcSource = useCalcSource();
 
   const [timetable, setTimetable] = useState<RamadanTimetable | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
@@ -81,7 +84,7 @@ export function TimetableScreen() {
     if (!timetable) return null;
     const stored = readStoredLocation();
     const d = districtById(stored?.districtId ?? (stored ? undefined : "dhaka"));
-    return d ? districtName(d, locale) : null;
+    return d ? districtName(d, locale) : (stored?.label ?? null);
   }, [timetable, locale]);
   const days = timetable?.days ?? [];
   const todayISO = useMemo(
@@ -186,7 +189,9 @@ export function TimetableScreen() {
             ))}
           </Card>
 
-          <p className="rp-caption text-rp-muted print:text-black">{t("source")}</p>
+          <p className="rp-caption text-rp-muted print:text-black">
+            {t("source", { source: calcSource(timetable?.calc) ?? calcSource({ method: 1, school: 1 })! })}
+          </p>
 
           <div className="flex gap-3 print:hidden">
             <Button variant="soft" onClick={share}>

@@ -34,6 +34,8 @@ describe("security headers (vercel.json, copied into the Node build)", () => {
       expect(directive("script-src")).toContain(host);
       expect(directive("connect-src")).toContain(host);
     }
+    // The location picker's worldwide city search calls Open-Meteo geocoding from the browser.
+    expect(directive("connect-src")).toContain("https://geocoding-api.open-meteo.com");
     expect(directive("img-src")).toContain("https://img.clerk.com");
     expect(directive("script-src")).toEqual(expect.arrayContaining(["'self'", "https://va.vercel-scripts.com", "https://js.stripe.com"]));
     expect(directive("frame-src")).toEqual(expect.arrayContaining(["https://checkout.stripe.com", "https://js.stripe.com"]));

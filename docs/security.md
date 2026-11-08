@@ -41,7 +41,7 @@ script-src 'self'
 style-src 'self' 'unsafe-inline';                 Clerk and Radix inject inline styles at runtime
 img-src 'self' data: blob: https://img.clerk.com;
 font-src 'self' data:;                            fonts are self-hosted (@fontsource)
-connect-src 'self' https://*.clerk.accounts.dev https://clerk.ramadanplanner.tahmid.space
+connect-src 'self' https://geocoding-api.open-meteo.com https://*.clerk.accounts.dev https://clerk.ramadanplanner.tahmid.space
   https://clerk-telemetry.com https://api.stripe.com;
 media-src 'self' https://*.mp3quran.net https://everyayah.com https://the-quran-project.github.io
   https://github.com https://raw.githubusercontent.com;      Quran audio URLs returned by /api/quran

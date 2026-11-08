@@ -9,9 +9,11 @@ import {
   type KnownTimings,
 } from "@/lib/auto-night";
 import { todayISOInZone } from "@/lib/prayer-phase";
+import { calcRequestParams, readStoredLocation } from "@/lib/user-location";
 
 // Small, once-a-day data the app shell needs: the user's known prayer timings (Auto Night) and the Ramadan day
-// (top bar caption). Both use the device timezone only (no geolocation prompt from the shell) and are cached in
+// (top bar caption). Both use the stored location, else the device timezone (no geolocation prompt from the
+// shell), with the stored country's calculation (shellRequestParams), and are cached in
 // localStorage, so navigation never refetches. Screens that fetch better (location-based) timings call
 // rememberTimings(data, "geo"); the shell re-reads on KNOWN_TIMINGS_EVENT.
 
@@ -24,6 +26,19 @@ function deviceTimeZone(): string {
   } catch {
     return "Asia/Dhaka";
   }
+}
+
+/** The stored location's zone, coordinates and calculation, else just the device zone. */
+function shellRequestParams(date: (tz: string) => string): URLSearchParams {
+  const loc = readStoredLocation();
+  const tz = loc?.tz ?? deviceTimeZone();
+  const p = new URLSearchParams({ tz, date: date(tz) });
+  if (loc) {
+    p.set("lat", loc.lat.toFixed(2));
+    p.set("lng", loc.lng.toFixed(2));
+  }
+  for (const [k, v] of Object.entries(calcRequestParams(loc))) p.set(k, v);
+  return p;
 }
 
 function readRaw(key: string): string | null {
@@ -66,11 +81,12 @@ export function useKnownTimings(enabled: boolean): KnownTimings | null {
 
   useEffect(() => {
     if (!enabled) return;
-    const tz = deviceTimeZone();
     const cached = readKnownTimings();
     if (cached && cached.date === todayISOInZone(new Date(), cached.timezone)) return;
     const controller = new AbortController();
-    fetch(`/api/timings?${new URLSearchParams({ tz, date: todayISOInZone(new Date(), tz) })}`, { signal: controller.signal })
+    const params = shellRequestParams((zone) => todayISOInZone(new Date(), zone));
+    const tz = params.get("tz")!;
+    fetch(`/api/timings?${params}`, { signal: controller.signal })
       .then((res) => (res.ok ? (res.json() as Promise<TimingData>) : null))
       .then((data) => {
         if (data?.prayerTimes) rememberTimings({ prayerTimes: data.prayerTimes, timezone: data.timezone || tz }, "tz");
@@ -95,7 +111,7 @@ export function useRamadanDay(): number | null {
     const current = safeParse(readRaw(RAMADAN_DAY_KEY)) as { date?: string } | null;
     if (current?.date === today) return;
     const controller = new AbortController();
-    fetch(`/api/ramadan?${new URLSearchParams({ tz, date: today })}`, { signal: controller.signal })
+    fetch(`/api/ramadan?${shellRequestParams((zone) => todayISOInZone(new Date(), zone))}`, { signal: controller.signal })
       .then((res) => (res.ok ? (res.json() as Promise<{ phase?: string; currentDay?: number | null }>) : null))
       .then((data) => {
         if (!data) return;

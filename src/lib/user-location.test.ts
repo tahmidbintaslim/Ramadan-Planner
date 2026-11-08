@@ -3,7 +3,11 @@ import { afterEach, describe, expect, it } from "vitest";
 import { districtById } from "./districts";
 import {
   LOCATION_STORAGE_KEY,
+  calcRequestParams,
   coarse,
+  locationFromCity,
+  readHijriAdjust,
+  writeHijriAdjust,
   defaultLocation,
   gateDecision,
   isValidTimeZone,
@@ -24,7 +28,8 @@ afterEach(() => localStorage.clear());
 describe("building a location", () => {
   it("a picked district uses its coordinates and Bangladesh's zone", () => {
     expect(locationFromDistrict(districtById("sylhet")!, "district", NOW)).toEqual({
-      v: 1, kind: "district", districtId: "sylhet", lat: 24.9, lng: 91.87, tz: "Asia/Dhaka", savedAt: NOW.toISOString(),
+      v: 2, kind: "district", districtId: "sylhet", lat: 24.9, lng: 91.87, tz: "Asia/Dhaka", country: "BD", method: 1, school: 1,
+      savedAt: NOW.toISOString(),
     });
   });
 
@@ -67,7 +72,8 @@ describe("storage", () => {
   it("rejects malformed values", () => {
     for (const raw of [
       "", "{", "null", "[]",
-      JSON.stringify({ v: 2, kind: "district", districtId: "dhaka", lat: 1, lng: 1, tz: "Asia/Dhaka" }),
+      JSON.stringify({ v: 3, kind: "district", districtId: "dhaka", lat: 1, lng: 1, tz: "Asia/Dhaka" }),
+      JSON.stringify({ v: 1, kind: "city", lat: 1, lng: 1, tz: "Asia/Dhaka", label: "X" }),
       JSON.stringify({ v: 1, kind: "district", districtId: "atlantis", lat: 1, lng: 1, tz: "Asia/Dhaka" }),
       JSON.stringify({ v: 1, kind: "district", lat: 1, lng: 1, tz: "Asia/Dhaka" }),
       JSON.stringify({ v: 1, kind: "geo", lat: 200, lng: 1, tz: "Asia/Dhaka" }),
@@ -79,6 +85,45 @@ describe("storage", () => {
     // Over-precise stored coordinates are coarsened on read.
     expect(parseStoredLocation(JSON.stringify({ v: 1, kind: "geo", lat: 51.50735, lng: -0.12776, tz: "Europe/London" })))
       .toMatchObject({ lat: 51.51, lng: -0.13 });
+  });
+});
+
+describe("v1 -> v2 migration and calculation params", () => {
+  it("migrates a v1 district to BD with Karachi + Hanafi", () => {
+    const raw = JSON.stringify({ v: 1, kind: "district", districtId: "sylhet", lat: 24.9, lng: 91.87, tz: "Asia/Dhaka", savedAt: "x" });
+    expect(parseStoredLocation(raw)).toEqual({
+      v: 2, kind: "district", districtId: "sylhet", lat: 24.9, lng: 91.87, tz: "Asia/Dhaka", country: "BD", method: 1, school: 1, savedAt: "x",
+    });
+  });
+
+  it("migrates a v1 device position abroad from its zone, labelled with the zone's city", () => {
+    const loc = parseStoredLocation(JSON.stringify({ v: 1, kind: "geo", lat: 41.88, lng: -87.63, tz: "America/Chicago" }));
+    expect(loc).toMatchObject({ v: 2, country: "US", method: 2, school: 0, label: "Chicago" });
+    const london = parseStoredLocation(JSON.stringify({ v: 1, kind: "geo", lat: 51.5, lng: -0.13, tz: "Europe/London" }));
+    expect(london).toMatchObject({ country: "GB", method: 3, school: 0 });
+  });
+
+  it("keeps a v2 user's own method and school, and drops invalid ones", () => {
+    const base = { v: 2, kind: "city", lat: 13.75, lng: 100.5, tz: "Asia/Bangkok", label: "Bangkok", country: "TH" };
+    expect(parseStoredLocation(JSON.stringify({ ...base, method: 1, school: 1 }))).toMatchObject({ method: 1, school: 1 });
+    expect(parseStoredLocation(JSON.stringify({ ...base, method: 99, school: 7 }))).toMatchObject({ method: 3, school: 0 });
+  });
+
+  it("a searched city stores 2-decimal coordinates, zone, label, country and its default method", () => {
+    expect(locationFromCity({ name: "Chicago", country_code: "US", latitude: 41.85003, longitude: -87.65005, timezone: "America/Chicago" }, NOW)).toEqual({
+      v: 2, kind: "city", lat: 41.85, lng: -87.65, tz: "America/Chicago", label: "Chicago", country: "US", method: 2, school: 0, savedAt: NOW.toISOString(),
+    });
+    expect(locationFromCity({ name: "X", latitude: 1, longitude: 1, timezone: "Not/AZone" })).toBeNull();
+  });
+
+  it("request params: Bangladesh sends Karachi + Hanafi; the Hijri adjustment only when set", () => {
+    const bd = locationFromDistrict(districtById("dhaka")!, "district", NOW);
+    expect(calcRequestParams(bd, 0)).toEqual({ cc: "BD", method: "1", school: "1" });
+    expect(calcRequestParams(null, -1)).toEqual({ hadj: "-1" });
+    writeHijriAdjust(2);
+    expect(readHijriAdjust()).toBe(2);
+    writeHijriAdjust(0);
+    expect(readHijriAdjust()).toBe(0);
   });
 });
 

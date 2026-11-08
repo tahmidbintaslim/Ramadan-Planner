@@ -1,25 +1,34 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import type { RamadanTimetable } from "@/lib/ramadan-timetable";
 import { useLocalTodayISO } from "@/hooks/use-local-day";
+import { calcRequestParams, readStoredLocation } from "@/lib/user-location";
 import { paraFromText, quranStreak } from "./plan-logic";
 
 // Data the plan screen reads from elsewhere in the app: the Ramadan timetable (night times and odd-night rows),
 // and the Quran tracker's progress (para and streak, from its localStorage entries).
 
-/** The Ramadan timetable for the device time zone (same public API as the timetable screen). */
+/** The Ramadan timetable for the stored location, else the device time zone (same public API as the timetable screen). */
 export function usePlanTimetable(enabled: boolean): { timetable: RamadanTimetable | null; failed: boolean } {
   const [timetable, setTimetable] = useState<RamadanTimetable | null>(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => {
     if (!enabled) return;
     const controller = new AbortController();
-    let tz = "Asia/Dhaka";
-    try {
-      tz = Intl.DateTimeFormat().resolvedOptions().timeZone || tz;
-    } catch {
-      // Keep the default zone.
+    const loc = readStoredLocation();
+    let tz = loc?.tz ?? "Asia/Dhaka";
+    if (!loc) {
+      try {
+        tz = Intl.DateTimeFormat().resolvedOptions().timeZone || tz;
+      } catch {
+        // Keep the default zone.
+      }
     }
-    fetch(`/api/ramadan-timetable?${new URLSearchParams({ tz })}`, { signal: controller.signal })
+    const params = new URLSearchParams({ tz, ...calcRequestParams(loc) });
+    if (loc) {
+      params.set("lat", loc.lat.toFixed(2));
+      params.set("lng", loc.lng.toFixed(2));
+    }
+    fetch(`/api/ramadan-timetable?${params}`, { signal: controller.signal })
       .then((res) => (res.ok ? (res.json() as Promise<RamadanTimetable>) : Promise.reject(new Error(String(res.status)))))
       .then((data) => {
         if (Array.isArray(data?.days)) setTimetable(data);
