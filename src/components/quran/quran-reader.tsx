@@ -18,10 +18,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   Play,
+  SkipBack,
+  SkipForward,
   Pause,
-  Square,
-  Volume2,
-  VolumeX,
   ArrowLeft,
   ChevronLeft,
   ChevronRight,
@@ -69,7 +68,6 @@ export function QuranReader({ surahNumber, initialText = null }: QuranReaderProp
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [isAudioPaused, setIsAudioPaused] = useState(false);
-  const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [audioAyah, setAudioAyah] = useState<number | null>(null);
   // Reciter selection
   const [reciters, setReciters] = useState<ReciterInfo[]>([]);
@@ -231,7 +229,6 @@ export function QuranReader({ surahNumber, initialText = null }: QuranReaderProp
       // Prefer originalUrl, fall back to url
       const audioUrl = audioEntry.originalUrl || audioEntry.url;
       const audio = new Audio(audioUrl);
-      audio.muted = isAudioMuted;
       audioRef.current = audio;
       setAudioAyah(ayah.ayahNo);
       setIsPlayingAudio(true);
@@ -274,18 +271,8 @@ export function QuranReader({ surahNumber, initialText = null }: QuranReaderProp
 
       void audio.play();
     },
-    [surah, scrollToAyah, selectedReciter, isAudioMuted],
+    [surah, scrollToAyah, selectedReciter],
   );
-
-  const stopAudio = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-    }
-    setIsPlayingAudio(false);
-    setIsAudioPaused(false);
-    setAudioAyah(null);
-  }, []);
 
   const pauseAudio = useCallback(() => {
     if (audioRef.current && !audioRef.current.paused) {
@@ -301,16 +288,6 @@ export function QuranReader({ surahNumber, initialText = null }: QuranReaderProp
         // Ignore autoplay/security failures
       }
     }
-  }, []);
-
-  const toggleAudioMute = useCallback(() => {
-    setIsAudioMuted((prev) => {
-      const next = !prev;
-      if (audioRef.current) {
-        audioRef.current.muted = next;
-      }
-      return next;
-    });
   }, []);
 
   const toggleAyahPlayback = useCallback(
@@ -377,6 +354,8 @@ export function QuranReader({ surahNumber, initialText = null }: QuranReaderProp
       </div>
     );
   }
+
+  const audioIndex = audioAyah === null ? -1 : surah.ayahs.findIndex((a) => a.ayahNo === audioAyah);
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto pb-32 regular:pb-0">
@@ -455,124 +434,66 @@ export function QuranReader({ surahNumber, initialText = null }: QuranReaderProp
         <div className="w-10" />
       </div>
 
-      {/* Audio controls (mobile-friendly) */}
+      {/* Mini-player (Figma page 12, B1/B2): position, surah · reciter, previous / play-pause / next. */}
       <div data-quran-audio-bar="" className={AUDIO_BAR_CLASS}>
-        <CardContent className="mx-auto w-full max-w-3xl py-3">
-          <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
-            <div className="flex items-center gap-2">
-              {!isPlayingAudio && !isAudioPaused ? (
-                <Button
-                  size="sm"
-                  className="sm:inline-flex w-full sm:w-auto"
-                  onClick={() => {
-                    if (surah.ayahs.length > 0) {
-                      playAudioAyah(surah.ayahs[0]);
-                    }
-                  }}
-                  aria-label={t("listenRecitation")}
-                  title={t("listenRecitation")}
-                >
-                  <Play className="h-4 w-4 mr-1.5" />
-                  {t("listenRecitation")}
-                </Button>
-              ) : (
-                <>
-                  {isPlayingAudio ? (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={pauseAudio}
-                      className="sm:inline-flex"
-                      aria-label={t("pause")}
-                      title={t("pause")}
-                    >
-                      <Pause className="h-4 w-4 mr-1.5" />
-                      {t("pause")}
-                    </Button>
-                  ) : (
-                    <Button
-                      size="sm"
-                      onClick={resumeAudio}
-                      className="sm:inline-flex"
-                      aria-label={t("resume")}
-                      title={t("resume")}
-                    >
-                      <Play className="h-4 w-4 mr-1.5" />
-                      {t("resume")}
-                    </Button>
-                  )}
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={stopAudio}
-                    className="sm:inline-flex"
-                    aria-label={t("stopAudio")}
-                    title={t("stopAudio")}
-                  >
-                    <Square className="h-4 w-4 mr-1.5" />
-                    {t("stopAudio")}
-                  </Button>
-                </>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Separator
-                orientation="vertical"
-                className="h-6 hidden sm:block"
-              />
-
-              <Button
-                size="icon"
-                variant="outline"
-                onClick={toggleAudioMute}
-                aria-pressed={isAudioMuted}
-                title={isAudioMuted ? t("unmute") : t("mute")}
-                className="h-10 w-10 sm:h-7 sm:w-7"
-              >
-                {isAudioMuted ? (
-                  <VolumeX className="h-5 w-5" />
-                ) : (
-                  <Volume2 className="h-5 w-5" />
-                )}
-                <span className="sr-only">
-                  {isAudioMuted ? t("unmute") : t("mute")}
-                </span>
-              </Button>
-            </div>
+        {/* Progress through the surah, as a hairline on the bar's top edge. */}
+        <div aria-hidden className="h-0.5 bg-rp-rule">
+          <div
+            className="h-full bg-rp-accent transition-[width] duration-300"
+            style={{ width: `${((audioIndex + 1) / surah.ayahs.length) * 100}%` }}
+          />
+        </div>
+        <div className="mx-auto flex w-full max-w-3xl items-center gap-3 px-4 py-2">
+          <div className="min-w-0 flex-1" aria-live="polite">
+            <p className="rp-subhead truncate font-semibold text-rp-ink">
+              {audioAyah === null
+                ? t("listenRecitation")
+                : t("ayahOf", {
+                    n: formatLocalizedNumber(audioAyah, locale),
+                    total: formatLocalizedNumber(surah.ayahs.length, locale),
+                  })}
+            </p>
+            <p className="rp-footnote truncate text-rp-muted">
+              {showBengaliName ? surah.nameBengali || surah.nameEnglish : surah.nameEnglish} ·{" "}
+              {reciters.find((r) => String(r.id) === selectedReciter)?.name ?? "Mishary Rashid Al Afasy"}
+            </p>
           </div>
-
-          {(audioAyah !== null || isAudioPaused) && (
-            <div
-              className="mt-2 text-center sm:text-left text-xs text-muted-foreground overflow-hidden"
-              aria-live="polite"
-            >
-              {isPlayingAudio ? (
-                <>
-                  <span className="font-medium mr-1">
-                    {t("nowPlaying")}:
-                  </span>
-                  <span className="inline-block max-w-[60%] sm:max-w-[70%] align-middle overflow-hidden truncate">
-                    {formatLocalizedNumber(audioAyah ?? 0, locale)} —{" "}
-                    {reciters.find((r) => String(r.id) === selectedReciter)
-                      ?.name ?? "Mishary Rashid Al Afasy"}
-                  </span>
-                </>
-              ) : (
-                <>
-                  <span className="font-medium mr-1">
-                    {t("paused")}:
-                  </span>
-                  <span className="inline-block max-w-[60%] sm:max-w-[70%] align-middle overflow-hidden truncate">
-                    {formatLocalizedNumber(audioAyah ?? 0, locale)} —{" "}
-                    {reciters.find((r) => String(r.id) === selectedReciter)
-                      ?.name ?? "Mishary Rashid Al Afasy"}
-                  </span>
-                </>
-              )}
-            </div>
-          )}
-        </CardContent>
+          <Button
+            size="icon"
+            variant="ghost"
+            disabled={audioIndex <= 0}
+            onClick={() => playAudioAyah(surah.ayahs[audioIndex - 1])}
+            aria-label={t("previousAyah")}
+            title={t("previousAyah")}
+            className="size-11"
+          >
+            <SkipBack className="size-6" aria-hidden />
+          </Button>
+          <Button
+            size="icon"
+            onClick={() => {
+              if (isPlayingAudio) pauseAudio();
+              else if (isAudioPaused) void resumeAudio();
+              else playAudioAyah(surah.ayahs[Math.max(audioIndex, 0)]);
+            }}
+            aria-label={isPlayingAudio ? t("pause") : t("listenRecitation")}
+            title={isPlayingAudio ? t("pause") : t("listenRecitation")}
+            className="size-11 rounded-rp-full"
+          >
+            {isPlayingAudio ? <Pause className="size-6" aria-hidden /> : <Play className="size-6" aria-hidden />}
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            disabled={audioIndex >= surah.ayahs.length - 1}
+            onClick={() => playAudioAyah(surah.ayahs[audioIndex + 1])}
+            aria-label={t("nextAyah")}
+            title={t("nextAyah")}
+            className="size-11"
+          >
+            <SkipForward className="size-6" aria-hidden />
+          </Button>
+        </div>
       </div>
 
       {/* Bismillah (for all surahs except At-Tawba #9) */}

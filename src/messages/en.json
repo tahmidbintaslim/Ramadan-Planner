@@ -800,7 +800,10 @@
         },
         "soon": "Soon",
         "loading": "Loading",
-        "surahFallback": "Surah {n}"
+        "surahFallback": "Surah {n}",
+        "ayahOf": "Ayah {n} / {total}",
+        "previousAyah": "Previous ayah",
+        "nextAyah": "Next ayah"
     },
     "hadith": {
         "title": "Hadith",

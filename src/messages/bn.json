@@ -800,7 +800,10 @@
         },
         "soon": "শিগগিরই",
         "loading": "লোড হচ্ছে",
-        "surahFallback": "সূরা {n}"
+        "surahFallback": "সূরা {n}",
+        "ayahOf": "আয়াত {n} / {total}",
+        "previousAyah": "আগের আয়াত",
+        "nextAyah": "পরের আয়াত"
     },
     "hadith": {
         "title": "হাদিস",
