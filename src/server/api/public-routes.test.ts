@@ -168,6 +168,17 @@ describe("GET /api/quran", () => {
     expect(m.fetchSurah).toHaveBeenCalledWith(2);
   });
 
+  it("audioReciter returns only that reciter's link per ayah, falling back to the default reciter", async () => {
+    const e = (url: string) => ({ reciter: "R", url, originalUrl: url });
+    m.fetchSurah.mockResolvedValue({ surahNo: 1, ayahs: [
+      { ayahNo: 1, audio: { "1": e("a1"), "5": e("b1") } },
+      { ayahNo: 2, audio: { "1": e("a2") } },
+    ] });
+    const res = await handleQuran(req("/api/quran?surah=1&audioReciter=5"));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ "1": e("b1"), "2": e("a2") });
+  });
+
   it("400 for an out-of-range surah (no Cache-Control)", async () => {
     for (const n of ["0", "115", "abc"]) {
       const res = await handleQuran(req(`/api/quran?surah=${n}`));

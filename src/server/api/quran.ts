@@ -57,6 +57,15 @@ async function run(request: Request): Promise<Response> {
       if (!data) {
         return unavailable("Surah is temporarily unavailable");
       }
+      // GET /api/quran?surah=N&audioReciter=R → only that reciter's audio per ayah ({ayahNo: entry}): the page
+      // already has the text from the server render, so it needs a few KB of links, not the whole surah again.
+      const reciter = searchParams.get("audioReciter");
+      if (reciter !== null) {
+        const audio = Object.fromEntries(
+          data.ayahs.map((a) => [a.ayahNo, a.audio[reciter] ?? a.audio["1"] ?? Object.values(a.audio)[0] ?? null]),
+        );
+        return json(audio, { headers: { "Cache-Control": QURAN_CACHE_LONG } });
+      }
       return json(data, { headers: { "Cache-Control": QURAN_CACHE_LONG } });
     }
 

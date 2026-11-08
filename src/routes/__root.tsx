@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router";
 import { ClerkProvider } from "@clerk/tanstack-react-start";
 import { Analytics } from "@vercel/analytics/react";
@@ -57,6 +57,14 @@ export const Route = createRootRoute({
   notFoundComponent: NotFound,
 });
 
+/** The offline worker for every visitor (it caches only static, user-independent files; see public/sw.js). */
+function ServiceWorkerRegistration() {
+  useEffect(() => {
+    if (import.meta.env.PROD && "serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
+  }, []);
+  return null;
+}
+
 function RootDocument({ children }: { children: ReactNode }) {
   const { locale, messages } = Route.useLoaderData();
   return (
@@ -77,6 +85,7 @@ function RootDocument({ children }: { children: ReactNode }) {
             </ThemeProvider>
           </AppIntlProvider>
         </ClerkProvider>
+        <ServiceWorkerRegistration />
         <Analytics />
         <Scripts />
       </body>
