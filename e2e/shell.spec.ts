@@ -75,6 +75,8 @@ test.describe("mobile shell", () => {
       const [b, n] = [await bar.boundingBox(), await nav.boundingBox()];
       expect(b && n).toBeTruthy();
       expect(b!.y + b!.height).toBeLessThanOrEqual(n!.y);
+      // Docked: no gap between the bar and the tab bar for text to show through.
+      expect(b!.y + b!.height).toBeGreaterThanOrEqual(n!.y - 1);
       // No floating accessibility button inside the shell any more (it lives in the More sheet), so the bar only
       // has to stay inside the viewport.
       expect(b!.x + b!.width).toBeLessThanOrEqual(width);

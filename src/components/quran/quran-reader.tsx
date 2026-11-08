@@ -46,7 +46,7 @@ const DEFAULT_RECITER = "1";
 // never floats over ayah text. Regular widths (side nav, no tab bar): an in-flow card. The wrapper's pb-32 keeps the
 // last ayahs scrollable clear of the docked bar.
 export const AUDIO_BAR_CLASS =
-  "fixed inset-x-0 bottom-[calc(3.5rem+1px+env(safe-area-inset-bottom))] z-30 rounded-none border-x-0 border-b-0 border-t border-rp-rule bg-rp-bar shadow-none regular:static regular:rounded-rp-lg regular:border regular:bg-rp-surface";
+  "fixed inset-x-0 bottom-[calc(3.5rem+1px+env(safe-area-inset-bottom))] z-30 mb-0 border-t border-rp-rule bg-rp-bar text-rp-ink regular:static regular:rounded-rp-lg regular:border-0 regular:bg-rp-surface regular:shadow-rp-soft";
 
 export function QuranReader({ surahNumber, initialText = null }: QuranReaderProps) {
   const t = useTranslations("quranReader");
@@ -456,7 +456,7 @@ export function QuranReader({ surahNumber, initialText = null }: QuranReaderProp
       </div>
 
       {/* Audio controls (mobile-friendly) */}
-      <Card data-quran-audio-bar="" className={AUDIO_BAR_CLASS}>
+      <div data-quran-audio-bar="" className={AUDIO_BAR_CLASS}>
         <CardContent className="mx-auto w-full max-w-3xl py-3">
           <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
             <div className="flex items-center gap-2">
@@ -573,7 +573,7 @@ export function QuranReader({ surahNumber, initialText = null }: QuranReaderProp
             </div>
           )}
         </CardContent>
-      </Card>
+      </div>
 
       {/* Bismillah (for all surahs except At-Tawba #9) */}
       {surahNumber !== 9 && surahNumber !== 1 && (
