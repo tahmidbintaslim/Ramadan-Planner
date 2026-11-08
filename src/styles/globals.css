@@ -588,3 +588,120 @@
     padding: 0 !important;
   }
 }
+
+/* First-run onboarding motion (Figma page 14, motion spec): motion/in 350 ms cubic-bezier(.05,.7,.1,1), motion/out
+   200 ms cubic-bezier(.3,0,1,1), logo 600 ms. Reduced motion: a 200 ms cross-fade only, nothing moves or scales. */
+:root {
+  --rp-wt-muted: #9DB8B1;
+  --rp-ease-in: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --rp-ease-out: cubic-bezier(0.3, 0, 1, 1);
+}
+.dark {
+  --rp-wt-muted: #4F7F77;
+}
+.rp-mark-animate .rp-mark-draw {
+  stroke-dasharray: 1;
+  animation: rp-mark-draw 450ms ease-out both;
+}
+.rp-mark-animate :is(.rp-mark-crescent, .rp-mark-star) {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.rp-mark-animate .rp-mark-crescent {
+  animation: rp-mark-rock 600ms both;
+}
+.rp-mark-animate .rp-mark-star {
+  animation: rp-mark-star 600ms both;
+}
+@keyframes rp-mark-draw {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+/* 0–250 ms anticipation (ease-out), 250–600 ms settle (the in curve). */
+@keyframes rp-mark-rock {
+  0% { transform: rotate(0deg); animation-timing-function: ease-out; }
+  42% { transform: rotate(14deg); animation-timing-function: var(--rp-ease-in); }
+  100% { transform: rotate(0deg); }
+}
+@keyframes rp-mark-star {
+  0% { transform: translateY(0) rotate(0deg); opacity: 0; animation-timing-function: ease-out; }
+  42% { transform: translateY(-2.2px) rotate(-24deg); opacity: 1; animation-timing-function: var(--rp-ease-in); }
+  100% { transform: translateY(0) rotate(0deg); opacity: 1; }
+}
+@keyframes rp-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes rp-wt-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+.rp-wt-enter {
+  animation: rp-wt-in 350ms var(--rp-ease-in) both;
+}
+.rp-wt-leave {
+  opacity: 0;
+  transition: opacity 200ms var(--rp-ease-out);
+}
+.rp-wt-scroller {
+  scrollbar-width: none;
+}
+.rp-wt-scroller::-webkit-scrollbar {
+  display: none;
+}
+/* Next/swipe: the slide's illustration and text dissolve in place while the track moves. */
+.rp-wt-content {
+  transition: opacity 350ms var(--rp-ease-in);
+}
+[data-active="false"] > .rp-wt-content {
+  opacity: 0.3;
+  transition: opacity 200ms var(--rp-ease-out);
+}
+.rp-wt-dot {
+  transition: width 350ms var(--rp-ease-in), background-color 350ms var(--rp-ease-in);
+}
+/* Idle, once per arrival: the sun climbs the arc to the next prayer; the bell rocks ±8° twice. */
+.rp-wt-sun,
+.rp-wt-bell {
+  transform-box: view-box;
+}
+.rp-wt-sun {
+  transform-origin: 130px 150px;
+}
+.rp-wt-bell {
+  transform-origin: 104px 24px;
+}
+[data-active="true"] .rp-wt-sun {
+  animation: rp-wt-sun 600ms var(--rp-ease-in) 150ms both;
+}
+[data-active="true"] .rp-wt-bell {
+  animation: rp-wt-bell 600ms ease-in-out 150ms both;
+}
+@keyframes rp-wt-sun {
+  from { transform: rotate(-90deg); }
+  to { transform: rotate(0deg); }
+}
+@keyframes rp-wt-bell {
+  0%, 100% { transform: rotate(0deg); }
+  20%, 60% { transform: rotate(8deg); }
+  40%, 80% { transform: rotate(-8deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rp-mark-animate {
+    animation: rp-fade-in 200ms linear both;
+  }
+  .rp-mark-animate :is(.rp-mark-draw, .rp-mark-crescent, .rp-mark-star),
+  [data-active="true"] :is(.rp-wt-sun, .rp-wt-bell) {
+    animation: none;
+  }
+  .rp-wt-enter {
+    animation: rp-fade-in 200ms linear both;
+  }
+  .rp-wt-content,
+  [data-active="false"] > .rp-wt-content {
+    transition: opacity 200ms linear;
+  }
+  .rp-wt-dot {
+    transition: none;
+  }
+}

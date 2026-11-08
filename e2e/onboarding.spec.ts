@@ -30,8 +30,13 @@ const hero = (page: Page) => page.getByRole("region", { name: /নামাজ�
 const place = (page: Page) => page.getByTestId("today-location");
 const CONFIRM = "আমার সময় দেখুন";
 
-/** The welcome flow starts with the language step; Continue leads to the district. */
+const SKIP = "এড়িয়ে যান";
+const carousel = (page: Page) => page.getByRole("region", { name: "রমজান প্ল্যানার পরিচিতি" });
+
+/** A first visit starts with the launch logo and the walkthrough; Skip leads to the language step, Continue to
+ * the district. */
 async function toLocationStep(page: Page) {
+  await page.getByRole("button", { name: SKIP }).click();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("ভাষা বেছে নিন");
   await page.getByRole("button", { name: "চালিয়ে যান" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("আপনার জেলা বেছে নিন");
@@ -70,6 +75,50 @@ test.describe("first run", () => {
     await expect(place(page)).toHaveText("সিলেট");
     expect(appErrors()).toEqual([]);
     expect(consoleEntries.filter((e) => HYDRATION.test(e.text))).toEqual([]);
+  });
+
+  test("walkthrough: launch logo, four cards by Next (and the arrow keys), then the language step; shown once", async ({ page, appErrors }) => {
+    await mockApis(page);
+    const res = await visit(page, "/welcome");
+    // The server sends the launch screen (the animated logo), so it shows before the app hydrates.
+    expect(await res!.text()).toContain("rp-mark-animate");
+    const region = carousel(page);
+    await expect(region).toHaveAttribute("aria-roledescription", "carousel");
+    const title = region.getByRole("heading", { level: 2 });
+    await expect(title).toHaveText("সেহরি থেকে ইফতার, প্রতিদিনের সঙ্গী");
+    // Card 1 shows today's real times (the mocked answer), never sample ones.
+    await expect(region).toContainText("সেহরি শেষ · ভোর ৪:৫৭");
+    await expect(region).toContainText("ইফতার · সন্ধ্যা ৫:৫৮");
+    await expect(region.getByRole("group", { name: "৪টির মধ্যে ১" })).toHaveAttribute("aria-roledescription", "slide");
+
+    await page.getByRole("button", { name: "পরবর্তী" }).click();
+    await expect(title).toHaveText("প্রতিদিনের আমল, কোনো চাপ ছাড়া");
+    await expect(region.locator("[aria-live=polite]")).toHaveText("৪টির মধ্যে ২: প্রতিদিনের আমল, কোনো চাপ ছাড়া");
+    await page.keyboard.press("ArrowRight");
+    await expect(title).toHaveText("কুরআন ও দোয়া, অফলাইনেও");
+    await page.keyboard.press("ArrowLeft");
+    await expect(title).toHaveText("প্রতিদিনের আমল, কোনো চাপ ছাড়া");
+    await page.keyboard.press("End");
+    await expect(title).toHaveText("আলতো করে মনে করিয়ে দেবে");
+    await expect(page.getByRole("button", { name: SKIP })).toBeHidden();
+
+    await page.getByRole("button", { name: "শুরু করুন", exact: true }).click();
+    const heading = page.getByRole("heading", { level: 1 });
+    await expect(heading).toHaveText("ভাষা বেছে নিন");
+    await expect(heading).toBeFocused();
+    expect(await page.evaluate(() => localStorage.getItem("rp_walkthrough_seen"))).toBe("1");
+
+    await page.reload({ waitUntil: "load" });
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("ভাষা বেছে নিন");
+    await expect(carousel(page)).toHaveCount(0);
+    expect(appErrors()).toEqual([]);
+  });
+
+  test("Skip leaves the walkthrough at once and remembers it", async ({ page }) => {
+    await mockApis(page);
+    await visit(page, "/welcome");
+    await toLocationStep(page);
+    expect(await page.evaluate(() => localStorage.getItem("rp_walkthrough_seen"))).toBe("1");
   });
 
   test("type a district (old spelling), choose it from the list", async ({ page }) => {
@@ -206,11 +255,24 @@ test("Today's location button opens the location sheet; Done saves the district 
   await expect(place(page)).toHaveText("সিলেট");
 });
 
+test.describe("walkthrough already seen", () => {
+  test.use({ onboarded: false });
+
+  test("a device that has seen the walkthrough opens /welcome at the language step", async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem("rp_walkthrough_seen", "1"));
+    await mockApis(page);
+    await visit(page, "/welcome");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("ভাষা বেছে নিন");
+    await expect(page.getByRole("button", { name: SKIP })).toHaveCount(0);
+  });
+});
+
 test("a returning guest goes straight to /today, and the landing CTA points there", async ({ page }) => {
   await mockApis(page);
   await visit(page, "/today");
   await expect(page).toHaveURL(/\/today$/);
   await expect(hero(page)).toBeVisible();
+  await expect(carousel(page)).toHaveCount(0);
   await visit(page, "/");
   await expect(page.getByTestId("landing-start")).toHaveAttribute("href", "/today");
 });

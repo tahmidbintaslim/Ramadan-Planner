@@ -1126,7 +1126,25 @@
         "sectionCities": "Cities worldwide",
         "citySearching": "Searching cities…",
         "cityNone": "No city found by that name.",
-        "cityError": "Couldn't search cities right now. Check your connection and try again."
+        "cityError": "Couldn't search cities right now. Check your connection and try again.",
+        "walkthrough": {
+            "label": "{appName} introduction",
+            "skip": "Skip",
+            "next": "Next",
+            "getStarted": "Get started",
+            "slideOf": "{current} of {total}",
+            "announce": "{current} of {total}: {title}",
+            "sehriEnds": "Sehri ends · {time}",
+            "iftarAt": "Iftar · {time}",
+            "s1Title": "From sehri to iftar, by your side every day",
+            "s1Body": "Open it and see the next prayer, when sehri ends and when iftar is, with a countdown.",
+            "s2Title": "Daily amal, without pressure",
+            "s2Body": "Daily amal in small steps. Whatever you manage, Alhamdulillah.",
+            "s3Title": "Quran and duas, offline too",
+            "s3Body": "All 114 surahs, and the duas for sehri, iftar and Laylatul Qadr. Surahs you've opened work without internet.",
+            "s4Title": "Gentle reminders",
+            "s4Body": "A gentle nudge before sehri ends and before each prayer, only the ones you turn on."
+        }
     },
     "comingSoon": {
         "label": "Coming soon",
