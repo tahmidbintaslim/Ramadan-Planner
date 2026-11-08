@@ -44,6 +44,7 @@ export function RemindersContent() {
   const t = useTranslations("reminders");
   const tCommon = useTranslations("common");
   const tSalah = useTranslations("salah");
+  const tNav = useTranslations("nav");
   const locale = useLocale();
   const num = (n: number) => formatLocalizedNumber(n, locale);
   const { isGuest, loading, user } = useAuth();
@@ -228,7 +229,7 @@ export function RemindersContent() {
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
-      <h1 className="rp-large-title text-rp-ink">{t("title")}</h1>
+      <h1 className="rp-large-title text-rp-ink">{tNav("remindersShort")}</h1>
 
       {!loading && isGuest && (
         <p className="rp-small rounded-rp-md bg-rp-accent-tint px-4 py-3 text-rp-ink">{t("guestLocalNotice")}</p>
