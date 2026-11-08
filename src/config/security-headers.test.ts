@@ -18,6 +18,8 @@ describe("security headers (vercel.json, copied into the Node build)", () => {
     expect(headers["Referrer-Policy"]).toBe("strict-origin-when-cross-origin");
     expect(headers["Permissions-Policy"]).toBe("geolocation=(self), camera=(), microphone=()");
     expect(headers["X-Frame-Options"]).toBe("DENY");
+    expect(headers["Strict-Transport-Security"]).toContain("includeSubDomains");
+    expect(headers["Cross-Origin-Opener-Policy"]).toBe("same-origin-allow-popups");
   });
 
   it("ships the CSP as Report-Only (it cannot break production yet)", () => {

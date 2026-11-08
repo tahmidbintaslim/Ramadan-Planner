@@ -117,99 +117,106 @@ export async function dispatchDueReminders(now: Date) {
   const invalidSubscriptions = new Set<string>();
 
   for (const user of users) {
-    if (user.pushSubscriptions.length === 0) continue;
+    // One user's bad data (e.g. an invalid stored time zone) must never abort the run for everyone else.
+    try {
+      if (user.pushSubscriptions.length === 0) continue;
 
-    const pushRules = user.reminderRules.filter((rule) => {
-      const channels = Array.isArray(rule.channels) ? rule.channels : [];
-      return channels.includes("push");
-    });
-    if (pushRules.length === 0) continue;
+      const pushRules = user.reminderRules.filter((rule) => {
+        const channels = Array.isArray(rule.channels) ? rule.channels : [];
+        return channels.includes("push");
+      });
+      if (pushRules.length === 0) continue;
 
-    // Usually one local date; two just after local midnight. Each date gets
-    // its own prayer times (see dueOccurrenceForRule).
-    const days: DayPrayerTimes[] = [];
-    for (const day of dueLocalDates(user.timezone, now)) {
-      try {
-        const timings = await fetchPrayerTimes(
-          user.latitude,
-          user.longitude,
-          toAlAdhanDate(day),
-          user.timezone,
-          user.locationLabel,
-        );
-        days.push({ day, prayerTimes: timings.prayerTimes });
-      } catch {
-        // One timing lookup failing must not block everyone else.
-      }
-    }
-    if (days.length === 0) {
-      skippedUsers += 1;
-      continue;
-    }
-
-    for (const rule of pushRules) {
-      const due = dueOccurrenceForRule(rule, days, user.timezone, now);
-      if (!due) continue;
-      const { scheduledAt } = due;
-
-      checked += 1;
-
-      for (const subscription of user.pushSubscriptions) {
-        // Re-validate before any outbound request: rows stored before the allowlist existed (or written by
-        // another path) must not make the server POST to an arbitrary host (SSRF).
-        const pushKeys = validPushKeys(subscription.keys);
-        if (!isAllowedPushEndpoint(subscription.endpoint) || !pushKeys) {
-          invalidSubscriptions.add(subscription.id);
-          continue;
-        }
-
+      // Usually one local date; two just after local midnight. Each date gets
+      // its own prayer times (see dueOccurrenceForRule).
+      const days: DayPrayerTimes[] = [];
+      for (const day of dueLocalDates(user.timezone, now)) {
         try {
-          await prisma.pushDeliveryLog.create({
-            data: {
-              userId: user.id,
-              subscriptionId: subscription.id,
-              ruleId: rule.id,
-              triggerType: rule.type,
-              scheduledFor: scheduledAt,
-            },
-          });
-        } catch (error) {
-          if (isUniqueError(error)) {
-            // Already sent by an earlier, overlapping run.
+          const timings = await fetchPrayerTimes(
+            user.latitude,
+            user.longitude,
+            toAlAdhanDate(day),
+            user.timezone,
+            user.locationLabel,
+          );
+          days.push({ day, prayerTimes: timings.prayerTimes });
+        } catch {
+          // One timing lookup failing must not block everyone else.
+        }
+      }
+      if (days.length === 0) {
+        skippedUsers += 1;
+        continue;
+      }
+
+      for (const rule of pushRules) {
+        const due = dueOccurrenceForRule(rule, days, user.timezone, now);
+        if (!due) continue;
+        const { scheduledAt } = due;
+
+        checked += 1;
+
+        for (const subscription of user.pushSubscriptions) {
+          // Re-validate before any outbound request: rows stored before the allowlist existed (or written by
+          // another path) must not make the server POST to an arbitrary host (SSRF).
+          const pushKeys = validPushKeys(subscription.keys);
+          if (!isAllowedPushEndpoint(subscription.endpoint) || !pushKeys) {
+            invalidSubscriptions.add(subscription.id);
             continue;
           }
-          throw error;
-        }
 
-        const { p256dh, auth } = pushKeys;
+          try {
+            await prisma.pushDeliveryLog.create({
+              data: {
+                userId: user.id,
+                subscriptionId: subscription.id,
+                ruleId: rule.id,
+                triggerType: rule.type,
+                scheduledFor: scheduledAt,
+              },
+            });
+          } catch (error) {
+            if (isUniqueError(error)) {
+              // Already sent by an earlier, overlapping run.
+              continue;
+            }
+            throw error;
+          }
 
-        const payload = JSON.stringify({
-          title: "Ramadan Planner",
-          body:
-            (rule.label?.trim() || displayName(rule.type)) +
-            ` • ${user.locationLabel}`,
-        });
+          const { p256dh, auth } = pushKeys;
 
-        try {
-          await webpush.sendNotification(
-            {
-              endpoint: subscription.endpoint,
-              keys: { p256dh, auth },
-            },
-            payload,
-          );
-          delivered += 1;
-        } catch (error) {
-          const statusCode =
-            typeof error === "object" && error && "statusCode" in error
-              ? Number((error as { statusCode?: number }).statusCode)
-              : 0;
+          const payload = JSON.stringify({
+            title: "Ramadan Planner",
+            body:
+              (rule.label?.trim() || displayName(rule.type)) +
+              ` • ${user.locationLabel}`,
+          });
 
-          if (statusCode === 404 || statusCode === 410) {
-            await prisma.pushSubscription.delete({ where: { id: subscription.id } });
+          try {
+            await webpush.sendNotification(
+              {
+                endpoint: subscription.endpoint,
+                keys: { p256dh, auth },
+              },
+              payload,
+            );
+            delivered += 1;
+          } catch (error) {
+            const statusCode =
+              typeof error === "object" && error && "statusCode" in error
+                ? Number((error as { statusCode?: number }).statusCode)
+                : 0;
+
+            if (statusCode === 404 || statusCode === 410) {
+              await prisma.pushSubscription.delete({ where: { id: subscription.id } });
+            }
           }
         }
       }
+  
+    } catch (error) {
+      skippedUsers += 1;
+      console.error("[push/dispatch] user skipped", user.id, error);
     }
   }
 

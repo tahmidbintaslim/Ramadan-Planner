@@ -1,5 +1,6 @@
 "use client";
 
+import { clearPersonalDeviceData } from "@/lib/sign-out-cleanup";
 import { Link } from "@/components/shared/link";
 import { useEffect, useState, useTransition } from "react";
 import { useClerk } from "@clerk/tanstack-react-start";
@@ -150,8 +151,9 @@ export function SettingsContent() {
   };
 
   const handleLogout = () => {
-    startTransition(() => {
-      void signOut({ redirectUrl: "/" });
+    startTransition(async () => {
+      await clearPersonalDeviceData();
+      await signOut({ redirectUrl: "/" });
     });
   };
 

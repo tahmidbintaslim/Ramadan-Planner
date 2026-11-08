@@ -1,5 +1,5 @@
 import { createMiddleware } from "@tanstack/react-start";
-import { setResponseStatus } from "@tanstack/react-start/server";
+import { setResponseHeader, setResponseStatus } from "@tanstack/react-start/server";
 import { getAppAuthUser, type AppAuthUser } from "@/lib/auth/server";
 import { AUTH_UNAVAILABLE_MESSAGE, UNAUTHORIZED_MESSAGE } from "./errors";
 
@@ -20,5 +20,7 @@ export const authMiddleware = createMiddleware({ type: "function" }).server(asyn
     setResponseStatus(401);
     throw new Error(UNAUTHORIZED_MESSAGE);
   }
+  // Personal data (journal, location, reminders): never stored by shared or browser caches.
+  setResponseHeader("Cache-Control", "private, no-store");
   return next({ context: { userId: user.id } });
 });

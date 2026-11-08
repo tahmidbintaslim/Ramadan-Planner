@@ -52,13 +52,13 @@ describe("GET /api/timings", () => {
     expect(res.headers.get("Cache-Control")).toBe(NEXT_TIMINGS_CC);
     expect(res.headers.get("Content-Type")).toMatch(/^application\/json/);
     expect(await res.json()).toEqual({ prayerTimes: { fajr: "04:00" } });
-    expect(m.fetchPrayerTimes).toHaveBeenCalledWith(23.8103, 90.4125, "01-03-2026", "Asia/Dhaka", "ঢাকা, বাংলাদেশ");
+    expect(m.fetchPrayerTimes).toHaveBeenCalledWith(23.81, 90.41, "01-03-2026", "Asia/Dhaka", "ঢাকা, বাংলাদেশ");
   });
 
   it("uses timezone defaults and explicit params", async () => {
     m.fetchPrayerTimes.mockResolvedValue({});
     await handleTimings(req("/api/timings?tz=Europe/London&date=2026-03-01"));
-    expect(m.fetchPrayerTimes).toHaveBeenCalledWith(51.5074, -0.1278, "01-03-2026", "Europe/London", "London, UK");
+    expect(m.fetchPrayerTimes).toHaveBeenCalledWith(51.51, -0.13, "01-03-2026", "Europe/London", "London, UK");
     await handleTimings(req("/api/timings?tz=Asia/Dhaka&lat=10&lng=20&location=X&date=2026-03-01"));
     expect(m.fetchPrayerTimes).toHaveBeenLastCalledWith(10, 20, "01-03-2026", "Asia/Dhaka", "X");
   });
