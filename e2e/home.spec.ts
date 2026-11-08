@@ -189,6 +189,17 @@ test.describe("mobile Home", () => {
       expect.objectContaining({ type: "isha", enabled: true }),
     ]);
   });
+
+  test("guests see the email channel disabled with a sign-in hint", async ({ page }) => {
+    await visit(page, "/reminders");
+    const email = page.locator("#new-reminder-email");
+    await expect(email).toBeDisabled();
+    await expect(page.locator("#new-reminder-email-hint")).toHaveText(
+      /^(ইমেইলে রিমাইন্ডার পেতে সাইন ইন করুন|Sign in to get email reminders)$/,
+    );
+    const row = await page.locator('label[for="new-reminder-email"]').boundingBox();
+    expect(row?.height ?? 0).toBeGreaterThanOrEqual(44);
+  });
 });
 
 test("desktop Today has two columns: card, pair and prayers on the left, amal and ayah on the right; sadaqah after maghrib", async ({

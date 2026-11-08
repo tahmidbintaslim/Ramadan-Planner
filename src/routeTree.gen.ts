@@ -48,6 +48,7 @@ import { Route as ApiDonationsPortalRouteImport } from './routes/api/donations.p
 import { Route as ApiDonationsSummaryRouteImport } from './routes/api/donations.summary'
 import { Route as ApiPushDispatchRouteImport } from './routes/api/push.dispatch'
 import { Route as ApiPushSubscribeRouteImport } from './routes/api/push.subscribe'
+import { Route as ApiRemindersUnsubscribeRouteImport } from './routes/api/reminders.unsubscribe'
 import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe.webhook'
 import { Route as AppHadithEditionIndexRouteImport } from './routes/_app.hadith.$edition.index'
 import { Route as AppHadithEditionChapterRouteImport } from './routes/_app.hadith.$edition.$chapter'
@@ -248,6 +249,11 @@ const ApiPushSubscribeRoute = ApiPushSubscribeRouteImport.update({
   path: '/api/push/subscribe',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiRemindersUnsubscribeRoute = ApiRemindersUnsubscribeRouteImport.update({
+  id: '/api/reminders/unsubscribe',
+  path: '/api/reminders/unsubscribe',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiStripeWebhookRoute = ApiStripeWebhookRouteImport.update({
   id: '/api/stripe/webhook',
   path: '/api/stripe/webhook',
@@ -316,6 +322,7 @@ export interface FileRoutesByFullPath {
   '/api/donations/summary': typeof ApiDonationsSummaryRoute
   '/api/push/dispatch': typeof ApiPushDispatchRoute
   '/api/push/subscribe': typeof ApiPushSubscribeRoute
+  '/api/reminders/unsubscribe': typeof ApiRemindersUnsubscribeRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/hadith/': typeof AppHadithIndexRoute
   '/quran/': typeof AppQuranIndexRoute
@@ -361,6 +368,7 @@ export interface FileRoutesByTo {
   '/api/donations/summary': typeof ApiDonationsSummaryRoute
   '/api/push/dispatch': typeof ApiPushDispatchRoute
   '/api/push/subscribe': typeof ApiPushSubscribeRoute
+  '/api/reminders/unsubscribe': typeof ApiRemindersUnsubscribeRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/hadith': typeof AppHadithIndexRoute
   '/quran': typeof AppQuranIndexRoute
@@ -409,6 +417,7 @@ export interface FileRoutesById {
   '/api/donations/summary': typeof ApiDonationsSummaryRoute
   '/api/push/dispatch': typeof ApiPushDispatchRoute
   '/api/push/subscribe': typeof ApiPushSubscribeRoute
+  '/api/reminders/unsubscribe': typeof ApiRemindersUnsubscribeRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/_app/hadith/': typeof AppHadithIndexRoute
   '/_app/quran/': typeof AppQuranIndexRoute
@@ -456,6 +465,7 @@ export interface FileRouteTypes {
     | '/api/donations/summary'
     | '/api/push/dispatch'
     | '/api/push/subscribe'
+    | '/api/reminders/unsubscribe'
     | '/api/stripe/webhook'
     | '/hadith/'
     | '/quran/'
@@ -501,6 +511,7 @@ export interface FileRouteTypes {
     | '/api/donations/summary'
     | '/api/push/dispatch'
     | '/api/push/subscribe'
+    | '/api/reminders/unsubscribe'
     | '/api/stripe/webhook'
     | '/hadith'
     | '/quran'
@@ -548,6 +559,7 @@ export interface FileRouteTypes {
     | '/api/donations/summary'
     | '/api/push/dispatch'
     | '/api/push/subscribe'
+    | '/api/reminders/unsubscribe'
     | '/api/stripe/webhook'
     | '/_app/hadith/'
     | '/_app/quran/'
@@ -580,6 +592,7 @@ export interface RootRouteChildren {
   ApiDonationsSummaryRoute: typeof ApiDonationsSummaryRoute
   ApiPushDispatchRoute: typeof ApiPushDispatchRoute
   ApiPushSubscribeRoute: typeof ApiPushSubscribeRoute
+  ApiRemindersUnsubscribeRoute: typeof ApiRemindersUnsubscribeRoute
   ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
   ApiAnnouncementsIndexRoute: typeof ApiAnnouncementsIndexRoute
   ApiCalendarGoogleCallbackRoute: typeof ApiCalendarGoogleCallbackRoute
@@ -862,6 +875,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPushSubscribeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/reminders/unsubscribe': {
+      id: '/api/reminders/unsubscribe'
+      path: '/api/reminders/unsubscribe'
+      fullPath: '/api/reminders/unsubscribe'
+      preLoaderRoute: typeof ApiRemindersUnsubscribeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/stripe/webhook': {
       id: '/api/stripe/webhook'
       path: '/api/stripe/webhook'
@@ -984,6 +1004,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiDonationsSummaryRoute: ApiDonationsSummaryRoute,
   ApiPushDispatchRoute: ApiPushDispatchRoute,
   ApiPushSubscribeRoute: ApiPushSubscribeRoute,
+  ApiRemindersUnsubscribeRoute: ApiRemindersUnsubscribeRoute,
   ApiStripeWebhookRoute: ApiStripeWebhookRoute,
   ApiAnnouncementsIndexRoute: ApiAnnouncementsIndexRoute,
   ApiCalendarGoogleCallbackRoute: ApiCalendarGoogleCallbackRoute,

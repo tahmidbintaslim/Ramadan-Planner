@@ -153,8 +153,8 @@ describe("start.ts CSRF middleware", () => {
     }
   });
 
-  it("the exemption list is exactly the cron route and the signature-verified Stripe webhook", () => {
-    expect([...CSRF_EXEMPT_PATHS].sort()).toEqual(["/api/push/dispatch", "/api/stripe/webhook"]);
+  it("the exemption list is exactly the cron route, the HMAC-signed email unsubscribe and the signature-verified Stripe webhook", () => {
+    expect([...CSRF_EXEMPT_PATHS].sort()).toEqual(["/api/push/dispatch", "/api/reminders/unsubscribe", "/api/stripe/webhook"]);
   });
 
   it("donation checkout and portal stay origin-checked", async () => {

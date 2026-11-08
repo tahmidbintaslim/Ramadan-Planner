@@ -23,7 +23,7 @@ describe("pageHead", () => {
     expect(h.meta[0]).toEqual({ title: "Quran — Ramadan Planner" });
     expect(h.links).toEqual([{ rel: "canonical", href: "https://x.test/quran" }]);
     expect(get(h, "property", "og:url")[0].content).toBe("https://x.test/quran");
-    expect(get(h, "property", "og:image")[0].content).toBe("https://x.test/og.png?v=3");
+    expect(get(h, "property", "og:image")[0].content).toBe("https://x.test/og.png?v=4");
     expect(get(h, "name", "twitter:card")[0].content).toBe("summary_large_image");
   });
 
@@ -75,7 +75,7 @@ describe("JSON-LD", () => {
       name: "Ramadan Planner",
       description: "Plan.",
       url: "https://x.test",
-      image: "https://x.test/og.png?v=3",
+      image: "https://x.test/og.png?v=4",
       inLanguage: ["bn", "en"],
     });
   });

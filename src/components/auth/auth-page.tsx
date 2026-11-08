@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { useTranslations } from "@/i18n/use-intl";
 import { Link } from "@/components/shared/link";
-import { CrescentIcon } from "@/components/icons/islamic-icons";
+import { BrandMark } from "@/components/icons/brand-mark";
 import { TextThemeButton } from "@/components/shared/accessibility-sidebar";
 
 // Port of the old src/app/(auth)/layout.tsx wrapper (rendered by the pathless `_auth` layout route). A slim header
@@ -16,7 +16,7 @@ export function AuthPage({ children }: { children: ReactNode }) {
           className="flex min-h-12 items-center gap-2.5 rounded-rp-full pr-2 outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
         >
           <span aria-hidden="true" className="flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground">
-            <CrescentIcon size={20} />
+            <BrandMark size={20} />
           </span>
           <span className="font-display text-[18px] leading-[28px] text-rp-ink">{t("appName")}</span>
         </Link>

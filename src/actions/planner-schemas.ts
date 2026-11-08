@@ -55,12 +55,16 @@ export const REMINDER_TYPES = [
   "custom",
 ] as const;
 
+/** "email" is for signed-in users only (guest rules live on the device; there is no address to send to). */
+export const REMINDER_CHANNELS = ["push", "calendar", "email"] as const;
+export type ReminderChannel = (typeof REMINDER_CHANNELS)[number];
+
 export interface ReminderRuleDTO {
   id: string;
   type: (typeof REMINDER_TYPES)[number];
   label: string;
   offsetMinutes: number;
-  channels: Array<"push" | "calendar">;
+  channels: Array<ReminderChannel>;
   enabled: boolean;
 }
 
@@ -149,9 +153,9 @@ export const createReminderSchema = z.object({
   type: z.enum(REMINDER_TYPES),
   label: z.string().trim().max(120),
   offsetMinutes: z.number().int().min(-720).max(720),
-  channels: z.array(z.enum(["push", "calendar"]))
+  channels: z.array(z.enum(REMINDER_CHANNELS))
     .min(1)
-    .max(2),
+    .max(REMINDER_CHANNELS.length),
   enabled: z.boolean(),
 });
 
@@ -160,9 +164,9 @@ export const updateReminderSchema = z.object({
   type: z.enum(REMINDER_TYPES),
   label: z.string().trim().max(120),
   offsetMinutes: z.number().int().min(-720).max(720),
-  channels: z.array(z.enum(["push", "calendar"]))
+  channels: z.array(z.enum(REMINDER_CHANNELS))
     .min(1)
-    .max(2),
+    .max(REMINDER_CHANNELS.length),
   enabled: z.boolean(),
 });
 

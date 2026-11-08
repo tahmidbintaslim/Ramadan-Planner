@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="statusBarTeal">#0E7C6B</color>
+    <color name="brandTeal">#0E7C6B</color>
+    <!-- Splash page colour: mint page here, dark page in values-night. -->
+    <color name="splashBackground">#F4F7F6</color>
 </resources>

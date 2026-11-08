@@ -9,12 +9,15 @@ const m = vi.hoisted(() => ({
   prisma: {
     userProfile: { findMany: vi.fn() },
     pushDeliveryLog: { create: vi.fn() },
+    reminderRule: { findFirst: vi.fn(), update: vi.fn() },
     pushSubscription: { delete: vi.fn(), deleteMany: vi.fn(), create: vi.fn(), findMany: vi.fn() },
   },
   webpush: { setVapidDetails: vi.fn(), sendNotification: vi.fn() },
   fetchPrayerTimes: vi.fn(),
   getAppAuthUser: vi.fn(),
+  getUserList: vi.fn(),
 }));
+vi.mock("@clerk/tanstack-react-start/server", () => ({ clerkClient: () => ({ users: { getUserList: m.getUserList } }) }));
 vi.mock("@/lib/prisma", () => ({ prisma: m.prisma }));
 vi.mock("web-push", () => ({ default: m.webpush }));
 vi.mock("@/lib/prayer-times", () => ({ fetchPrayerTimes: m.fetchPrayerTimes }));
@@ -22,6 +25,9 @@ vi.mock("@/lib/auth/server", () => ({ getAppAuthUser: m.getAppAuthUser }));
 
 import { handlePushDispatchGet, handlePushDispatchPost } from "./push-dispatch";
 import { handlePushSubscribe } from "./push-subscribe";
+import { handleReminderUnsubscribeGet, handleReminderUnsubscribePost } from "./reminder-unsubscribe";
+import { clerkIdToUuid } from "@/lib/auth/uuid";
+import { unsubscribeToken } from "@/server/reminder-email";
 
 const URL_D = "https://app.example/api/push/dispatch";
 const get = (headers: Record<string, string> = {}) => new Request(URL_D, { headers });
@@ -43,6 +49,7 @@ beforeEach(() => {
   vi.stubEnv("VAPID_PRIVATE_KEY", "fake-private");
   vi.stubEnv("VAPID_SUBJECT", "mailto:test@example.com");
   vi.stubEnv("PUSH_DISPATCH_DEBUG", "1");
+  vi.stubEnv("RESEND_API_KEY", "");
   m.prisma.userProfile.findMany.mockResolvedValue([]);
   m.prisma.pushSubscription.findMany.mockResolvedValue([]);
   m.prisma.pushSubscription.deleteMany.mockReset().mockResolvedValue({ count: 0 });
@@ -90,7 +97,7 @@ describe("GET /api/push/dispatch (Vercel Cron / GitHub Actions)", () => {
   it("200 with Bearer CRON_SECRET: { ok:true, checked, delivered, skippedUsers }", async () => {
     const res = await handlePushDispatchGet(get({ Authorization: `Bearer ${CRON}` }));
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true, checked: 0, delivered: 0, skippedUsers: 0 });
+    expect(await res.json()).toEqual({ ok: true, checked: 0, delivered: 0, emailed: 0, skippedUsers: 0 });
     expect(m.webpush.setVapidDetails).toHaveBeenCalledWith("mailto:test@example.com", "fake-public", "fake-private");
     expectSecretsNotLogged();
   });
@@ -110,7 +117,7 @@ describe("POST /api/push/dispatch (manual / external)", () => {
     for (const headers of [{ "x-cron-secret": DISPATCH }, { Authorization: `Bearer ${DISPATCH}` }] as Record<string, string>[]) {
       const res = await handlePushDispatchPost(post(headers));
       expect(res.status).toBe(200);
-      expect(await res.json()).toEqual({ ok: true, checked: 0, delivered: 0, skippedUsers: 0 });
+      expect(await res.json()).toEqual({ ok: true, checked: 0, delivered: 0, emailed: 0, skippedUsers: 0 });
     }
   });
 
@@ -153,7 +160,7 @@ describe("dispatch outcomes", () => {
     expectSecretsNotLogged();
   });
 
-  it("sends a due push reminder and records it (logic unchanged)", async () => {
+  it("sends a due push reminder in the user's language with the time, and records it", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-01T00:01:00.000Z")); // 06:01 in Dhaka
     try {
@@ -163,6 +170,7 @@ describe("dispatch outcomes", () => {
           timezone: "Asia/Dhaka",
           latitude: 23.8,
           longitude: 90.4,
+          locale: "en",
           locationLabel: "Dhaka",
           reminderRules: [{ id: "r1", type: "fajr", label: null, offsetMinutes: 0, channels: ["push"] }],
           pushSubscriptions: [{ id: "s1", endpoint: "https://fcm.googleapis.com/fcm/send/1", keys: { p256dh: "p", auth: "a" } }],
@@ -174,10 +182,10 @@ describe("dispatch outcomes", () => {
       m.prisma.pushDeliveryLog.create.mockResolvedValue({});
       m.webpush.sendNotification.mockResolvedValue({});
       const res = await handlePushDispatchGet(get(auth));
-      expect(await res.json()).toEqual({ ok: true, checked: 1, delivered: 1, skippedUsers: 0 });
+      expect(await res.json()).toEqual({ ok: true, checked: 1, delivered: 1, emailed: 0, skippedUsers: 0 });
       expect(m.webpush.sendNotification).toHaveBeenCalledWith(
         { endpoint: "https://fcm.googleapis.com/fcm/send/1", keys: { p256dh: "p", auth: "a" } },
-        JSON.stringify({ title: "Ramadan Planner", body: "Fajr • Dhaka" }),
+        JSON.stringify({ title: "Fajr — 6:00 AM", body: "Dhaka. Take a moment to pray." }),
       );
     } finally {
       vi.useRealTimers();
@@ -324,7 +332,7 @@ describe("dispatch re-validates stored subscriptions", () => {
       m.prisma.pushDeliveryLog.create.mockResolvedValue({});
       m.webpush.sendNotification.mockResolvedValue({});
       const res = await handlePushDispatchGet(get({ Authorization: `Bearer ${CRON}` }));
-      expect(await res.json()).toEqual({ ok: true, checked: 1, delivered: 1, skippedUsers: 0 });
+      expect(await res.json()).toEqual({ ok: true, checked: 1, delivered: 1, emailed: 0, skippedUsers: 0 });
       expect(m.webpush.sendNotification).toHaveBeenCalledTimes(1);
       expect(m.webpush.sendNotification.mock.calls[0][0].endpoint).toBe("https://fcm.googleapis.com/fcm/send/ok");
       expect(m.prisma.pushDeliveryLog.create).toHaveBeenCalledTimes(1);
@@ -335,5 +343,127 @@ describe("dispatch re-validates stored subscriptions", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe("email reminders in the dispatcher", () => {
+  const auth = { Authorization: `Bearer ${CRON}` };
+  const CLERK_A = "user_email_a";
+  const CLERK_B = "user_email_b";
+  const A = clerkIdToUuid(CLERK_A);
+  const B = clerkIdToUuid(CLERK_B);
+  const times = {
+    prayerTimes: { sehri: "04:40", iftar: "18:00", fajr: "06:00", dhuhr: "12:00", asr: "15:30", maghrib: "18:00", isha: "19:30" },
+  };
+  const profile = (id: string, ruleId: string, channels: string[]) => ({
+    id,
+    locale: "bn",
+    timezone: "Asia/Dhaka",
+    latitude: 23.8,
+    longitude: 90.4,
+    locationLabel: "ঢাকা",
+    reminderRules: [{ id: ruleId, type: "fajr", label: "", offsetMinutes: 0, channels }],
+    pushSubscriptions: [],
+  });
+  const clerkUser = (id: string, email: string, status = "verified") => ({
+    id,
+    primaryEmailAddressId: `${id}-e`,
+    emailAddresses: [{ id: `${id}-e`, emailAddress: email, verification: { status } }],
+  });
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-03-01T00:01:00.000Z")); // 06:01 in Dhaka
+    m.fetchPrayerTimes.mockResolvedValue(times);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it("makes no request at all when RESEND_API_KEY is unset", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    m.prisma.userProfile.findMany.mockResolvedValue([profile(A, "ra", ["email"])]);
+    const res = await handlePushDispatchGet(get(auth));
+    expect(await res.json()).toEqual({ ok: true, checked: 0, delivered: 0, emailed: 0, skippedUsers: 0 });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(m.getUserList).not.toHaveBeenCalled();
+  });
+
+  it("emails verified addresses only, keeps going after one send fails, and never logs addresses", async () => {
+    vi.stubEnv("RESEND_API_KEY", "re_fake_key_for_tests");
+    const C = clerkIdToUuid("user_unverified");
+    m.prisma.userProfile.findMany.mockResolvedValue([
+      profile(A, "ra", ["email"]),
+      profile(C, "rc", ["email"]),
+      profile(B, "rb", ["email"]),
+    ]);
+    m.getUserList.mockResolvedValue({
+      data: [clerkUser(CLERK_A, "a@example.com"), clerkUser("user_unverified", "c@example.com", "unverified"), clerkUser(CLERK_B, "b@example.com")],
+    });
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("network down"))
+      .mockResolvedValue(new Response("{}", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const res = await handlePushDispatchGet(get(auth));
+    expect(await res.json()).toEqual({ ok: true, checked: 3, delivered: 0, emailed: 1, skippedUsers: 0 });
+    expect(m.getUserList).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2); // A failed, C has no verified email, B sent
+    const body = JSON.parse(String((fetchMock.mock.calls[1] as unknown as [string, RequestInit])[1].body));
+    expect(body.to).toEqual(["b@example.com"]);
+    expect(body.subject).toBe("ফজর — সকাল ৬:০০");
+    const all = logs.join("\n");
+    expect(all).not.toMatch(/@example\.com/);
+  });
+
+  it("runs email even when VAPID is missing", async () => {
+    vi.stubEnv("RESEND_API_KEY", "re_fake_key_for_tests");
+    vi.stubEnv("VITE_VAPID_PUBLIC_KEY", "");
+    m.prisma.userProfile.findMany.mockResolvedValue([profile(A, "ra", ["email"])]);
+    m.getUserList.mockResolvedValue({ data: [clerkUser(CLERK_A, "a@example.com")] });
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 200 })));
+    const res = await handlePushDispatchGet(get(auth));
+    expect(await res.json()).toEqual({ ok: true, checked: 1, delivered: 0, emailed: 1, skippedUsers: 0 });
+  });
+});
+
+describe("/api/reminders/unsubscribe", () => {
+  const RULE = "0b6f3c3e-4c1f-4a52-9a43-1f1b7d2e8a10";
+  const link = (token: string | null) =>
+    `https://app.example/api/reminders/unsubscribe?u=${USER}&r=${RULE}&t=${encodeURIComponent(token ?? "")}`;
+
+  it("GET with a valid link shows a confirm form and changes nothing", async () => {
+    const res = await handleReminderUnsubscribeGet(new Request(link(unsubscribeToken(USER, RULE))));
+    expect(res.status).toBe(200);
+    expect(await res.text()).toContain('<form method="post">');
+    expect(m.prisma.reminderRule.update).not.toHaveBeenCalled();
+  });
+
+  it("POST removes only the email channel of that user's rule", async () => {
+    m.prisma.reminderRule.findFirst.mockResolvedValue({ channels: ["push", "email"] });
+    const res = await handleReminderUnsubscribePost(new Request(link(unsubscribeToken(USER, RULE)), { method: "POST" }));
+    expect(res.status).toBe(200);
+    expect(m.prisma.reminderRule.findFirst).toHaveBeenCalledWith({ where: { id: RULE, userId: USER }, select: { channels: true } });
+    expect(m.prisma.reminderRule.update).toHaveBeenCalledWith({
+      where: { id: RULE, userId: USER },
+      data: expect.objectContaining({ channels: ["push"] }),
+    });
+  });
+
+  it("POST turns the rule off when email was its only channel", async () => {
+    m.prisma.reminderRule.findFirst.mockResolvedValue({ channels: ["email"] });
+    await handleReminderUnsubscribePost(new Request(link(unsubscribeToken(USER, RULE)), { method: "POST" }));
+    expect(m.prisma.reminderRule.update.mock.calls[0][0].data).toMatchObject({ channels: [], enabled: false });
+  });
+
+  it("a forged or missing token is rejected with 400 and no DB access", async () => {
+    for (const token of ["forged", null]) {
+      const res = await handleReminderUnsubscribePost(new Request(link(token), { method: "POST" }));
+      expect(res.status).toBe(400);
+    }
+    expect(m.prisma.reminderRule.findFirst).not.toHaveBeenCalled();
   });
 });

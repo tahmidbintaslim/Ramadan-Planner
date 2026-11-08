@@ -3,12 +3,12 @@
 import type { ReactNode } from "react";
 import { useTranslations } from "@/i18n/use-intl";
 import { Link } from "@/components/shared/link";
-import { CrescentIcon } from "@/components/icons/islamic-icons";
+import { BrandMark } from "@/components/icons/brand-mark";
 import { TextThemeButton } from "@/components/shared/accessibility-sidebar";
 import { cn } from "@/lib/utils";
 import { LanguageSegmented } from "./shell-actions";
 
-/** The brand tile + name (v4): 40 teal tile, radius 12, crescent; Headline name. */
+/** The brand tile + name (v4): 40 teal tile, radius 12, the logo mark (white crescent, gold star); Headline name. */
 export function BrandLockup({ className }: { className?: string }) {
   const t = useTranslations("common");
   return (
@@ -20,7 +20,7 @@ export function BrandLockup({ className }: { className?: string }) {
       )}
     >
       <span aria-hidden="true" className="flex size-10 items-center justify-center rounded-rp-input bg-rp-live text-rp-on-live">
-        <CrescentIcon size={24} />
+        <BrandMark size={24} />
       </span>
       <span className="rp-headline whitespace-nowrap text-rp-ink">{t("appName")}</span>
     </Link>
