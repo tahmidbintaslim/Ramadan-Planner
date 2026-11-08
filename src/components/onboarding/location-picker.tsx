@@ -337,9 +337,11 @@ export function LocationPickerFields({ picker, className }: { picker: LocationPi
             </li>
           ) : null}
         </ul>
-        <p role="status" aria-live="polite" className="sr-only">
-          {searchable && cityStatus === "loading" ? t("citySearching") : ""}
-        </p>
+        {searchable ? (
+          <p role="status" aria-live="polite" className="sr-only">
+            {cityStatus === "loading" ? t("citySearching") : ""}
+          </p>
+        ) : null}
         {/* Always in the DOM so screen readers announce the message when it appears. */}
         <p id={errorId} role="alert" className={cn("rp-small text-rp-ink", !error && "sr-only")}>
           {error === "none" ? t("chooseFirst") : error === "noMatch" ? t("noMatch") : error === "ambiguous" ? t("ambiguous") : ""}
