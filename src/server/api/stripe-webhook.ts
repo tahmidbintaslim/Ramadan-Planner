@@ -2,7 +2,7 @@
 // no cookies, and the `stripe-signature` HMAC over the raw body is the authentication.
 import "@tanstack/react-start/server-only";
 import type Stripe from "stripe";
-import { getStripe, stripeEnv, verifyStripeWebhook } from "@/lib/stripe";
+import { getStripe, stripeEnv, stripeLiveAllowed, verifyStripeWebhook } from "@/lib/stripe";
 import { applyDonationEvent, prismaDonationDb, type LedgerDeps } from "@/server/donations-ledger";
 import { guarded, json } from "./http";
 
@@ -41,6 +41,12 @@ export async function handleStripeWebhook(request: Request, deps: WebhookDeps = 
       event = await deps.verify(rawBody, request.headers.get("stripe-signature"), secret);
     } catch {
       return json({ ok: false, error: "Invalid signature" }, { status: 400, headers: noStore });
+    }
+    // Test mode only until live payments are allowed: a live event is acknowledged (so Stripe stops retrying) and
+    // never written to the ledger.
+    if (event.livemode && !stripeLiveAllowed()) {
+      console.error("[api/stripe/webhook] ignored a live-mode event: STRIPE_ALLOW_LIVE is not true");
+      return json({ ok: true, result: "ignored-live" }, { headers: noStore });
     }
     // A database or Stripe failure throws here and `guarded` answers 500, so Stripe retries the event.
     const result = await applyDonationEvent(event, deps.ledger);

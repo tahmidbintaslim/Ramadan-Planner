@@ -45,6 +45,20 @@ describe("env", () => {
     expect(stripeEnv("STRIPE_WEBHOOK_SECRET")).toBe("");
   });
 
+  it("treats a live secret key as unset unless STRIPE_ALLOW_LIVE is true", () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.stubEnv("STRIPE_SECRET_KEY", "sk_live_fake_not_a_real_key");
+    vi.stubEnv("STRIPE_ALLOW_LIVE", "");
+    expect(stripeEnv("STRIPE_SECRET_KEY")).toBe("");
+    vi.stubEnv("STRIPE_SECRET_KEY", "rk_live_fake_not_a_real_key");
+    expect(stripeEnv("STRIPE_SECRET_KEY")).toBe("");
+    vi.stubEnv("STRIPE_ALLOW_LIVE", "true");
+    expect(stripeEnv("STRIPE_SECRET_KEY")).toBe("rk_live_fake_not_a_real_key");
+    vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_fake");
+    vi.stubEnv("STRIPE_ALLOW_LIVE", "");
+    expect(stripeEnv("STRIPE_SECRET_KEY")).toBe("sk_test_fake");
+  });
+
   it("getStripe throws without a secret key", () => {
     vi.stubEnv("STRIPE_SECRET_KEY", "");
     expect(() => getStripe()).toThrow(/STRIPE_SECRET_KEY/);

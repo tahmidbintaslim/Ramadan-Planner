@@ -77,6 +77,18 @@ describe("POST /api/stripe/webhook", () => {
     expect(db.rows[0]).toMatchObject({ stripeEventId: "evt_web_1", amountMinor: 500, currency: "eur", country: "DE" });
   });
 
+  it("acknowledges but never records a live-mode event while live payments are off", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.stubEnv("STRIPE_ALLOW_LIVE", "");
+    const { db, post } = setup();
+    const body = JSON.stringify({ ...JSON.parse(completed("evt_live")), livemode: true });
+    const res = await post(body, sign(body));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true, result: "ignored-live" });
+    expect(db.rows).toEqual([]);
+    vi.unstubAllEnvs();
+  });
+
   it("is idempotent across redeliveries of the same event", async () => {
     const { db, post } = setup();
     const body = completed("evt_again");
