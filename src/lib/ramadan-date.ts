@@ -514,6 +514,20 @@ export const FALLBACK_RAMADAN_YEAR = 1448;
  * keys daily logs by this year so each Ramadan keeps its own day 1-30. Local moon-sighting offsets move dates by a
  * day or two, which never changes the year around Ramadan (the year turns at Muharram, months later).
  */
+/**
+ * Whether a YYYY-MM-DD date is in Ramadan (Umm al-Qura month 9), widened by a day each side because local moon
+ * sighting (e.g. Bangladesh) often starts and ends a day later.
+ */
+export function inRamadanWindow(dateISO: string): boolean {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateISO);
+    if (!m) return false;
+    const fmt = new Intl.DateTimeFormat("en-u-ca-islamic-umalqura", { timeZone: "UTC", month: "numeric" });
+    return [-1, 0, 1].some((shift) => {
+        const at = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]) + shift, 12));
+        return fmt.formatToParts(at).find((p) => p.type === "month")?.value === "9";
+    });
+}
+
 export function hijriYearForDate(dateISO: string): number {
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateISO);
     if (!m) return FALLBACK_RAMADAN_YEAR;

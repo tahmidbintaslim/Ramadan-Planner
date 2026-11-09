@@ -17,6 +17,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers();
   localStorage.clear();
+  document.cookie = "__client_uat=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
 });
 
 describe("useOnboardingGate", () => {
@@ -27,7 +28,14 @@ describe("useOnboardingGate", () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
+  it("a first visit with no session cookie onboards at once, without waiting for auth", () => {
+    const { result } = renderHook(() => useOnboardingGate());
+    expect(result.current).toBe("onboard");
+    expect(navigate).toHaveBeenCalledWith({ to: "/welcome", replace: true });
+  });
+
   it("waits for auth, then onboards a resolved guest", () => {
+    document.cookie = "__client_uat=0; path=/";
     const { result, rerender } = renderHook(() => useOnboardingGate());
     expect(result.current).toBe("wait");
     Object.assign(auth, { loading: false });
@@ -38,6 +46,7 @@ describe("useOnboardingGate", () => {
 
   it("treats an auth client that never answers as a guest after the timeout", () => {
     vi.useFakeTimers();
+    document.cookie = "__client_uat=0; path=/";
     const { result } = renderHook(() => useOnboardingGate());
     expect(result.current).toBe("wait");
     act(() => vi.advanceTimersByTime(GUEST_AUTH_WAIT_MS));

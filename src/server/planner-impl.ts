@@ -7,7 +7,7 @@ import type { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { todayISOInZone } from "@/lib/prayer-phase";
-import { hijriYearForDate } from "@/lib/ramadan-date";
+import { hijriYearForDate, inRamadanWindow } from "@/lib/ramadan-date";
 import {
   daySchema,
   saveDailyLogSchema,
@@ -116,6 +116,30 @@ async function resolveLogDate(userId: string, todayISO: string | undefined): Pro
 
 const parseCount = (s: string) => Math.max(0, Number.parseInt(s || "0", 10) || 0);
 
+const EMPTY_LOG_FIELDS = {
+  prayers: {} as Prisma.InputJsonValue,
+  quranPara: 0,
+  quranSurah: "",
+  quranAyah: 0,
+  quranPages: 0,
+  checklist: [] as Prisma.InputJsonValue,
+  journalText: "",
+  myDua: "",
+  dayTaskDone: false,
+};
+
+/**
+ * A stored row belongs to another day: its date differs and one of the two dates is outside Ramadan. Outside
+ * Ramadan the trackers use day 1 every day (and that row is also Ramadan's day 1), so yesterday's row must not show
+ * as today's or carry into Ramadan. Inside Ramadan a day row is kept even if the date drifts (a cached day number
+ * just after midnight), so nothing is wiped there.
+ */
+export function isStaleLog(stored: Date | null | undefined, dateISO: string): boolean {
+  if (!stored) return false;
+  const storedISO = stored.toISOString().slice(0, 10);
+  return storedISO !== dateISO && !(inRamadanWindow(storedISO) && inRamadanWindow(dateISO));
+}
+
 async function upsertDailyLog(
   userId: string,
   payload: z.infer<typeof saveDailyLogSchema>,
@@ -123,26 +147,31 @@ async function upsertDailyLog(
   try {
     const { logDate, ramadanYear } = await resolveLogDate(userId, payload.logDate);
     const where = { userId_ramadanYear_day: { userId, ramadanYear, day: payload.day } };
-    const existing = await prisma.dailyLog.findUnique({ where, select: dailyLogSelect });
+    const existing = await prisma.dailyLog.findUnique({ where, select: { logDate: true } });
 
-    // Fields the payload leaves out keep their stored value.
-    const fields = {
-      logDate: dateColumn(logDate),
-      prayers: (payload.prayers ?? prayersOf(existing?.prayers)) as Prisma.InputJsonValue,
-      quranPara: payload.quran ? parseCount(payload.quran.para) : finiteOr(existing?.quranPara, 0),
-      quranSurah: payload.quran ? payload.quran.surah.trim() : (existing?.quranSurah ?? ""),
-      quranAyah: payload.quran ? parseCount(payload.quran.ayah) : finiteOr(existing?.quranAyah, 0),
-      quranPages: payload.quran ? parseCount(payload.quran.pages) : finiteOr(existing?.quranPages, 0),
-      checklist: (payload.checklist ?? (Array.isArray(existing?.checklist) ? existing.checklist : [])) as Prisma.InputJsonValue,
-      journalText: payload.journal ? payload.journal.reflection : (existing?.journalText ?? ""),
-      myDua: payload.journal ? payload.journal.myDua : (existing?.myDua ?? ""),
-      dayTaskDone: payload.dayTaskDone ?? existing?.dayTaskDone ?? false,
+    // Only the fields this save carries: an update never rewrites the others from a stale read, so two saves at
+    // once (a prayer tick and the debounced Quran note, or two tabs) cannot undo each other.
+    const sent = {
+      ...(payload.prayers ? { prayers: payload.prayers as Prisma.InputJsonValue } : {}),
+      ...(payload.quran
+        ? {
+            quranPara: parseCount(payload.quran.para),
+            quranSurah: payload.quran.surah.trim(),
+            quranAyah: parseCount(payload.quran.ayah),
+            quranPages: parseCount(payload.quran.pages),
+          }
+        : {}),
+      ...(payload.checklist ? { checklist: payload.checklist as Prisma.InputJsonValue } : {}),
+      ...(payload.journal ? { journalText: payload.journal.reflection, myDua: payload.journal.myDua } : {}),
+      ...(payload.dayTaskDone !== undefined ? { dayTaskDone: payload.dayTaskDone } : {}),
     };
+    const fresh = { ...EMPTY_LOG_FIELDS, ...sent, logDate: dateColumn(logDate) };
 
     const row = await prisma.dailyLog.upsert({
       where,
-      create: { userId, ramadanYear, day: payload.day, ...fields },
-      update: fields,
+      create: { userId, ramadanYear, day: payload.day, ...fresh },
+      // A row left from another day (outside Ramadan every day maps to day 1) starts empty, not with old ticks.
+      update: existing && isStaleLog(existing.logDate, logDate) ? fresh : { ...sent, logDate: dateColumn(logDate) },
       select: dailyLogSelect,
     });
     return { ok: true, data: normalizeDailyLog(row) };
@@ -163,12 +192,12 @@ export async function getDailyLogImpl(
   }
 
   try {
-    const { ramadanYear } = await resolveLogDate(userId, parsed.data.date);
+    const { logDate, ramadanYear } = await resolveLogDate(userId, parsed.data.date);
     const row = await prisma.dailyLog.findUnique({
       where: { userId_ramadanYear_day: { userId, ramadanYear, day: parsed.data.day } },
-      select: dailyLogSelect,
+      select: { ...dailyLogSelect, logDate: true },
     });
-    return { ok: true, data: row ? normalizeDailyLog(row) : null };
+    return { ok: true, data: row && !isStaleLog(row.logDate, logDate) ? normalizeDailyLog(row) : null };
   } catch (error) {
     return fail("getDailyLog", error, "load_failed");
   }

@@ -158,6 +158,12 @@ describe("onboarding gate", () => {
     expect(gateDecision({ ...base, signedIn: true })).toBe("clear");
   });
 
+  it("gateDecision onboards a first visit at once when there is no session cookie at all", () => {
+    expect(gateDecision({ ...base, authLoading: true, cookieMissing: true })).toBe("onboard");
+    // A cookie that says signed out ("0") still waits for the auth client to confirm.
+    expect(gateDecision({ ...base, authLoading: true, cookieMissing: false })).toBe("wait");
+  });
+
   it("only a guest without a location is onboarded", () => {
     expect(shouldOnboard({ hasLocation: false, signedIn: false })).toBe(true);
     expect(shouldOnboard({ hasLocation: true, signedIn: false })).toBe(false);

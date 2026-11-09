@@ -1,7 +1,7 @@
 "use client";
 
 import { track } from "@/lib/track";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useLocale, useTranslations } from "@/i18n/use-intl";
 import { Input, fieldClass } from "@/components/ui/input";
 import { Chip } from "@/components/ui/chip";
@@ -16,6 +16,7 @@ import { migrateUtcDayKey } from "@/lib/local-day";
 import { useLocalTodayISO } from "@/hooks/use-local-day";
 
 const TASBIH_PRESETS = [33, 99, 100];
+const subscribeNoop = () => () => {};
 const STORAGE_KEY_PREFIX = "rp_tasbih_state_v1_";
 
 type TasbihState = {
@@ -98,9 +99,16 @@ export function TasbihContent() {
   const locale = useLocale();
   // The local day (live): at local midnight the counter switches to the new day's entry.
   const todayKey = `${STORAGE_KEY_PREFIX}${useLocalTodayISO()}`;
-  const initialState = useMemo(() => readTasbihState(todayKey), [todayKey]);
+  // The stored count is read only after hydration (the server has none): reading it in the first render made the
+  // server's 0 and the client's saved count differ (React #418).
+  const mounted = useSyncExternalStore(subscribeNoop, () => true, () => false);
+  const storageKey = mounted ? todayKey : null;
+  const initialState = useMemo(
+    () => (storageKey ? readTasbihState(storageKey) : { count: 0, target: 33, autoEnabled: false, totalIncrements: 0, completedCycles: 0 }),
+    [storageKey],
+  );
   /** The key the state below was loaded from: it is only ever written back under this key. */
-  const [loadedKey, setLoadedKey] = useState(todayKey);
+  const [loadedKey, setLoadedKey] = useState<string | null>(storageKey);
   const [count, setCount] = useState(initialState.count);
   const [target, setTarget] = useState(initialState.target);
   const [targetInput, setTargetInput] = useState(() => formatLocalizedNumber(initialState.target, locale));
@@ -109,8 +117,8 @@ export function TasbihContent() {
   const [completedCycles, setCompletedCycles] = useState(initialState.completedCycles);
 
   // A new day: load its entry during this render (yesterday's count is never written under today's key).
-  if (loadedKey !== todayKey) {
-    setLoadedKey(todayKey);
+  if (loadedKey !== storageKey) {
+    setLoadedKey(storageKey);
     setCount(initialState.count);
     setTarget(initialState.target);
     setTargetInput(formatLocalizedNumber(initialState.target, locale));
@@ -129,7 +137,7 @@ export function TasbihContent() {
   }, [count, target]);
 
   useEffect(() => {
-    if (typeof window === "undefined" || loadedKey !== todayKey) return;
+    if (!storageKey || loadedKey !== storageKey) return;
     const payload: TasbihState = {
       count,
       target,
@@ -142,7 +150,7 @@ export function TasbihContent() {
     } catch {
       // Best effort only
     }
-  }, [autoEnabled, completedCycles, count, loadedKey, target, todayKey, totalIncrements]);
+  }, [autoEnabled, completedCycles, count, loadedKey, storageKey, target, todayKey, totalIncrements]);
 
   const incrementCount = useCallback((options?: { stopAtTarget?: boolean }) => {
     const stopAtTarget = options?.stopAtTarget ?? false;

@@ -161,14 +161,14 @@ describe.each(authed)("%s.%s", (mod, name, args, implName, rest) => {
     expect(implOf(implName)).not.toHaveBeenCalled();
   });
 
-  it("503 auth_unavailable is rethrown, not turned into a result", async () => {
+  it("503 auth_unavailable resolves as a failed result (not a throw into the error boundary)", async () => {
     h.state.mode = "unavailable";
-    await expect(wrapper()(...args)).rejects.toThrow("auth_unavailable");
+    await expect(wrapper()(...args)).resolves.toEqual({ ok: false, error: "request_failed" });
   });
 
-  it("an internal_error rejection (masked server error) is rethrown, not turned into unauthorized", async () => {
+  it("an internal_error rejection resolves as request_failed, not unauthorized", async () => {
     h.state.mode = "internal";
-    await expect(wrapper()(...args)).rejects.toThrow("internal_error");
+    await expect(wrapper()(...args)).resolves.toEqual({ ok: false, error: "request_failed" });
   });
 });
 

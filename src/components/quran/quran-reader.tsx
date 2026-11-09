@@ -22,7 +22,6 @@ import {
   SkipBack,
   SkipForward,
   Pause,
-  ArrowLeft,
   ChevronLeft,
   ChevronRight,
   BookOpen,
@@ -50,6 +49,7 @@ export const AUDIO_BAR_CLASS =
 
 export function QuranReader({ surahNumber, initialText = null }: QuranReaderProps) {
   const t = useTranslations("quranReader");
+  const tNav = useTranslations("nav");
   const locale = useLocale();
   const showBengaliName = locale.startsWith("bn");
   const [surah, setSurah] = useState<SurahDetail | null>(initialText);
@@ -362,11 +362,14 @@ export function QuranReader({ surahNumber, initialText = null }: QuranReaderProp
     <div className="space-y-6 max-w-3xl mx-auto pb-32 regular:pb-0">
       {/* Header */}
       <div className="flex flex-col items-center gap-2">
-        <Button variant="ghost" size="icon" asChild className="self-start">
-          <Link href="/quran" aria-label={t("allSurahs")}>
-            <ArrowLeft className="h-5 w-5" aria-hidden="true" />
-          </Link>
-        </Button>
+        {/* Figma B1: a labelled back link ("‹ কুরআন"), not a bare arrow nobody reads as "back to the list". */}
+        <Link
+          href="/quran"
+          className="rp-row -ms-2 inline-flex min-h-11 items-center gap-1 self-start rounded-rp-sm px-2 text-rp-accent outline-none focus-visible:ring-2 focus-visible:ring-rp-focus"
+        >
+          <ChevronLeft className="size-5 rtl:rotate-180" aria-hidden="true" />
+          {tNav("quran")}
+        </Link>
         <div className="text-center min-w-0 w-full">
           <h1 className="rp-h1">
             {showBengaliName

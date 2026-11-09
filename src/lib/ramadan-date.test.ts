@@ -44,3 +44,13 @@ describe("getRamadanStatus", () => {
     expect(status.daysUntil).toBe(106);
   });
 });
+
+describe("inRamadanWindow", () => {
+  it("is true in Ramadan 1448 (from about 8 Feb 2027) with a day of slack, false in Jumada and Shawwal", async () => {
+    const { inRamadanWindow } = await import("./ramadan-date");
+    expect(inRamadanWindow("2027-02-20")).toBe(true);
+    expect(inRamadanWindow("2026-11-09")).toBe(false);
+    expect(inRamadanWindow("2027-04-01")).toBe(false);
+    expect(inRamadanWindow("bad")).toBe(false);
+  });
+});

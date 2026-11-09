@@ -128,9 +128,9 @@ describe.each(cases)("%s", (name, args, implName, implArg, _schema, invalidArgs,
     expect(implFn(implName)).not.toHaveBeenCalled();
   });
 
-  it("other failures (503 auth_unavailable) are rethrown, not turned into a result", async () => {
+  it("other failures (503 auth_unavailable, offline) resolve as a failed result the caller can roll back on", async () => {
     h.state.mode = "unavailable";
-    await expect(wrapper(name)(...args)).rejects.toThrow("auth_unavailable");
+    await expect(wrapper(name)(...args)).resolves.toEqual({ ok: false, error: "request_failed" });
   });
 
   if (invalidArgs) {

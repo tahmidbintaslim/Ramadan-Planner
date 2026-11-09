@@ -913,6 +913,15 @@
         "upNext": "Up next"
     },
     "timetablePage": {
+        "weekdaysShort": {
+          "Mon": "Mon",
+          "Tue": "Tue",
+          "Wed": "Wed",
+          "Thu": "Thu",
+          "Fri": "Fri",
+          "Sat": "Sat",
+          "Sun": "Sun"
+        },
         "title": "Sehri & Iftar Timetable",
         "metaTitle": "Sehri & Iftar Timetable",
         "metaDescription": "The full 30-day sehri and iftar timetable, arranged in the three ten-day parts of mercy, forgiveness and salvation. Odd nights are marked; print or share it.",
