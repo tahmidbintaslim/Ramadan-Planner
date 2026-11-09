@@ -14,7 +14,7 @@ import { useClockWhen } from "@/components/prayer/use-prayer-phase";
 import { digits, ddmmyyyyToISO, formatClock, type Locale } from "@/components/timetable/timetable-logic";
 import { shouldShowSadaqah, timingsFromPrayerTimes, todayISOInZone } from "@/lib/prayer-phase";
 import { AddAmalButton, AmalSheet, DeleteAmalSheet, type AmalDraft, type AmalEditTarget, type AmalSuggestion } from "./add-amal-sheet";
-import { ChecklistCards, ChecklistOverline, type ChecklistRowItem } from "./checklist";
+import { ChecklistCards, ChecklistOverline, useFineHover, type ChecklistRowItem } from "./checklist";
 import { NightHero, OddNightsCard, QadrDuaCard } from "./night-view";
 import { SupportCard } from "@/components/today/home-sections";
 import { useSadaqahDismissal } from "@/components/today/sadaqah-dismissal";
@@ -87,6 +87,7 @@ export function PlanContent({ cookieGuest = false }: { cookieGuest?: boolean }) 
   const addingDefaults = useRef(false);
   const [defaultsBusy, setDefaultsBusy] = useState(false);
   const sadaqah = useSadaqahDismissal();
+  const fineHover = useFineHover();
 
   // ── Ramadan day, today's times, the last ten nights ──
   const tz = timetable?.timezone ?? deviceZone();
@@ -397,7 +398,7 @@ export function PlanContent({ cookieGuest = false }: { cookieGuest?: boolean }) 
                   </section>
                 ))
               : null}
-            {tasks.length > 0 ? <p className="rp-caption -mt-2 px-4 text-rp-muted">{t("swipeHint")}</p> : null}
+            {tasks.length > 0 ? <p className="rp-caption -mt-2 px-4 text-rp-muted">{t(fineHover ? "hoverHint" : "swipeHint")}</p> : null}
             <AddAmalButton disabled={locked} onClick={() => setSheet({ open: true, editing: null })} />
           </section>
 

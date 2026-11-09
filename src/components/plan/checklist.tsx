@@ -1,4 +1,4 @@
-import { useRef, useState, type PointerEvent, type ReactNode } from "react";
+import { useRef, useState, useSyncExternalStore, type PointerEvent, type ReactNode } from "react";
 import { useTranslations } from "@/i18n/use-intl";
 import { CheckIcon } from "@/components/icons/islamic-icons";
 import { cn } from "@/lib/utils";
@@ -15,6 +15,19 @@ const ACTIONS_W = 148;
 /** Hairline inset to the text, past the 44pt check (Figma D5 separator). */
 const ROW_DIVIDER =
   "relative after:absolute after:right-0 after:bottom-0 after:left-[60px] after:h-px after:bg-rp-rule last:after:hidden";
+
+const FINE_HOVER = "(hover: hover) and (pointer: fine)";
+// Old webviews (and jsdom) have no matchMedia: treat them as touch.
+const hoverQuery = () => (typeof window.matchMedia === "function" ? window.matchMedia(FINE_HOVER) : null);
+const subscribeHover = (cb: () => void) => {
+  const mq = hoverQuery();
+  mq?.addEventListener("change", cb);
+  return () => mq?.removeEventListener("change", cb);
+};
+/** A mouse or trackpad: row actions show on hover/focus instead of a swipe (nobody swipes with a mouse). */
+export function useFineHover(): boolean {
+  return useSyncExternalStore(subscribeHover, () => hoverQuery()?.matches ?? false, () => false);
+}
 
 /** Heading above a group: h2 like every section heading; h3 is the small grouped-list caption (Figma D5). */
 export function ChecklistOverline({ id, children, as: Heading = "h2" }: { id?: string; children: ReactNode; as?: "h2" | "h3" }) {
@@ -96,7 +109,9 @@ function SwipeRow({
   onDelete?: (item: ChecklistRowItem) => void;
 }) {
   const t = useTranslations("plan");
-  const swipeable = Boolean(onEdit || onDelete) && !locked;
+  const hover = useFineHover();
+  const hasActions = Boolean(onEdit || onDelete) && !locked;
+  const swipeable = hasActions && !hover;
   const start = useRef<{ x: number; y: number; base: number } | null>(null);
   const [drag, setDrag] = useState<number | null>(null);
   // A swipe ends with a click on the check: that click must not tick the row.
@@ -128,7 +143,7 @@ function SwipeRow({
 
   return (
     <li
-      className={cn(ROW_DIVIDER, "relative overflow-hidden")}
+      className={cn(ROW_DIVIDER, "group relative flex overflow-hidden")}
       data-testid="plan-item"
       data-done={item.done || undefined}
       data-open={open || undefined}
@@ -136,8 +151,16 @@ function SwipeRow({
         if (open && !e.currentTarget.contains(e.relatedTarget as Node | null)) setOpen(false);
       }}
     >
-      {swipeable ? (
-        <div className="absolute inset-y-0 right-0 flex" onFocus={() => setOpen(true)}>
+      {hasActions ? (
+        <div
+          className={cn(
+            "flex",
+            hover
+              ? "order-last opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 motion-reduce:transition-none"
+              : "absolute inset-y-0 right-0",
+          )}
+          onFocus={() => !hover && setOpen(true)}
+        >
           {onEdit ? (
             <button
               type="button"
@@ -146,7 +169,7 @@ function SwipeRow({
                 setOpen(false);
                 onEdit(item);
               }}
-              className={cn(actionClass, "bg-rp-inverse text-rp-on-inverse")}
+              className={cn(actionClass, hover ? "text-rp-accent hover:bg-rp-accent-tint" : "bg-rp-inverse text-rp-on-inverse")}
             >
               {t("editShort")}
             </button>
@@ -159,7 +182,7 @@ function SwipeRow({
                 setOpen(false);
                 onDelete(item);
               }}
-              className={cn(actionClass, "bg-destructive text-white")}
+              className={cn(actionClass, hover ? "text-destructive hover:bg-destructive/10" : "bg-destructive text-white")}
             >
               {t("deleteShort")}
             </button>
@@ -190,7 +213,7 @@ function SwipeRow({
         }}
         style={{ transform: offset ? `translateX(${offset}px)` : undefined, touchAction: swipeable ? "pan-y" : undefined }}
         className={cn(
-          "relative flex min-h-12 w-full items-center gap-2 bg-rp-surface py-1 pe-4 ps-2 text-start text-rp-ink outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-rp-focus disabled:opacity-60",
+          "relative flex min-h-12 min-w-0 flex-1 items-center gap-2 bg-rp-surface py-1 pe-4 ps-2 text-start text-rp-ink outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-rp-focus disabled:opacity-60",
           drag === null && "transition-transform duration-200 motion-reduce:transition-none",
         )}
       >

@@ -325,6 +325,7 @@
         "deleteConfirmTitle": "Delete “{title}”?",
         "deleteConfirmBody": "It will be removed from today's list. This can't be undone.",
         "cancel": "Cancel",
+        "hoverHint": "Point at a row to edit or delete it.",
         "swipeHint": "Swipe a row left to edit or delete it.",
         "timesUnit": "times",
         "noTarget": "No target",
