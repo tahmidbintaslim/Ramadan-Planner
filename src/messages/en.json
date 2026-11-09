@@ -751,6 +751,8 @@
         "targetTitle": "Target"
     },
     "zakat": {
+        "metaTitle": "Zakat calculator: work out zakat from your assets and nisab",
+        "metaDescription": "Work out your zakat (2.5%) from cash, gold, silver and investments minus short-term debts. Enter today's nisab yourself; nothing you type is stored.",
         "fieldCash": "Cash and savings",
         "fieldGold": "Gold and silver value",
         "fieldInvestments": "Investments",

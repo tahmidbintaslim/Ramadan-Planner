@@ -40,7 +40,8 @@ export interface NavItem {
   /** The short label (tab bar and sidebar); defaults to `labelKey`. */
   shortKey?: NavLabelKey;
   /** Only shown to signed-in users. */
-  signedInOnly?: boolean;
+  /** Shown only to admins (see useIsAdmin). */
+  adminOnly?: boolean;
 }
 
 /** lucide glyphs are drawn at stroke 1.75 (Figma v4 icons); the Hugeicons set keeps its own 1.5. */
@@ -73,7 +74,7 @@ export const SECONDARY_NAV: NavItem[] = ([] as NavItem[]).concat([
   { href: "/reminders", icon: BellIcon, labelKey: "reminders", shortKey: "remindersShort" },
   { href: "/support", icon: HeartIcon, labelKey: "support" },
   { href: SETTINGS_HREF, icon: Settings, labelKey: "settings" },
-  { href: "/admin/announcements", icon: ShieldCheck, labelKey: "admin", signedInOnly: true },
+  { href: "/admin/announcements", icon: ShieldCheck, labelKey: "admin", adminOnly: true },
 ]).filter((item) => !isHiddenPath(item.href));
 
 /** Active when the path is the item's path or below it (hash-only links never match). */

@@ -37,6 +37,17 @@ export default defineConfig({
         },
       },
     },
+    {
+      // A phone: the journeys and every page render again at 390 x 844 with touch, where the nav is the tab bar.
+      name: "phone",
+      testMatch: /(journey|onboarding|pages)\.spec\.ts/,
+      use: {
+        ...devices["Pixel 7"],
+        viewport: { width: 390, height: 844 },
+        locale: "bn-BD",
+        launchOptions: { executablePath: process.env.PWCHROME || undefined, args: ["--no-proxy-server"] },
+      },
+    },
   ],
   webServer: {
     command: "node .output/server/index.mjs",

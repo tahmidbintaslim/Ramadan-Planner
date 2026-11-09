@@ -3,10 +3,10 @@
 import { Link } from "@/components/shared/link";
 import { usePathname } from "@/hooks/use-pathname";
 import { useTranslations } from "@/i18n/use-intl";
-import { useAuth } from "@/components/providers/auth-provider";
 import { BrandMark } from "@/components/icons/brand-mark";
 import { cn } from "@/lib/utils";
 import { LUCIDE_STROKE, PRIMARY_NAV, SECONDARY_NAV, SETTINGS_HREF, isNavActive, type NavItem } from "./nav-items";
+import { useIsAdmin } from "@/hooks/use-is-admin";
 
 // Sidebar (regular, >=835px; v4): 264 wide on bg/bar with a hairline rule. Brand row (40 teal tile + crescent, app
 // name), the four primary destinations, a "More tools" group, Settings at the foot. Rows 44 tall, inset 16, radius
@@ -39,9 +39,9 @@ export function DesktopSidebar() {
   const pathname = usePathname();
   const t = useTranslations("nav");
   const tCommon = useTranslations("common");
-  const { isGuest } = useAuth();
+  const isAdmin = useIsAdmin();
   const settings = SECONDARY_NAV.find((i) => i.href === SETTINGS_HREF);
-  const tools = SECONDARY_NAV.filter((i) => i.href !== SETTINGS_HREF && (!i.signedInOnly || !isGuest));
+  const tools = SECONDARY_NAV.filter((i) => i.href !== SETTINGS_HREF && (!i.adminOnly || isAdmin));
 
   return (
     <aside className="hidden regular:fixed regular:inset-y-0 regular:left-0 regular:z-30 regular:flex regular:w-[264px] regular:flex-col border-r border-rp-rule bg-rp-bar">

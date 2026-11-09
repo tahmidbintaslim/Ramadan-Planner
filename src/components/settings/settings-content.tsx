@@ -273,7 +273,7 @@ export function SettingsContent() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto w-full max-w-2xl space-y-6">
       <h1 className="rp-large-title text-rp-ink">{t("title")}</h1>
 
       {error && (

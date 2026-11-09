@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from "react";
-import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router";
+import { HeadContent, Scripts, createRootRoute, useRouter } from "@tanstack/react-router";
 import { ClerkProvider } from "@clerk/tanstack-react-start";
+import { bnIN } from "@clerk/localizations";
 import { Analytics } from "@vercel/analytics/react";
 import appCss from "@/styles/globals.css?url";
 // The one font worth preloading per locale: the display/UI face every screen paints first (titles, rows, times).
@@ -19,8 +20,15 @@ import { Toaster } from "@/components/ui/sonner";
 
 const THEME_COLOR_SCRIPT = `try{var t=localStorage.getItem("theme");var d=t==="dark"||((!t||t==="system")&&matchMedia("(prefers-color-scheme: dark)").matches);var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute("content",d?"#0B1A17":"#F4F7F6")}catch(e){}`;
 
+// Clerk's Bengali strings, with the app's Bengali name: the Clerk application name is English ("Ramadan Planner").
+const CLERK_BN = { ...bnIN, signIn: { ...bnIN.signIn, start: { ...bnIN.signIn?.start, title: "রমজান প্ল্যানারে সাইন ইন করুন" } } };
+
 export const Route = createRootRoute({
-  loader: () => getLocaleAndMessages(),
+  // ?lang=en (or bn) picks the language for this URL: each language has its own indexable address (hreflang).
+  validateSearch: (search: Record<string, unknown>): { lang?: "bn" | "en" } =>
+    search.lang === "en" || search.lang === "bn" ? { lang: search.lang } : {},
+  loaderDeps: ({ search }) => ({ lang: search.lang }),
+  loader: ({ deps }) => getLocaleAndMessages({ data: deps.lang }),
   // Messages never go stale on their own; a locale switch calls router.invalidate() to reload.
   staleTime: Infinity,
   head: ({ loaderData }) => {
@@ -66,6 +74,27 @@ function ServiceWorkerRegistration() {
   return null;
 }
 
+/**
+ * Back/forward can show a page as it was when left, in the old language after a language switch or signed in
+ * after signing out: from the page cache (bfcache), or as a full load of the cached HTML (history navigation reuses
+ * it without asking the server). Reload the loaders (messages follow the cookie) in both cases.
+ */
+function PageCacheRefresh() {
+  const router = useRouter();
+  useEffect(() => {
+    const nav = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
+    if (nav?.type === "back_forward") void router.invalidate();
+  }, [router]);
+  useEffect(() => {
+    const onShow = (e: PageTransitionEvent) => {
+      if (e.persisted) void router.invalidate();
+    };
+    window.addEventListener("pageshow", onShow);
+    return () => window.removeEventListener("pageshow", onShow);
+  }, [router]);
+  return null;
+}
+
 function RootDocument({ children }: { children: ReactNode }) {
   const { locale, messages } = Route.useLoaderData();
   return (
@@ -77,7 +106,11 @@ function RootDocument({ children }: { children: ReactNode }) {
         <script dangerouslySetInnerHTML={{ __html: THEME_COLOR_SCRIPT }} />
       </head>
       <body className="antialiased bg-background text-foreground">
-        <ClerkProvider>
+        {/* Bengali sign-in and sign-up in the Bengali UI (#48; Clerk's Bengali strings), in the app's teal and type. */}
+        <ClerkProvider
+          localization={locale === "bn" ? CLERK_BN : undefined}
+          appearance={{ variables: { colorPrimary: "#00846c", fontFamily: "inherit", borderRadius: "0.75rem" } }}
+        >
           <AppIntlProvider locale={locale} messages={messages}>
             <ThemeProvider>
               <AuthProvider>{children}</AuthProvider>
@@ -87,6 +120,7 @@ function RootDocument({ children }: { children: ReactNode }) {
           </AppIntlProvider>
         </ClerkProvider>
         <ServiceWorkerRegistration />
+        <PageCacheRefresh />
         <Analytics />
         <Scripts />
       </body>

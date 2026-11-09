@@ -170,7 +170,7 @@ const FEATURES = [
 function FeatureRow({ f, index, t }: { f: (typeof FEATURES)[number]; index: number; t: T }) {
   const tag = t(`f${f.key}Tag`);
   return (
-    <li className="grid items-center gap-8 regular:grid-cols-2 regular:gap-16">
+    <li className="grid grid-cols-[minmax(0,1fr)] items-center gap-8 regular:grid-cols-2 regular:gap-16">
       <div className={cn("flex flex-col gap-4", index % 2 === 1 && "regular:order-2")}>
         <p className="flex items-center gap-3">
           <IconTile Icon={f.Icon} />
@@ -280,7 +280,7 @@ export function LandingPage({ serverYear = new Date().getFullYear(), initialNow 
         {/* 01 Hero */}
         <section
           aria-labelledby="hero-title"
-          className="mx-auto grid w-full max-w-[1296px] gap-10 px-4 pt-8 pb-16 medium:px-6 regular:grid-cols-[minmax(0,1fr)_minmax(0,560px)] regular:items-center regular:gap-12 regular:px-12 regular:pt-16 regular:pb-24"
+          className="mx-auto grid w-full max-w-[1296px] grid-cols-[minmax(0,1fr)] gap-10 px-4 pt-8 pb-16 medium:px-6 regular:grid-cols-[minmax(0,1fr)_minmax(0,560px)] regular:items-center regular:gap-12 regular:px-12 regular:pt-16 regular:pb-24"
         >
           <div className="flex flex-col gap-4">
             <p className="rp-callout text-rp-accent" data-testid="landing-date" suppressHydrationWarning>
@@ -315,11 +315,13 @@ export function LandingPage({ serverYear = new Date().getFullYear(), initialNow 
                   <NextPrayerRow timings={phaseTimings} timeZone={timeZone} now={now} />
                 </>
               ) : (
-                <div role="status" className="flex min-h-[176px] items-end rounded-rp-lg bg-rp-surface p-6 text-rp-muted motion-safe:animate-pulse">
+                <div role="status" className="flex h-[166px] items-end rounded-rp-lg bg-rp-surface p-6 text-rp-muted motion-safe:animate-pulse">
                   <span className="rp-small">{home.status === "error" ? t("timesUnavailable") : t("timesLoading")}</span>
                 </div>
               )}
-              <p className="rp-small text-rp-muted" data-testid="landing-sample-source">
+              {/* Same height as the real content (pair 82 + gap 8 + next-prayer row 76) and a two-line source line on
+                  phones, so the times arriving do not push the page down (landing CLS was 0.16 in production). */}
+              <p className="rp-small min-h-[2lh] text-rp-muted medium:min-h-0" data-testid="landing-sample-source">
                 {source}
               </p>
             </section>
@@ -333,18 +335,18 @@ export function LandingPage({ serverYear = new Date().getFullYear(), initialNow 
             </ul>
           </div>
 
-          {/* The real Today screen over the vector arch art (sky, mosque silhouette, crescent). */}
+          {/* The real Today screen over the vector arch art: the logo crescent and star in the open sky, Hugeicons lanterns. */}
           <div className="relative mx-auto w-full max-w-[560px]">
             <img src="/home/hero-art-light.svg" alt="" width={640} height={660} className="block h-auto w-full dark:hidden" />
             <img src="/home/hero-art-dark.svg" alt="" width={640} height={660} className="hidden h-auto w-full dark:block" />
-            <Phone screen="today" alt={t("heroArtLabel")} eager className="absolute left-1/2 top-[16%] w-[46%] -translate-x-1/2" />
+            <Phone screen="today" alt={t("heroArtLabel")} eager className="absolute left-[57%] top-[19%] w-[44%] -translate-x-1/2" />
           </div>
         </section>
 
         {/* 02 How it works */}
         <section id="how" aria-labelledby="how-title" className={section}>
           <SectionHead id="how-title" eyebrow={t("howEyebrow")} title={t("howTitle")} sub={t("howSub")} />
-          <ol className="grid gap-4 regular:grid-cols-3 regular:gap-6">
+          <ol className="grid grid-cols-[minmax(0,1fr)] gap-4 regular:grid-cols-3 regular:gap-6">
             {([GlobeIcon, MapPin, SalahTimeIcon] as const).map((Icon, i) => (
               <li key={i} className="flex flex-col gap-3 rounded-rp-xl bg-rp-surface p-6 regular:p-8">
                 <IconTile Icon={Icon} className="size-14" />
@@ -396,7 +398,7 @@ export function LandingPage({ serverYear = new Date().getFullYear(), initialNow 
         {/* 05 Trust */}
         <section aria-labelledby="trust-title" className={section}>
           <SectionHead id="trust-title" eyebrow={t("trustEyebrow")} title={t("trustTitle")} />
-          <ul className="grid gap-4 medium:grid-cols-2 regular:grid-cols-4 regular:gap-6">
+          <ul className="grid grid-cols-[minmax(0,1fr)] gap-4 medium:grid-cols-2 regular:grid-cols-4 regular:gap-6">
             {(
               [
                 [HeartIcon, 1],
@@ -424,7 +426,7 @@ export function LandingPage({ serverYear = new Date().getFullYear(), initialNow 
         <section id="install" aria-labelledby="install-title" className="bg-rp-surface">
           <div className={section}>
             <SectionHead id="install-title" eyebrow={t("installEyebrow")} title={t("installTitle")} sub={t("installSub")} />
-            <ul className="grid gap-4 medium:grid-cols-2 regular:grid-cols-4 regular:gap-6">
+            <ul className="grid grid-cols-[minmax(0,1fr)] gap-4 medium:grid-cols-2 regular:grid-cols-4 regular:gap-6">
               <InstallCard Icon={GlobeIcon} title={t("webTitle")} body={t("webBody")} live t={t}>
                 <Link href={startHref} className={cn(buttonVariants(), "mt-auto self-start")}>
                   {t("openInBrowser")}
@@ -470,7 +472,7 @@ export function LandingPage({ serverYear = new Date().getFullYear(), initialNow 
 
       {/* 08 Footer */}
       <footer className="border-t border-rp-rule bg-rp-surface">
-        <div className="mx-auto grid max-w-[1296px] gap-8 px-4 py-12 medium:px-6 regular:grid-cols-[1fr_auto_auto] regular:gap-24 regular:px-12">
+        <div className="mx-auto grid max-w-[1296px] grid-cols-[minmax(0,1fr)] gap-8 px-4 py-12 medium:px-6 regular:grid-cols-[1fr_auto_auto] regular:gap-24 regular:px-12">
           <div className="flex flex-col gap-2">
             <BrandLockup />
             <p className="rp-small text-rp-muted">{t("footerTagline")}</p>
