@@ -75,11 +75,16 @@ function ServiceWorkerRegistration() {
 }
 
 /**
- * Back/forward can restore a page from the browser's page cache as it was when left: in the old language after a
- * language switch, or signed in after signing out. Reload the loaders (messages follow the cookie) when that happens.
+ * Back/forward can show a page as it was when left, in the old language after a language switch or signed in
+ * after signing out: from the page cache (bfcache), or as a full load of the cached HTML (history navigation reuses
+ * it without asking the server). Reload the loaders (messages follow the cookie) in both cases.
  */
 function PageCacheRefresh() {
   const router = useRouter();
+  useEffect(() => {
+    const nav = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
+    if (nav?.type === "back_forward") void router.invalidate();
+  }, [router]);
   useEffect(() => {
     const onShow = (e: PageTransitionEvent) => {
       if (e.persisted) void router.invalidate();
