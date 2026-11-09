@@ -335,11 +335,11 @@ export function LandingPage({ serverYear = new Date().getFullYear(), initialNow 
             </ul>
           </div>
 
-          {/* The real Today screen over the vector arch art (sky, mosque silhouette, crescent). */}
+          {/* The real Today screen over the vector arch art: the logo crescent and star in the open sky, Hugeicons lanterns. */}
           <div className="relative mx-auto w-full max-w-[560px]">
             <img src="/home/hero-art-light.svg" alt="" width={640} height={660} className="block h-auto w-full dark:hidden" />
             <img src="/home/hero-art-dark.svg" alt="" width={640} height={660} className="hidden h-auto w-full dark:block" />
-            <Phone screen="today" alt={t("heroArtLabel")} eager className="absolute left-1/2 top-[16%] w-[46%] -translate-x-1/2" />
+            <Phone screen="today" alt={t("heroArtLabel")} eager className="absolute left-[57%] top-[19%] w-[44%] -translate-x-1/2" />
           </div>
         </section>
 
