@@ -66,8 +66,8 @@ test.describe("day plan (mobile)", () => {
     await expect(page.getByTestId("plan-progress-empty")).toBeVisible();
 
     await page.getByRole("button", { name: "প্রস্তাবিত আমল যোগ করুন" }).click();
-    for (const overline of ["সেহরি থেকে যোহর", "যোহর থেকে ইফতার", "ইফতারের পর"]) {
-      await expect(page.getByRole("heading", { level: 3, name: overline })).toBeVisible();
+    for (const overline of ["সেহরি", "দিনে", "ইফতার ও রাত"]) {
+      await expect(page.getByRole("heading", { level: 3, name: overline, exact: true })).toBeVisible();
     }
     await expect(page.getByTestId("plan-item")).toHaveCount(5);
     await expect(page.locator('[data-window="sehriToDhuhr"] [data-testid="plan-item"]')).toHaveCount(2);
@@ -82,21 +82,21 @@ test.describe("day plan (mobile)", () => {
     await expect(page.getByTestId("plan-progress-copy")).toHaveText("আলহামদুলিল্লাহ, ভালো চলছে");
 
     // The add sheet puts a new deed in the chosen window.
-    await page.getByRole("button", { name: "+ নতুন আমল যোগ করুন" }).click();
+    await page.getByRole("button", { name: "নতুন আমল যোগ করুন" }).click();
     const sheet = page.getByRole("dialog");
     await sheet.getByLabel("আমলের নাম").fill("পরিবারের সাথে দোয়া");
-    const after = sheet.getByRole("button", { name: "ইফতারের পর" });
+    const after = sheet.getByRole("radio", { name: "ইফতার ও রাত" });
     await after.click();
-    await expect(after).toHaveAttribute("aria-pressed", "true");
+    await expect(after).toHaveAttribute("aria-checked", "true");
     await sheet.getByRole("button", { name: "যোগ করুন", exact: true }).click();
     await expect(sheet).toBeHidden();
     await expect(page.locator('[data-window="afterIftar"]')).toContainText("পরিবারের সাথে দোয়া");
     await expect(progress.getByRole("img")).toHaveText("১/৬");
 
     // A goal template from the sheet keeps its target.
-    await page.getByRole("button", { name: "+ নতুন আমল যোগ করুন" }).click();
+    await page.getByRole("button", { name: "নতুন আমল যোগ করুন" }).click();
     await sheet.getByRole("button", { name: "দৈনিক যিকর" }).click();
-    await expect(sheet.getByLabel("লক্ষ্যমাত্রা (ঐচ্ছিক)")).toHaveValue("100");
+    await expect(sheet.getByLabel("লক্ষ্যমাত্রা (ঐচ্ছিক)")).toHaveValue("১০০");
     await sheet.getByRole("button", { name: "যোগ করুন", exact: true }).click();
     await expect(sheet).toBeHidden();
     // Goals (a target count) live in "আমার লক্ষ্য", not in the day checklist.
@@ -104,16 +104,28 @@ test.describe("day plan (mobile)", () => {
     await expect(page.getByTestId("plan-today-amal")).not.toContainText("দৈনিক যিকর");
 
     // Edit: rename and move a deed, then delete another.
-    await page.getByRole("button", { name: "পরিবারের সাথে দোয়া সম্পাদনা করুন" }).click();
+    // Row actions: focusing one opens its row (keyboard), a left swipe opens it (touch/mouse).
+    const edit = page.getByRole("button", { name: "পরিবারের সাথে দোয়া সম্পাদনা করুন" });
+    await edit.focus();
+    await edit.click();
     await expect(sheet.getByRole("heading", { name: "আমল সম্পাদনা" })).toBeVisible();
     await sheet.getByLabel("আমলের নাম").fill("পরিবারের সাথে ইফতারের দোয়া");
-    await sheet.getByRole("button", { name: "যোহর থেকে ইফতার" }).click();
+    await sheet.getByRole("radio", { name: "দিনে" }).click();
     await sheet.getByRole("button", { name: "সংরক্ষণ করুন" }).click();
     await expect(sheet).toBeHidden();
     await expect(page.locator('[data-window="dhuhrToIftar"]')).toContainText("পরিবারের সাথে ইফতারের দোয়া");
-    await page.getByRole("button", { name: "তারাবি সম্পাদনা করুন" }).click();
-    await sheet.getByRole("button", { name: "আমলটি মুছুন" }).click();
-    await expect(sheet).toBeHidden();
+    const taraweeh = page.getByRole("checkbox", { name: /^তারাবি/ });
+    const box = (await taraweeh.boundingBox())!;
+    await page.mouse.move(box.x + box.width - 20, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width - 120, box.y + box.height / 2, { steps: 6 });
+    await page.mouse.move(box.x + box.width - 200, box.y + box.height / 2, { steps: 6 });
+    await page.mouse.up();
+    await expect(taraweeh).toHaveAttribute("aria-checked", "false");
+    await page.getByRole("button", { name: "তারাবি মুছুন" }).click();
+    const confirm = page.getByRole("dialog", { name: /তারাবি.*মুছবেন/ });
+    await confirm.getByRole("button", { name: "আমল মুছুন" }).click();
+    await expect(confirm).toBeHidden();
     await expect(page.getByRole("checkbox", { name: /^তারাবি/ })).toHaveCount(0);
     await expect(progress.getByRole("img")).toHaveText("১/৬");
 

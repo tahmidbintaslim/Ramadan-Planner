@@ -3,14 +3,17 @@
 import { useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useLocale, useTranslations } from "@/i18n/use-intl";
 import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+import { roundButtonClass } from "@/components/layout/shell-actions";
 import { Chip } from "@/components/ui/chip";
+import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useKnownTimings, useRamadanDay } from "@/hooks/use-shell-day";
 import { useClockFormat } from "@/hooks/use-clock-format";
 import { useClockWhen } from "@/components/prayer/use-prayer-phase";
 import { digits, ddmmyyyyToISO, formatClock, type Locale } from "@/components/timetable/timetable-logic";
 import { shouldShowSadaqah, timingsFromPrayerTimes, todayISOInZone } from "@/lib/prayer-phase";
-import { AddAmalButton, AmalSheet, type AmalDraft, type AmalEditTarget, type AmalSuggestion } from "./add-amal-sheet";
+import { AddAmalButton, AmalSheet, DeleteAmalSheet, type AmalDraft, type AmalEditTarget, type AmalSuggestion } from "./add-amal-sheet";
 import { ChecklistCards, ChecklistOverline, type ChecklistRowItem } from "./checklist";
 import { NightHero, OddNightsCard, QadrDuaCard } from "./night-view";
 import { SupportCard } from "@/components/today/home-sections";
@@ -78,6 +81,7 @@ export function PlanContent({ cookieGuest = false }: { cookieGuest?: boolean }) 
   const { timetable, failed: timetableFailed } = usePlanTimetable(ramadanDay !== null);
   const [viewChoice, setViewChoice] = useState<"day" | "nights" | null>(null);
   const [sheet, setSheet] = useState<{ open: boolean; editing: AmalEditTarget | null }>({ open: false, editing: null });
+  const [deleting, setDeleting] = useState<AmalEditTarget | null>(null);
   // Suggested night practices being added (a second tap must not add a duplicate).
   const [adding, setAdding] = useState<ReadonlySet<string>>(() => new Set());
   const addingDefaults = useRef(false);
@@ -224,14 +228,15 @@ export function PlanContent({ cookieGuest = false }: { cookieGuest?: boolean }) 
     return ok;
   };
 
-  const openEdit = (row: ChecklistRowItem) => {
+  const editTarget = (row: ChecklistRowItem): AmalEditTarget | null => {
     const item = byId.get(row.id);
-    if (!item) return;
-    setSheet({
-      open: true,
-      editing: { id: item.id, kind: item.kind, title: item.rawTitle, window: item.window, targetCount: item.targetCount },
-    });
+    return item ? { id: item.id, kind: item.kind, title: item.rawTitle, window: item.window, targetCount: item.targetCount } : null;
   };
+  const openEdit = (row: ChecklistRowItem) => {
+    const editing = editTarget(row);
+    if (editing) setSheet({ open: true, editing });
+  };
+  const askDelete = (row: ChecklistRowItem) => setDeleting(editTarget(row));
 
   const suggestions: AmalSuggestion[] = [
     ...DAY_DEFAULTS.filter((d) => !presentKeys.has(d.key)).map((d) => ({ title: titleOf(d.key) })),
@@ -277,7 +282,20 @@ export function PlanContent({ cookieGuest = false }: { cookieGuest?: boolean }) 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4" data-view={view} data-ready={plan.ready || undefined}>
       <div className="space-y-1">
-        <h1 className="rp-h1 text-rp-ink">{view === "nights" ? t("nightsTitle") : t("dayTitle")}</h1>
+        <div className="flex items-start justify-between gap-2">
+          <h1 className="rp-large-title text-rp-ink">{view === "nights" ? t("nightsTitle") : t("dayTitle")}</h1>
+          {view === "day" ? (
+            <button
+              type="button"
+              aria-label={t("addSheetTitle")}
+              disabled={locked}
+              onClick={() => setSheet({ open: true, editing: null })}
+              className={cn(roundButtonClass, "text-rp-accent")}
+            >
+              <Plus aria-hidden="true" className="size-6" strokeWidth={1.75} />
+            </button>
+          ) : null}
+        </div>
         <p className="rp-small min-h-[22px] text-rp-muted" data-testid="plan-caption" suppressHydrationWarning>
           {caption}
         </p>
@@ -359,25 +377,27 @@ export function PlanContent({ cookieGuest = false }: { cookieGuest?: boolean }) 
             ) : null}
             {tasks.length > 0
               ? PLAN_WINDOWS.map((w) => (
-                  <section key={w} aria-labelledby={`plan-${w}`} data-window={w} className="flex flex-col gap-3">
+                  <section key={w} aria-labelledby={`plan-${w}`} data-window={w} className="flex flex-col gap-2">
                     <ChecklistOverline id={`plan-${w}`} as="h3">
-                      {t(`windows.${w}`)}
+                      {t(`windowsShort.${w}`)}
                     </ChecklistOverline>
                     {taskGroups[w].length > 0 ? (
                       <ChecklistCards
                         items={taskGroups[w]}
                         onToggle={toggle}
                         onEdit={openEdit}
+                        onDelete={askDelete}
                         disabled={locked}
                         pending={plan.pending}
                         labelledBy={`plan-${w}`}
                       />
                     ) : (
-                      <p className="rp-small rounded-rp-lg border border-dashed border-rp-rule px-4 py-3 text-rp-muted">{t("groupEmpty")}</p>
+                      <p className="rp-small rounded-rp-md border border-dashed border-rp-rule px-4 py-3 text-rp-muted">{t("groupEmpty")}</p>
                     )}
                   </section>
                 ))
               : null}
+            {tasks.length > 0 ? <p className="rp-caption -mt-2 px-4 text-rp-muted">{t("swipeHint")}</p> : null}
             <AddAmalButton disabled={locked} onClick={() => setSheet({ open: true, editing: null })} />
           </section>
 
@@ -393,7 +413,7 @@ export function PlanContent({ cookieGuest = false }: { cookieGuest?: boolean }) 
               {t("goalsTitle")}
             </h2>
             {goals.length > 0 ? (
-              <ChecklistCards items={goals} onToggle={toggle} onEdit={openEdit} disabled={locked} pending={plan.pending} labelledBy="plan-goals" />
+              <ChecklistCards items={goals} onToggle={toggle} onEdit={openEdit} onDelete={askDelete} disabled={locked} pending={plan.pending} labelledBy="plan-goals" />
             ) : (
               <p className="rp-small rounded-rp-lg border border-dashed border-rp-rule px-4 py-3 text-rp-muted">{t("goalsEmpty")}</p>
             )}
@@ -410,8 +430,8 @@ export function PlanContent({ cookieGuest = false }: { cookieGuest?: boolean }) 
         suggestions={suggestions}
         onAdd={addAmal}
         onSave={saveAmal}
-        onDelete={deleteAmal}
       />
+      <DeleteAmalSheet item={deleting} onOpenChange={(open) => !open && setDeleting(null)} onConfirm={deleteAmal} />
     </div>
   );
 }

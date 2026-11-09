@@ -90,8 +90,9 @@ describe("ChecklistCards", () => {
     expect(onToggle).toHaveBeenCalledWith(expect.objectContaining({ id: "b" }), true);
   });
 
-  it("locks a row while its request is in flight and offers a 48px edit button", () => {
+  it("locks a row while its request is in flight and offers edit and delete row actions", () => {
     const onEdit = vi.fn();
+    const onDelete = vi.fn();
     render(
       <WithIntl>
         <ChecklistCards
@@ -101,6 +102,7 @@ describe("ChecklistCards", () => {
           ]}
           onToggle={() => {}}
           onEdit={onEdit}
+          onDelete={onDelete}
           pending={new Set(["a"])}
         />
       </WithIntl>,
@@ -109,10 +111,15 @@ describe("ChecklistCards", () => {
     expect(a).toBeDisabled();
     expect(a).toHaveAttribute("aria-busy", "true");
     expect(b).toBeEnabled();
+    // The locked row has no actions; the other one has both (revealed by a swipe or by focusing them).
+    expect(screen.queryByRole("button", { name: "সেহরি ও নিয়ত সম্পাদনা করুন" })).toBeNull();
     const edit = screen.getByRole("button", { name: "তারাবি সম্পাদনা করুন" });
-    expect(edit).toHaveClass("w-12");
+    fireEvent.focus(edit);
+    expect(edit.closest("li")).toHaveAttribute("data-open", "true");
     fireEvent.click(edit);
     expect(onEdit).toHaveBeenCalledWith(expect.objectContaining({ id: "b" }));
+    fireEvent.click(screen.getByRole("button", { name: "তারাবি মুছুন" }));
+    expect(onDelete).toHaveBeenCalledWith(expect.objectContaining({ id: "b" }));
   });
 });
 
