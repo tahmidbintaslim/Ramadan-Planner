@@ -726,6 +726,8 @@
         "startAuto": "অটো চালু করুন",
         "restartAuto": "অটো আবার চালু করুন",
         "todayTracking": "আজকের হিসাব",
+        "tapToCount": "গুনতে চাপ দিন, এখন {count}, লক্ষ্য {target}",
+        "tapHint": "কার্ডের যেকোনো জায়গায় চাপ দিন",
         "totalIncrements": "আজ মোট গুনেছেন",
         "cyclesCompleted": "কতবার লক্ষ্য পূর্ণ হলো",
         "targetTitle": "লক্ষ্য"
@@ -736,6 +738,9 @@
         "fieldInvestments": "বিনিয়োগ",
         "fieldDebts": "স্বল্পমেয়াদি ঋণ",
         "fieldNisab": "নিসাব সীমা",
+        "groupAssets": "সম্পদ",
+        "groupDebts": "দায়",
+        "groupNisab": "নিসাব",
         "amountPlaceholder": "টাকায় লিখুন",
         "nisabPlaceholder": "আজকের দাম অনুযায়ী লিখুন",
         "nisabHint": "নিসাব = ৮৭.৪৮ গ্রাম সোনা বা ৬১২.৩৬ গ্রাম রুপার আজকের বাজারদাম। আপনার এলাকার আজকের দাম দেখে টাকায় লিখুন; অ্যাপ কোনো দাম ধরে নেয় না।",

@@ -726,6 +726,8 @@
         "startAuto": "Start auto",
         "restartAuto": "Restart auto",
         "todayTracking": "Today",
+        "tapToCount": "Tap to count, now {count} of {target}",
+        "tapHint": "Tap anywhere on the card",
         "totalIncrements": "Counted today",
         "cyclesCompleted": "Rounds completed",
         "targetTitle": "Target"
@@ -736,6 +738,9 @@
         "fieldInvestments": "Investments",
         "fieldDebts": "Short-term debts",
         "fieldNisab": "Nisab threshold",
+        "groupAssets": "Assets",
+        "groupDebts": "Debts",
+        "groupNisab": "Nisab",
         "amountPlaceholder": "Amount in taka",
         "nisabPlaceholder": "Enter at today's price",
         "nisabHint": "Nisab = today's market value of 87.48 g of gold or 612.36 g of silver. Check today's local price and enter it in taka; the app assumes no price.",
