@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@/lib/track";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "@/i18n/use-intl";
 import { Input, fieldClass } from "@/components/ui/input";
@@ -155,6 +156,7 @@ export function TasbihContent() {
       const next = prev + 1;
       if (target > 0 && prev < target && next >= target) {
         setCompletedCycles((c) => c + 1);
+        track("tasbih_round");
       }
       setTotalIncrements((n) => n + 1);
       return next;

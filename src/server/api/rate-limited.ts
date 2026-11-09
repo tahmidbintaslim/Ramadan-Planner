@@ -8,12 +8,14 @@ import { handlePushSubscribe } from "./push-subscribe";
 import { handleRamadan } from "./ramadan";
 import { handleRamadanTimetable } from "./ramadan-timetable";
 import { handleTimings } from "./timings";
+import { handleUsageEvent } from "./usage-events";
 
 const limiters = {
   timings: createRateLimiter(DEFAULT_LIMIT),
   ramadan: createRateLimiter(DEFAULT_LIMIT),
   ramadanTimetable: createRateLimiter(DEFAULT_LIMIT),
   pushSubscribe: createRateLimiter(DEFAULT_LIMIT),
+  usageEvents: createRateLimiter(DEFAULT_LIMIT),
 };
 
 export const rateLimitedTimings = (request: Request) =>
@@ -27,3 +29,6 @@ export const rateLimitedRamadanTimetable = (request: Request) =>
 
 export const rateLimitedPushSubscribe = (request: Request) =>
   withRateLimit(limiters.pushSubscribe, request, () => handlePushSubscribe(request));
+
+export const rateLimitedUsageEvent = (request: Request) =>
+  withRateLimit(limiters.usageEvents, request, () => handleUsageEvent(request));

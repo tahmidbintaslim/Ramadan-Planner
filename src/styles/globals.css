@@ -163,6 +163,10 @@
 }
 
 :root {
+  /* Charts (Figma page 15, validated with the dataviz checker): series 1/2 and status good. */
+  --chart-1: #00846c;
+  --chart-2: #b07d00;
+  --status-good: #1d7a3a;
   /* Per-locale type tokens (html[lang]); bn here, en under :root:lang(en) below. */
   --font-rp-display: "Anek Bangla Variable", "Figtree Variable", "RP Sans Fallback", "Kalpurush", "SolaimanLipi", system-ui, sans-serif;
   /* One Bengali family for every size (Noto Sans Bengali dropped to save 107 KB): small text gets a little more
@@ -283,6 +287,9 @@
 }
 
 .dark {
+  --chart-1: #1fa98b;
+  --chart-2: #b8860f;
+  --status-good: #7bd88f;
   /* Semantic: Night. The next-prayer card stays #0E7C6B (bg/live) in both modes. */
   --rp-bg-page: var(--rp-cs-night);
   --rp-bg-surface: var(--rp-cs-night-surface);

@@ -1,8 +1,10 @@
 "use client";
 
+import { track } from "@/lib/track";
 import { useEffect, useState, useTransition } from "react";
 import { useLocale, useTranslations } from "@/i18n/use-intl";
-import { BellOff, Plus } from "lucide-react";
+import { Bell, BellOff, Plus } from "lucide-react";
+import { requestNotificationPermission, useNotificationPermission } from "./use-guest-local-reminders";
 import { Link } from "@/components/shared/link";
 import { hasPushSubscription, pushSupported, subscribeToPush } from "@/lib/push-subscribe";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -60,6 +62,7 @@ export function RemindersContent() {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   // This browser's push state for the banner: unknown until checked; "denied" means only the browser can undo it.
+  const permission = useNotificationPermission();
   const [pushState, setPushState] = useState<"unknown" | "on" | "off" | "denied" | "unsupported">("unknown");
   useEffect(() => {
     if (loading || isGuest) return;
@@ -71,6 +74,7 @@ export function RemindersContent() {
     startTransition(async () => {
       const result = await subscribeToPush();
       setPushState(result === "ok" ? "on" : result === "denied" ? "denied" : "off");
+      if (result === "ok") track("push_enabled");
       if (result === "error" || result === "missing-key") setError(t("genericError"));
     });
   const rules = isGuest ? guestRules : serverRules;
@@ -136,6 +140,7 @@ export function RemindersContent() {
       setError(t("offsetInvalid", { limit: num(OFFSET_LIMIT) }));
       return;
     }
+    if (draft.isNew) track("reminder_added");
     persist({ ...draft.rule, label: draft.rule.label.trim(), channels, offsetMinutes }, draft.isNew, () => setDraft(null));
   };
 
@@ -248,14 +253,35 @@ export function RemindersContent() {
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
       <h1 className="rp-large-title text-rp-ink">{tNav("remindersShort")}</h1>
 
-      {!loading && isGuest && (
-        <p className="rp-small rounded-rp-md bg-rp-accent-tint px-4 py-3 text-rp-ink" data-testid="reminder-guest-note">
-          {t("guestLocalNotice")}{" "}
-          <Link href="/sign-in" className="inline-flex min-h-11 items-center font-semibold text-rp-accent underline-offset-4 hover:underline">
-            {tAuth("login")}
-          </Link>
-        </p>
-      )}
+      {/* Guests: browser notifications while the app is open (after permission); an account adds server push. */}
+      {!loading && isGuest ? (
+        <div className="space-y-3 rounded-rp-md bg-rp-surface px-4 py-3" data-testid="reminder-guest-note">
+          <div className="flex items-center gap-3">
+            {permission === "granted" ? (
+              <Bell size={24} strokeWidth={LUCIDE_STROKE} aria-hidden className="shrink-0 text-rp-accent" />
+            ) : (
+              <BellOff size={24} strokeWidth={LUCIDE_STROKE} aria-hidden className="shrink-0 text-destructive" />
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="rp-row text-rp-ink">{permission === "granted" ? t("guestNotifyOn") : t("pushOffTitle")}</p>
+              <p className="rp-small text-rp-muted">
+                {permission === "denied" ? t("pushOffDenied") : t("guestNotifyBody")}
+              </p>
+            </div>
+            {permission === "default" ? (
+              <Button variant="soft" size="sm" onClick={() => void requestNotificationPermission()}>
+                {t("pushTurnOn")}
+              </Button>
+            ) : null}
+          </div>
+          <p className="rp-small border-t border-rp-rule pt-3 text-rp-ink">
+            {t("guestSignUpPitch")}{" "}
+            <Link href="/sign-up" onClick={() => track("signup_cta", "/reminders")} className="inline-flex min-h-11 items-center font-semibold text-rp-accent underline-offset-4 hover:underline">
+              {tAuth("signup")}
+            </Link>
+          </p>
+        </div>
+      ) : null}
 
       {/* Figma D7: signed in but this browser is not subscribed, so nothing would arrive. */}
       {!loading && !isGuest && pushState !== "on" && pushState !== "unknown" ? (
@@ -304,7 +330,10 @@ export function RemindersContent() {
                   <Switch
                     checked={rule.enabled}
                     disabled={isPending}
-                    onCheckedChange={(enabled) => persist({ ...rule, enabled }, false)}
+                    onCheckedChange={(enabled) => {
+                      track("reminder_toggled");
+                      persist({ ...rule, enabled }, false);
+                    }}
                     aria-label={rule.label || typeLabel(rule.type)}
                   />
                 </li>

@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@/lib/track";
 import { Fragment, useEffect, useState, useCallback, useRef } from "react";
 import { useLocale, useTranslations } from "@/i18n/use-intl";
 import { Link } from "@/components/shared/link";
@@ -474,7 +475,10 @@ export function QuranReader({ surahNumber, initialText = null }: QuranReaderProp
             onClick={() => {
               if (isPlayingAudio) pauseAudio();
               else if (isAudioPaused) void resumeAudio();
-              else playAudioAyah(surah.ayahs[Math.max(audioIndex, 0)]);
+              else {
+                track("quran_play");
+                playAudioAyah(surah.ayahs[Math.max(audioIndex, 0)]);
+              }
             }}
             aria-label={isPlayingAudio ? t("pause") : t("listenRecitation")}
             title={isPlayingAudio ? t("pause") : t("listenRecitation")}

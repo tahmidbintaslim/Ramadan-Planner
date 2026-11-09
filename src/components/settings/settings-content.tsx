@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@/lib/track";
 import { clearPersonalDeviceData } from "@/lib/sign-out-cleanup";
 import { Link } from "@/components/shared/link";
 import { useEffect, useState, useTransition } from "react";
@@ -342,7 +343,7 @@ export function SettingsContent() {
                   </Link>
                 </li>
                 <li className={DIVIDER}>
-                  <Link href="/sign-up" className={ROW}>
+                  <Link href="/sign-up" onClick={() => track("signup_cta", "/settings")} className={ROW}>
                     <UserPlus size={24} strokeWidth={LUCIDE_STROKE} aria-hidden className="shrink-0 text-rp-icon" />
                     <span className="min-w-0 flex-1">{tAuth("signup")}</span>
                     <ChevronRight size={20} strokeWidth={LUCIDE_STROKE} aria-hidden className="shrink-0 text-rp-muted" />
