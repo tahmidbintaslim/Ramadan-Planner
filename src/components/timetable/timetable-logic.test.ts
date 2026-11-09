@@ -77,7 +77,7 @@ describe("formatting", () => {
     expect(formatClock("17:55", "en", "24h")).toBe("17:55");
     expect(formatClock("04:50", "bn", "24h")).toBe("০৪:৫০");
   });
-  it("formats a row date", () => expect(formatRowDate(days[0], "মঙ্গল", "bn")).toBe("মঙ্গল · ৯ ফেব্রুয়ারি"));
+  it("formats a row date", () => expect(formatRowDate(days[0], "মঙ্গল", "bn")).toBe("মঙ্গল · ৯ ফেব্রু"));
 });
 
 describe("coarse", () => {

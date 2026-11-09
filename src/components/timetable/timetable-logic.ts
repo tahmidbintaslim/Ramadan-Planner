@@ -74,6 +74,11 @@ const MONTHS: Record<Locale, readonly string[]> = {
   en: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
 };
 
+const MONTHS_SHORT: Record<Locale, readonly string[]> = {
+  bn: ["জানু", "ফেব্রু", "মার্চ", "এপ্রিল", "মে", "জুন", "জুলাই", "আগ", "সেপ্টে", "অক্টো", "নভে", "ডিসে"],
+  en: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+};
+
 export function digits(s: string | number, locale: Locale): string {
   return locale === "bn" ? toBengaliDigits(s) : String(s);
 }
@@ -100,9 +105,10 @@ export function formatClock(hhmm: string, locale: Locale, format: ClockFormat = 
   return formatHHMM(hhmm, locale, format);
 }
 
-/** Weekday and day-month for a row, e.g. "সোম · ৯ ফেব্রুয়ারি". */
+/** Compact weekday and day-month for a table row, e.g. "সোম · ৯ ফেব্রু" / "Mon · 9 Feb". */
 export function formatRowDate(day: TimetableDay, weekdayLabel: string, locale: Locale): string {
-  return `${weekdayLabel} · ${formatDayMonth(ddmmyyyyToISO(day.gregorianDate), locale)}`;
+  const [, m, d] = ddmmyyyyToISO(day.gregorianDate).split("-").map(Number);
+  return `${weekdayLabel} · ${digits(d, locale)} ${MONTHS_SHORT[locale][m - 1]}`;
 }
 
 /** Coordinates rounded to 2 decimals (~1 km) before they go to the public cacheable API. */
