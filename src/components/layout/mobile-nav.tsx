@@ -6,9 +6,9 @@ import { AccessibilityControls } from "@/components/shared/accessibility-sidebar
 import { Link } from "@/components/shared/link";
 import { usePathname } from "@/hooks/use-pathname";
 import { useTranslations } from "@/i18n/use-intl";
-import { useAuth } from "@/components/providers/auth-provider";
 import { Show } from "@clerk/tanstack-react-start";
 import { CrescentIcon } from "@/components/icons/islamic-icons";
+import { useIsAdmin } from "@/hooks/use-is-admin";
 import {
   Sheet,
   SheetContent,
@@ -46,8 +46,8 @@ function MoreSheetBody({ onNavigate }: { onNavigate: () => void }) {
   const tCommon = useTranslations("common");
   const tA11y = useTranslations("accessibility");
   const pathname = usePathname();
-  const { isGuest } = useAuth();
-  const items = SECONDARY_NAV.filter((i) => !i.signedInOnly || !isGuest);
+  const isAdmin = useIsAdmin();
+  const items = SECONDARY_NAV.filter((i) => !i.adminOnly || isAdmin);
 
   return (
     <div className="flex flex-col gap-6 px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
