@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@/lib/track";
 import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 import { useCalcSource } from "@/components/prayer/use-calc-source";
 import { toast } from "sonner";
@@ -75,6 +76,7 @@ export function TimetableScreen() {
   );
 
   async function share() {
+    track("timetable_share");
     const url = `${window.location.origin}/timetable`;
     try {
       if (typeof navigator.share === "function") {

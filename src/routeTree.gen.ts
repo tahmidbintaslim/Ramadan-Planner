@@ -31,10 +31,12 @@ import { Route as AppTodayRouteImport } from './routes/_app.today'
 import { Route as AppZakatRouteImport } from './routes/_app.zakat'
 import { Route as AuthSignupRouteImport } from './routes/_auth.signup'
 import { Route as ApiDailyContentRouteImport } from './routes/api/daily-content'
+import { Route as ApiEventsRouteImport } from './routes/api/events'
 import { Route as ApiQuranRouteImport } from './routes/api/quran'
 import { Route as ApiRamadanRouteImport } from './routes/api/ramadan'
 import { Route as ApiRamadanTimetableRouteImport } from './routes/api/ramadan-timetable'
 import { Route as ApiTimingsRouteImport } from './routes/api/timings'
+import { Route as AppAdminIndexRouteImport } from './routes/_app.admin.index'
 import { Route as AppAdminAnnouncementsRouteImport } from './routes/_app.admin.announcements'
 import { Route as AppHadithIndexRouteImport } from './routes/_app.hadith.index'
 import { Route as AppQuranIndexRouteImport } from './routes/_app.quran.index'
@@ -164,6 +166,11 @@ const ApiDailyContentRoute = ApiDailyContentRouteImport.update({
   path: '/api/daily-content',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiEventsRoute = ApiEventsRouteImport.update({
+  id: '/api/events',
+  path: '/api/events',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiQuranRoute = ApiQuranRouteImport.update({
   id: '/api/quran',
   path: '/api/quran',
@@ -183,6 +190,11 @@ const ApiTimingsRoute = ApiTimingsRouteImport.update({
   id: '/api/timings',
   path: '/api/timings',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AppAdminIndexRoute = AppAdminIndexRouteImport.update({
+  id: '/admin/',
+  path: '/admin/',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppAdminAnnouncementsRoute = AppAdminAnnouncementsRouteImport.update({
   id: '/admin/announcements',
@@ -308,6 +320,7 @@ export interface FileRoutesByFullPath {
   '/zakat': typeof AppZakatRoute
   '/signup': typeof AuthSignupRoute
   '/api/daily-content': typeof ApiDailyContentRoute
+  '/api/events': typeof ApiEventsRoute
   '/api/quran': typeof ApiQuranRoute
   '/api/ramadan': typeof ApiRamadanRoute
   '/api/ramadan-timetable': typeof ApiRamadanTimetableRoute
@@ -324,6 +337,7 @@ export interface FileRoutesByFullPath {
   '/api/push/subscribe': typeof ApiPushSubscribeRoute
   '/api/reminders/unsubscribe': typeof ApiRemindersUnsubscribeRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/admin/': typeof AppAdminIndexRoute
   '/hadith/': typeof AppHadithIndexRoute
   '/quran/': typeof AppQuranIndexRoute
   '/api/announcements/': typeof ApiAnnouncementsIndexRoute
@@ -354,6 +368,7 @@ export interface FileRoutesByTo {
   '/zakat': typeof AppZakatRoute
   '/signup': typeof AuthSignupRoute
   '/api/daily-content': typeof ApiDailyContentRoute
+  '/api/events': typeof ApiEventsRoute
   '/api/quran': typeof ApiQuranRoute
   '/api/ramadan': typeof ApiRamadanRoute
   '/api/ramadan-timetable': typeof ApiRamadanTimetableRoute
@@ -370,6 +385,7 @@ export interface FileRoutesByTo {
   '/api/push/subscribe': typeof ApiPushSubscribeRoute
   '/api/reminders/unsubscribe': typeof ApiRemindersUnsubscribeRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/admin': typeof AppAdminIndexRoute
   '/hadith': typeof AppHadithIndexRoute
   '/quran': typeof AppQuranIndexRoute
   '/api/announcements': typeof ApiAnnouncementsIndexRoute
@@ -403,6 +419,7 @@ export interface FileRoutesById {
   '/_app/zakat': typeof AppZakatRoute
   '/_auth/signup': typeof AuthSignupRoute
   '/api/daily-content': typeof ApiDailyContentRoute
+  '/api/events': typeof ApiEventsRoute
   '/api/quran': typeof ApiQuranRoute
   '/api/ramadan': typeof ApiRamadanRoute
   '/api/ramadan-timetable': typeof ApiRamadanTimetableRoute
@@ -419,6 +436,7 @@ export interface FileRoutesById {
   '/api/push/subscribe': typeof ApiPushSubscribeRoute
   '/api/reminders/unsubscribe': typeof ApiRemindersUnsubscribeRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/_app/admin/': typeof AppAdminIndexRoute
   '/_app/hadith/': typeof AppHadithIndexRoute
   '/_app/quran/': typeof AppQuranIndexRoute
   '/api/announcements/': typeof ApiAnnouncementsIndexRoute
@@ -451,6 +469,7 @@ export interface FileRouteTypes {
     | '/zakat'
     | '/signup'
     | '/api/daily-content'
+    | '/api/events'
     | '/api/quran'
     | '/api/ramadan'
     | '/api/ramadan-timetable'
@@ -467,6 +486,7 @@ export interface FileRouteTypes {
     | '/api/push/subscribe'
     | '/api/reminders/unsubscribe'
     | '/api/stripe/webhook'
+    | '/admin/'
     | '/hadith/'
     | '/quran/'
     | '/api/announcements/'
@@ -497,6 +517,7 @@ export interface FileRouteTypes {
     | '/zakat'
     | '/signup'
     | '/api/daily-content'
+    | '/api/events'
     | '/api/quran'
     | '/api/ramadan'
     | '/api/ramadan-timetable'
@@ -513,6 +534,7 @@ export interface FileRouteTypes {
     | '/api/push/subscribe'
     | '/api/reminders/unsubscribe'
     | '/api/stripe/webhook'
+    | '/admin'
     | '/hadith'
     | '/quran'
     | '/api/announcements'
@@ -545,6 +567,7 @@ export interface FileRouteTypes {
     | '/_app/zakat'
     | '/_auth/signup'
     | '/api/daily-content'
+    | '/api/events'
     | '/api/quran'
     | '/api/ramadan'
     | '/api/ramadan-timetable'
@@ -561,6 +584,7 @@ export interface FileRouteTypes {
     | '/api/push/subscribe'
     | '/api/reminders/unsubscribe'
     | '/api/stripe/webhook'
+    | '/_app/admin/'
     | '/_app/hadith/'
     | '/_app/quran/'
     | '/api/announcements/'
@@ -582,6 +606,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   WelcomeRoute: typeof WelcomeRoute
   ApiDailyContentRoute: typeof ApiDailyContentRoute
+  ApiEventsRoute: typeof ApiEventsRoute
   ApiQuranRoute: typeof ApiQuranRoute
   ApiRamadanRoute: typeof ApiRamadanRoute
   ApiRamadanTimetableRoute: typeof ApiRamadanTimetableRoute
@@ -756,6 +781,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDailyContentRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/events': {
+      id: '/api/events'
+      path: '/api/events'
+      fullPath: '/api/events'
+      preLoaderRoute: typeof ApiEventsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/quran': {
       id: '/api/quran'
       path: '/api/quran'
@@ -783,6 +815,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/timings'
       preLoaderRoute: typeof ApiTimingsRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_app/admin/': {
+      id: '/_app/admin/'
+      path: '/admin'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AppAdminIndexRouteImport
+      parentRoute: typeof AppRoute
     }
     '/_app/admin/announcements': {
       id: '/_app/admin/announcements'
@@ -941,6 +980,7 @@ interface AppRouteChildren {
   AppZakatRoute: typeof AppZakatRoute
   AppAdminAnnouncementsRoute: typeof AppAdminAnnouncementsRoute
   AppQuranSurahRoute: typeof AppQuranSurahRoute
+  AppAdminIndexRoute: typeof AppAdminIndexRoute
   AppHadithIndexRoute: typeof AppHadithIndexRoute
   AppQuranIndexRoute: typeof AppQuranIndexRoute
   AppHadithEditionChapterRoute: typeof AppHadithEditionChapterRoute
@@ -961,6 +1001,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppZakatRoute: AppZakatRoute,
   AppAdminAnnouncementsRoute: AppAdminAnnouncementsRoute,
   AppQuranSurahRoute: AppQuranSurahRoute,
+  AppAdminIndexRoute: AppAdminIndexRoute,
   AppHadithIndexRoute: AppHadithIndexRoute,
   AppQuranIndexRoute: AppQuranIndexRoute,
   AppHadithEditionChapterRoute: AppHadithEditionChapterRoute,
@@ -994,6 +1035,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   WelcomeRoute: WelcomeRoute,
   ApiDailyContentRoute: ApiDailyContentRoute,
+  ApiEventsRoute: ApiEventsRoute,
   ApiQuranRoute: ApiQuranRoute,
   ApiRamadanRoute: ApiRamadanRoute,
   ApiRamadanTimetableRoute: ApiRamadanTimetableRoute,

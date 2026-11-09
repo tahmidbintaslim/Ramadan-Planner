@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@/lib/track";
 import { useState, useSyncExternalStore } from "react";
 import { useLocale, useTranslations } from "@/i18n/use-intl";
 import { Button } from "@/components/ui/button";
@@ -107,6 +108,7 @@ export function CardDonation() {
     setBusy(true);
     setError(null);
     try {
+      track("donate_start");
       const res = await postJson("/api/donations/checkout", { amount, currency, frequency, locale: locale.startsWith("bn") ? "bn" : "en" });
       if (res.ok && res.url) {
         window.location.assign(res.url);

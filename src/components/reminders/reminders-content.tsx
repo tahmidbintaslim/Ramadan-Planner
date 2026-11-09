@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@/lib/track";
 import { useEffect, useState, useTransition } from "react";
 import { useLocale, useTranslations } from "@/i18n/use-intl";
 import { Bell, BellOff, Plus } from "lucide-react";
@@ -73,6 +74,7 @@ export function RemindersContent() {
     startTransition(async () => {
       const result = await subscribeToPush();
       setPushState(result === "ok" ? "on" : result === "denied" ? "denied" : "off");
+      if (result === "ok") track("push_enabled");
       if (result === "error" || result === "missing-key") setError(t("genericError"));
     });
   const rules = isGuest ? guestRules : serverRules;
@@ -138,6 +140,7 @@ export function RemindersContent() {
       setError(t("offsetInvalid", { limit: num(OFFSET_LIMIT) }));
       return;
     }
+    if (draft.isNew) track("reminder_added");
     persist({ ...draft.rule, label: draft.rule.label.trim(), channels, offsetMinutes }, draft.isNew, () => setDraft(null));
   };
 
@@ -273,7 +276,7 @@ export function RemindersContent() {
           </div>
           <p className="rp-small border-t border-rp-rule pt-3 text-rp-ink">
             {t("guestSignUpPitch")}{" "}
-            <Link href="/sign-up" className="inline-flex min-h-11 items-center font-semibold text-rp-accent underline-offset-4 hover:underline">
+            <Link href="/sign-up" onClick={() => track("signup_cta", "/reminders")} className="inline-flex min-h-11 items-center font-semibold text-rp-accent underline-offset-4 hover:underline">
               {tAuth("signup")}
             </Link>
           </p>
@@ -327,7 +330,10 @@ export function RemindersContent() {
                   <Switch
                     checked={rule.enabled}
                     disabled={isPending}
-                    onCheckedChange={(enabled) => persist({ ...rule, enabled }, false)}
+                    onCheckedChange={(enabled) => {
+                      track("reminder_toggled");
+                      persist({ ...rule, enabled }, false);
+                    }}
                     aria-label={rule.label || typeLabel(rule.type)}
                   />
                 </li>

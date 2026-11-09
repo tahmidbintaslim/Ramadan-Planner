@@ -4,9 +4,11 @@ import { Card } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { AnnouncementsAdminContent } from "@/components/admin/announcements-admin-content";
 import type { AdminAccess } from "@/actions/admin-access";
+import { AdminTabs } from "@/components/admin/admin-tabs";
 
-// Gate for /admin/announcements (the access level comes from the route loader, checked on the server).
-export function AnnouncementsAdminPage({ access }: { access: AdminAccess }) {
+// Gate for the /admin pages (the access level comes from the route loader, checked on the server); every admin
+// server function checks rights again.
+export function AdminGate({ access, children }: { access: AdminAccess; children: React.ReactNode }) {
   const t = useTranslations("admin");
   const tAuth = useTranslations("auth");
   const tComing = useTranslations("comingSoon");
@@ -35,5 +37,14 @@ export function AnnouncementsAdminPage({ access }: { access: AdminAccess }) {
       </div>
     );
   }
-  return <AnnouncementsAdminContent />;
+  return <>{children}</>;
+}
+
+export function AnnouncementsAdminPage({ access }: { access: AdminAccess }) {
+  return (
+    <AdminGate access={access}>
+      <AdminTabs current="/admin/announcements" />
+      <AnnouncementsAdminContent />
+    </AdminGate>
+  );
 }

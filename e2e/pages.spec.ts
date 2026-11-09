@@ -4,7 +4,7 @@ import { test, expect, visit, HYDRATION, LEAK } from "./fixtures";
 // errors and no hydration warnings. (Promoted from the old scripts/smoke.mjs.)
 const ROUTES = [
   "/", "/today", "/plan", "/timetable", "/support", "/quran", "/reminders", "/duas", "/books", "/quiz",
-  "/tasbih", "/zakat", "/settings", "/admin/announcements", "/welcome",
+  "/tasbih", "/zakat", "/settings", "/admin", "/admin/announcements", "/welcome",
 ];
 
 for (const route of ROUTES) {

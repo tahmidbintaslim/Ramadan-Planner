@@ -7,12 +7,26 @@ import { AppHeader } from "@/components/layout/app-header";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { useTranslations } from "@/i18n/use-intl";
 import { prefetchAppData } from "@/lib/prefetch-app-data";
+import { track } from "@/lib/track";
+import { useRouter } from "@tanstack/react-router";
 import { useGuestLocalReminders } from "@/components/reminders/use-guest-local-reminders";
 
 /** Renders nothing: guest reminders as browser notifications while the app is open (own component, so rule
  *  changes do not re-render the shell). */
 function GuestLocalReminders() {
   useGuestLocalReminders();
+  return null;
+}
+
+/** Renders nothing: one first-party page_view per resolved navigation (src/lib/track.ts). */
+function PageViews() {
+  const router = useRouter();
+  useEffect(() => {
+    track("page_view");
+    return router.subscribe("onResolved", ({ pathChanged }) => {
+      if (pathChanged) track("page_view");
+    });
+  }, [router]);
   return null;
 }
 
@@ -51,6 +65,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </div>
       <MobileNav />
       <GuestLocalReminders />
+      <PageViews />
     </div>
   );
 }

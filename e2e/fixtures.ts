@@ -55,6 +55,8 @@ export async function prepareContext(context: BrowserContext, baseURL: string, a
   await context.addCookies(cookies);
   // No network to Clerk/Vercel (fake keys): fail those requests fast.
   await context.route(BLOCKED_HOSTS, (r) => r.abort());
+  // Usage events (src/lib/track.ts) need a database; tests are not about analytics, so answer them here.
+  await context.route("**/api/events", (r) => r.fulfill({ status: 204 }));
   if (onboarded) {
     await context.addInitScript((loc) => {
       try {

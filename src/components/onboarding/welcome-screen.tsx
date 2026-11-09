@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { track } from "@/lib/track";
 import { useRouter } from "@tanstack/react-router";
 import { ChevronLeft } from "lucide-react";
 import { useTranslations } from "@/i18n/use-intl";
@@ -47,6 +48,7 @@ export function WelcomeScreen() {
   }, [step]);
 
   function finish(loc: StoredLocation) {
+    track("location_set");
     writeStoredLocation(loc);
     markOnboardingDone();
     void router.navigate({ to: "/today" });
