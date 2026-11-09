@@ -14,7 +14,8 @@ const SURAHS = [
 
 /** Whether this build has card donations on (VITE_STRIPE_DONATIONS_ENABLED=true at build time). */
 async function stripeOn(page: Page): Promise<boolean> {
-  return (await page.getByTestId("give-card").getAttribute("data-stripe-enabled")) === "true";
+  const give = page.getByTestId("give-card");
+  return (await give.count()) > 0 && (await give.getAttribute("data-stripe-enabled")) === "true";
 }
 
 async function mockSurahs(page: Page) {
@@ -67,26 +68,29 @@ test.describe("Quran list (mobile)", () => {
 test.describe("Support page (mobile)", () => {
   test.use({ viewport: { width: 390, height: 844 }, appLocale: "bn" });
 
-  test("renders the appeal, ledger placeholders and disabled donation buttons, indexable, no console errors", async ({ page, appErrors, consoleEntries }) => {
+  test("renders the appeal, no placeholder ledger, the donation card when giving is on, indexable, no console errors", async ({ page, appErrors, consoleEntries }) => {
     const res = await visit(page, "/support");
     expect(res?.status()).toBe(200);
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "index, follow");
     await expect(page.getByRole("heading", { level: 1, name: "সাপোর্ট ও অবদান" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "সবার জন্য বিনামূল্যে থাকুক" })).toBeVisible();
-    await expect(page.getByText("রমজান ২০২৭-এর খরচ")).toBeVisible();
-    await expect(page.getByTestId("cost-server")).toHaveText("শিগগিরই প্রকাশ করা হবে");
+    // No placeholder cost ledger until real numbers exist (#51).
+    await expect(page.getByTestId("cost-ledger")).toHaveCount(0);
+    await expect(page.getByText("শিগগিরই প্রকাশ করা হবে")).toHaveCount(0);
 
+    if (!(await stripeOn(page))) {
+      // No way to give yet (Figma D13): one line instead of a form with disabled buttons (#51).
+      await expect(page.getByTestId("give-card")).toHaveCount(0);
+      await expect(page.getByTestId("giving-later")).toBeVisible();
+      expect(appErrors()).toEqual([]);
+      return;
+    }
     const wallet = page.getByTestId("wallet-button");
     await expect(wallet).toBeDisabled();
     await expect(wallet).toHaveText("শিগগিরই চালু হবে");
-    if (await stripeOn(page)) {
-      // The Stripe form replaces the "coming soon" card button.
-      await expect(page.getByTestId("card-button")).toHaveCount(0);
-      await expect(page.getByTestId("card-donation")).toBeVisible();
-    } else {
-      await expect(page.getByTestId("card-button")).toBeDisabled();
-      await expect(page.getByTestId("card-donation")).toHaveCount(0);
-    }
+    // The Stripe form replaces the "coming soon" card button.
+    await expect(page.getByTestId("card-button")).toHaveCount(0);
+    await expect(page.getByTestId("card-donation")).toBeVisible();
     await expect(page.getByTestId("support-note")).toContainText("কর-রেয়াতযোগ্য নয়");
 
     // Amount chips and the custom field (bKash/Nagad card).
@@ -124,7 +128,8 @@ test.describe("Support page (English)", () => {
   test("renders in English", async ({ page }) => {
     await visit(page, "/support");
     await expect(page.getByRole("heading", { level: 1, name: "Support & Contribute" })).toBeVisible();
-    await expect(page.getByTestId("wallet-button")).toHaveText("Coming soon");
+    if (await stripeOn(page)) await expect(page.getByTestId("wallet-button")).toHaveText("Coming soon");
+    else await expect(page.getByTestId("giving-later")).toHaveText("Ways to give money will appear here once they open.");
   });
 });
 

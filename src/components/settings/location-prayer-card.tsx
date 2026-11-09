@@ -68,8 +68,8 @@ export function LocationPrayerCard() {
           <li className={DIVIDER}>
             <button type="button" onClick={() => setSheetOpen(true)} className={ROW}>
               <MapPin size={24} strokeWidth={LUCIDE_STROKE} aria-hidden className="shrink-0 text-rp-icon" />
-              <span className="min-w-0 flex-1">{t("location")}</span>
-              <span className="rp-small min-w-0 truncate text-rp-muted">{place ?? t("chooseLocation")}</span>
+              <span className="shrink-0">{t("location")}</span>
+              <span className="rp-small min-w-0 flex-1 truncate text-end text-rp-muted">{place ?? t("chooseLocation")}</span>
               <ChevronRight size={20} strokeWidth={LUCIDE_STROKE} aria-hidden className="shrink-0 text-rp-muted" />
             </button>
           </li>
@@ -81,8 +81,9 @@ export function LocationPrayerCard() {
               onClick={() => setMethodsOpen((v) => !v)}
               className={ROW}
             >
-              <span className="min-w-0 flex-1">{t("method")}</span>
-              <span className="rp-small min-w-0 truncate text-rp-muted" data-testid="calc-method-value">
+              <span className="shrink-0">{t("method")}</span>
+              {/* The label keeps its width; the long method name takes the rest and truncates (#49). */}
+              <span className="rp-small min-w-0 flex-1 truncate text-end text-rp-muted" data-testid="calc-method-value">
                 {methodName(method)}
               </span>
               <ChevronRight

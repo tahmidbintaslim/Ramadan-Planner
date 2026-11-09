@@ -95,7 +95,7 @@ test.describe("first run", () => {
     await expect(title).toHaveText("প্রতিদিনের আমল, কোনো চাপ ছাড়া");
     await expect(region.locator("[aria-live=polite]")).toHaveText("৪টির মধ্যে ২: প্রতিদিনের আমল, কোনো চাপ ছাড়া");
     await page.keyboard.press("ArrowRight");
-    await expect(title).toHaveText("কুরআন ও দোয়া, অফলাইনেও");
+    await expect(title).toHaveText("কুরআন ও দোয়া, এক জায়গায়");
     await page.keyboard.press("ArrowLeft");
     await expect(title).toHaveText("প্রতিদিনের আমল, কোনো চাপ ছাড়া");
     await page.keyboard.press("End");

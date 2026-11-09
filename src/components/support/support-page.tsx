@@ -137,6 +137,9 @@ export function SupportPage({
     : "";
 
   const walletsReady = wallets.length > 0;
+  // Figma D13: nothing to give through yet -> no form with disabled buttons and no ledger of placeholders (#51).
+  const canGive = stripeEnabled || walletsReady || cardUrl !== null;
+  const hasLedger = COST_KEYS.some((key) => config.costs[key] !== null) || ledgerUrl !== null;
   const walletDisabled = !walletsReady || amount === null;
   const walletLabel = !walletsReady
     ? t("soon")
@@ -179,112 +182,116 @@ export function SupportPage({
         </div>
       </Card>
 
-      <Card className="gap-0 overflow-hidden py-0" data-testid="cost-ledger">
-        <h2 className="rp-h2 px-4 pb-1 pt-4 text-rp-ink">{t("ledgerTitle")}</h2>
-        <ul className="divide-y divide-rp-rule">
-          {COST_KEYS.map((key) => (
-            <li key={key} className="flex min-h-14 items-center justify-between gap-3 px-4">
-              <span className="rp-row text-rp-ink">{t(`cost.${key}`)}</span>
-              <span className="rp-row shrink-0 tabular-nums text-rp-muted" data-testid={`cost-${key}`}>
-                {config.costs[key] ?? t("costPending")}
-              </span>
-            </li>
-          ))}
-          {ledgerUrl ? (
-            <li>
-              <a href={ledgerUrl} target="_blank" rel="noopener noreferrer" className={rowClass} data-testid="ledger-link">
-                <span className="rp-row min-w-0 flex-1 text-rp-accent">{t("receipts")}</span>
-                <span className="sr-only">({t("opensNewTab")})</span>
-                <ChevronRightIcon size={20} aria-hidden="true" className="shrink-0 text-rp-muted" />
-              </a>
-            </li>
-          ) : null}
-        </ul>
-      </Card>
+      {hasLedger ? (
+        <Card className="gap-0 overflow-hidden py-0" data-testid="cost-ledger">
+          <h2 className="rp-h2 px-4 pb-1 pt-4 text-rp-ink">{t("ledgerTitle")}</h2>
+          <ul className="divide-y divide-rp-rule">
+            {COST_KEYS.map((key) => (
+              <li key={key} className="flex min-h-14 items-center justify-between gap-3 px-4">
+                <span className="rp-row text-rp-ink">{t(`cost.${key}`)}</span>
+                <span className="rp-row shrink-0 tabular-nums text-rp-muted" data-testid={`cost-${key}`}>
+                  {config.costs[key] ?? t("costPending")}
+                </span>
+              </li>
+            ))}
+            {ledgerUrl ? (
+              <li>
+                <a href={ledgerUrl} target="_blank" rel="noopener noreferrer" className={rowClass} data-testid="ledger-link">
+                  <span className="rp-row min-w-0 flex-1 text-rp-accent">{t("receipts")}</span>
+                  <span className="sr-only">({t("opensNewTab")})</span>
+                  <ChevronRightIcon size={20} aria-hidden="true" className="shrink-0 text-rp-muted" />
+                </a>
+              </li>
+            ) : null}
+          </ul>
+        </Card>
+      ) : null}
 
       {stripeEnabled ? <TransparencyCard /> : null}
 
-      <Card className="px-5" data-testid="give-card" data-stripe-enabled={stripeEnabled}>
-        <h2 className="rp-h2 text-rp-ink">{t("giveTitle")}</h2>
+      {canGive ? (
+        <Card className="px-5" data-testid="give-card" data-stripe-enabled={stripeEnabled}>
+          <h2 className="rp-h2 text-rp-ink">{t("giveTitle")}</h2>
 
-        <div className="space-y-2">
-          <p id="amount-label" className="rp-caption text-rp-muted">
-            {t("amountLabel")}
-          </p>
-          <div role="group" aria-labelledby="amount-label" className="flex flex-wrap gap-2">
-            {PRESET_AMOUNTS.map((a) => (
-              <Chip key={a} selected={selection === a} onClick={() => setSelection(a)} data-amount={a}>
-                ৳{num(a)}
+          <div className="space-y-2">
+            <p id="amount-label" className="rp-caption text-rp-muted">
+              {t("amountLabel")}
+            </p>
+            <div role="group" aria-labelledby="amount-label" className="flex flex-wrap gap-2">
+              {PRESET_AMOUNTS.map((a) => (
+                <Chip key={a} selected={selection === a} onClick={() => setSelection(a)} data-amount={a}>
+                  ৳{num(a)}
+                </Chip>
+              ))}
+              <Chip selected={selection === "other"} onClick={() => setSelection("other")} data-amount="other">
+                {t("amountOther")}
               </Chip>
-            ))}
-            <Chip selected={selection === "other"} onClick={() => setSelection("other")} data-amount="other">
-              {t("amountOther")}
-            </Chip>
-          </div>
-          {selection === "other" ? (
-            <div className="space-y-1.5 pt-1">
-              <Label htmlFor="custom-amount" className="rp-small text-rp-ink">
-                {t("customLabel")}
-              </Label>
-              <Input
-                id="custom-amount"
-                inputMode="numeric"
-                autoComplete="off"
-                value={custom}
-                onChange={(e) => setCustom(e.target.value)}
-                aria-invalid={showError}
-                aria-describedby="custom-amount-help"
-                className="h-12 rounded-rp-md border-rp-input bg-rp-surface"
-              />
-              <p
-                id="custom-amount-help"
-                role={showError ? "alert" : undefined}
-                className={showError ? "rp-small text-destructive" : "rp-small text-rp-muted"}
-              >
-                {showError
-                  ? errorText
-                  : t("customHint", { min: num(MIN_AMOUNT), max: num(MAX_AMOUNT, { useGrouping: true }) })}
-              </p>
             </div>
-          ) : null}
-        </div>
-
-        <div className="space-y-2">
-          <p id="frequency-label" className="rp-caption text-rp-muted">
-            {t("frequencyLabel")}
-          </p>
-          <div role="group" aria-labelledby="frequency-label" className="flex gap-2">
-            <Chip selected={frequency === "once"} onClick={() => setFrequency("once")} data-frequency="once">
-              {t("once")}
-            </Chip>
-            <Chip selected={frequency === "monthly"} onClick={() => setFrequency("monthly")} data-frequency="monthly">
-              {t("monthly")}
-            </Chip>
+            {selection === "other" ? (
+              <div className="space-y-1.5 pt-1">
+                <Label htmlFor="custom-amount" className="rp-small text-rp-ink">
+                  {t("customLabel")}
+                </Label>
+                <Input
+                  id="custom-amount"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  value={custom}
+                  onChange={(e) => setCustom(e.target.value)}
+                  aria-invalid={showError}
+                  aria-describedby="custom-amount-help"
+                  className="h-12 rounded-rp-md border-rp-input bg-rp-surface"
+                />
+                <p
+                  id="custom-amount-help"
+                  role={showError ? "alert" : undefined}
+                  className={showError ? "rp-small text-destructive" : "rp-small text-rp-muted"}
+                >
+                  {showError
+                    ? errorText
+                    : t("customHint", { min: num(MIN_AMOUNT), max: num(MAX_AMOUNT, { useGrouping: true }) })}
+                </p>
+              </div>
+            ) : null}
           </div>
-        </div>
 
-        <div className="space-y-3">
-          <Button size="lg" className="w-full" disabled={walletDisabled} onClick={() => setSheetOpen(true)} data-testid="wallet-button">
-            {walletLabel}
-          </Button>
-          {stripeEnabled ? null : cardUrl ? (
-            <Button asChild variant="outline" size="lg" className="w-full">
-              <a href={cardUrl} target="_blank" rel="noopener noreferrer" data-testid="card-button">
-                {t("cardButton")}
-                <span className="sr-only">({t("opensNewTab")})</span>
-              </a>
-            </Button>
-          ) : (
-            <Button variant="outline" size="lg" className="w-full" disabled data-testid="card-button">
-              {t("cardButton")} · {t("soon")}
-            </Button>
-          )}
-        </div>
+          <div className="space-y-2">
+            <p id="frequency-label" className="rp-caption text-rp-muted">
+              {t("frequencyLabel")}
+            </p>
+            <div role="group" aria-labelledby="frequency-label" className="flex gap-2">
+              <Chip selected={frequency === "once"} onClick={() => setFrequency("once")} data-frequency="once">
+                {t("once")}
+              </Chip>
+              <Chip selected={frequency === "monthly"} onClick={() => setFrequency("monthly")} data-frequency="monthly">
+                {t("monthly")}
+              </Chip>
+            </div>
+          </div>
 
-        <p className="rp-caption text-rp-muted" data-testid="support-note">
-          {t("voluntaryNote")} {config.taxDeductible ? t("taxYes") : t("taxNo")}
-        </p>
-      </Card>
+          <div className="space-y-3">
+            <Button size="lg" className="w-full" disabled={walletDisabled} onClick={() => setSheetOpen(true)} data-testid="wallet-button">
+              {walletLabel}
+            </Button>
+            {stripeEnabled ? null : cardUrl ? (
+              <Button asChild variant="outline" size="lg" className="w-full">
+                <a href={cardUrl} target="_blank" rel="noopener noreferrer" data-testid="card-button">
+                  {t("cardButton")}
+                  <span className="sr-only">({t("opensNewTab")})</span>
+                </a>
+              </Button>
+            ) : (
+              <Button variant="outline" size="lg" className="w-full" disabled data-testid="card-button">
+                {t("cardButton")} · {t("soon")}
+              </Button>
+            )}
+          </div>
+
+          <p className="rp-caption text-rp-muted" data-testid="support-note">
+            {t("voluntaryNote")} {config.taxDeductible ? t("taxYes") : t("taxNo")}
+          </p>
+        </Card>
+      ) : null}
 
       {stripeEnabled ? <CardDonation /> : null}
 
@@ -334,6 +341,12 @@ export function SupportPage({
           {t("creditsLicence")}
         </p>
       </Card>
+
+      {canGive ? null : (
+        <p className="rp-caption px-4 text-rp-muted" data-testid="giving-later">
+          {t("givingLater")}
+        </p>
+      )}
 
       <PaymentSheet open={sheetOpen} onOpenChange={setSheetOpen} wallets={wallets} amount={amount ?? DEFAULT_AMOUNT} frequency={frequency} />
     </div>

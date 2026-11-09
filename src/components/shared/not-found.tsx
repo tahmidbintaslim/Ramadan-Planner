@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { SearchX } from "lucide-react";
 import { Link } from "@/components/shared/link";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,11 @@ import { useTranslations } from "@/i18n/use-intl";
 // Root notFoundComponent (Figma page 12, D10): inside the app shell so the tab bar and sidebar stay, with one way back.
 export function NotFound() {
   const t = useTranslations("common");
+  const title = `${t("pageNotFoundTitle")} — ${t("appName")}`;
+  // The router's head has no match for an unknown path, so the tab would keep the home title (#57).
+  useEffect(() => {
+    document.title = title;
+  }, [title]);
 
   return (
     <AppShell>
