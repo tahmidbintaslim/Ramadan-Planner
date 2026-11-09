@@ -261,7 +261,7 @@ export function RemindersContent() {
                     <span className={cn("rp-row truncate", rule.enabled ? "text-rp-ink" : "text-rp-muted")}>
                       {rule.label || typeLabel(rule.type)}
                     </span>
-                    <span className="rp-footnote truncate text-rp-muted">{ruleSummary(rule)}</span>
+                    <span className="rp-small truncate text-rp-muted">{ruleSummary(rule)}</span>
                   </button>
                   <Switch
                     checked={rule.enabled}

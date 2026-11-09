@@ -137,7 +137,7 @@ export function TimetableScreen() {
                 onClick={() => setDecade(i)}
                 data-decade={d.id}
                 className={cn(
-                  "rp-footnote min-w-0 truncate rounded-[7px] px-2 font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rp-focus",
+                  "rp-small min-w-0 truncate rounded-[7px] px-2 font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rp-focus",
                   activeDecade === i ? "bg-rp-surface text-rp-ink shadow-sm" : "text-rp-muted hover:text-rp-ink",
                 )}
               >
