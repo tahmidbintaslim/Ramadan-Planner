@@ -5,7 +5,7 @@ import { test, expect, visit } from "./fixtures";
 
 test.use({ timezoneId: "Asia/Dhaka", viewport: { width: 390, height: 844 }, appLocale: "en" });
 
-test("method, Asr and Hijri adjustment are saved and sent with the timings requests", async ({ page }) => {
+test("method, Asr and Hijri adjustment are saved and sent with the timings requests", async ({ page, appErrors }) => {
   const urls: string[] = [];
   await page.route("**/api/timings?*", (r) => {
     urls.push(r.request().url());
@@ -19,6 +19,8 @@ test("method, Asr and Hijri adjustment are saved and sent with the timings reque
   await expect(card.getByTestId("calc-method-value")).toHaveText("Karachi (University of Islamic Sciences)");
   await expect(card.getByTestId("calc-asr").getByRole("button", { name: "Hanafi" })).toHaveAttribute("aria-pressed", "true");
   await expect(card.getByText("Times from AlAdhan")).toBeVisible();
+  // The device-zone default (Bangladesh → Karachi) must not differ between the server HTML and hydration (React #418).
+  expect(appErrors()).toEqual([]);
 
   await card.getByRole("button", { name: /Calculation method/ }).click();
   await card.getByRole("radio", { name: /Muslim World League/ }).click();

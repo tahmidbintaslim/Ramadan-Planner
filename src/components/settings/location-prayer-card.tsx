@@ -26,6 +26,8 @@ const ADJUSTMENTS = [-2, -1, 0, 1, 2] as const;
  * country's default first, with a check on the current one), the Asr school, the Hijri date adjustment, and the
  * source. Method and school are kept with the stored location on this device; the adjustment on its own key.
  */
+const subscribeNever = () => () => {};
+
 export function LocationPrayerCard() {
   const t = useTranslations("calc");
   const locale = useLocale();
@@ -36,8 +38,10 @@ export function LocationPrayerCard() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [methodsOpen, setMethodsOpen] = useState(false);
 
-  // Without a stored location the server uses the device zone's country; show that default.
-  const country = stored?.country ?? (stored ? undefined : getCountryCodeForTimezone(deviceTimeZone()));
+  // Without a stored location the server uses the device zone's country; show that default. The zone is read
+  // after hydration (the server has none), so the first render matches the server's HTML.
+  const zone = useSyncExternalStore(subscribeNever, deviceTimeZone, () => null);
+  const country = stored?.country ?? (stored ? undefined : getCountryCodeForTimezone(zone ?? undefined));
   const fallback = defaultMethodForCountry(country);
   const method = stored?.method ?? fallback.method;
   const school = stored?.school ?? fallback.school;
