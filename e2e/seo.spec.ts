@@ -55,11 +55,15 @@ test("an English URL renders English, and stays English on navigation", async ({
 });
 
 // The rows themselves come from AlAdhan at render time (an external service), so only the error text is asserted.
-test("the timetable's server HTML never carries the 'could not load' error text", async ({ request }) => {
-  const html = await (await request.get("/timetable")).text();
-  const main = html.replace(/<script[\s\S]*?<\/script>/g, "").match(/<main[\s\S]*<\/main>/)?.[0] ?? "";
-  expect(main).toContain("সময়সূচি");
-  expect(main).not.toContain("লোড করা যায়নি");
+test.describe("server HTML (no JavaScript)", () => {
+  test.use({ javaScriptEnabled: false });
+  test("the timetable's server HTML never carries the 'could not load' error text", async ({ page }) => {
+    await page.goto("/timetable");
+    // innerText skips <script> contents, so the serialized messages never count.
+    const main = await page.locator("main").innerText();
+    expect(main).toContain("সময়সূচি");
+    expect(main).not.toContain("লোড করা যায়নি");
+  });
 });
 
 test("the zakat calculator is indexable with its own title", async ({ page }) => {
