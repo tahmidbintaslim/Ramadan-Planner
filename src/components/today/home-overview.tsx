@@ -131,14 +131,16 @@ export function HomeOverview({
   return (
     <div className="flex flex-col gap-6">
       {/* Large Title (regular); below 835px the header carries the place and date, so the title is read only. */}
-      <div className="sr-only regular:not-sr-only regular:flex regular:flex-col regular:gap-1">
+      <div className="sr-only min-[1000px]:not-sr-only min-[1000px]:flex min-[1000px]:flex-col min-[1000px]:gap-1">
         <h1 className="rp-large-title text-rp-ink">{tToday("title")}</h1>
         <p className="rp-small text-rp-muted" data-testid="today-subtitle" suppressHydrationWarning>
           {subtitle}
         </p>
       </div>
-      <div className="flex flex-col gap-6 regular:grid regular:grid-cols-[minmax(0,1.42fr)_minmax(0,1fr)] regular:items-start regular:gap-6">
-        <div className="contents regular:flex regular:flex-col regular:gap-6">
+      {/* Two columns from 1000 px: beside the sidebar, an 835-999 px window (landscape phones, small tablets) left
+          ~580 px for both columns and cut the prayer names and tiles. */}
+      <div className="flex flex-col gap-6 min-[1000px]:grid min-[1000px]:grid-cols-[minmax(0,1.42fr)_minmax(0,1fr)] min-[1000px]:items-start min-[1000px]:gap-6">
+        <div className="contents min-[1000px]:flex min-[1000px]:flex-col min-[1000px]:gap-6">
           {timings && phaseTimings ? (
             <div className="order-1 flex flex-col gap-4">
               <PrayerHero timings={phaseTimings} timeZone={timeZone} ramadan={inRamadan} now={frozenNow} initialNow={initialNow} />
@@ -169,7 +171,7 @@ export function HomeOverview({
           )}
           {loading ? (
             // The prayer list's loaded height (five rows and the source line; taller rows at regular).
-            <div aria-hidden="true" data-testid="prayers-skeleton" className="order-2 h-[302px] rounded-rp-md bg-rp-surface motion-safe:animate-pulse regular:h-[342px]" />
+            <div aria-hidden="true" data-testid="prayers-skeleton" className="order-2 h-[302px] rounded-rp-md bg-rp-surface motion-safe:animate-pulse min-[1000px]:h-[342px]" />
           ) : null}
           {phaseTimings ? (
             <PrayerList
@@ -185,22 +187,22 @@ export function HomeOverview({
           ) : null}
         </div>
 
-        <div className="contents regular:flex regular:flex-col regular:gap-8">
+        <div className="contents min-[1000px]:flex min-[1000px]:flex-col min-[1000px]:gap-8">
           {timings && phaseTimings ? (
             cardKind ? (
-              <PhaseCard className="order-3 regular:order-2" kind={cardKind} />
+              <PhaseCard className="order-3 min-[1000px]:order-2" kind={cardKind} />
             ) : featureOn("dailyContent") ? (
-              <DailyAyahCard className="order-3 regular:order-2" ramadanDay={ramadanDay} />
+              <DailyAyahCard className="order-3 min-[1000px]:order-2" ramadanDay={ramadanDay} />
             ) : null
           ) : loading && featureOn("dailyContent") ? (
             // The ayah card's height (title and the fallback ayah), in its own slot: the plan preview and tiles stay put.
-            <div aria-hidden="true" data-testid="ayah-skeleton" className="order-3 h-[208px] rounded-rp-md bg-rp-surface motion-safe:animate-pulse regular:order-2" />
+            <div aria-hidden="true" data-testid="ayah-skeleton" className="order-3 h-[208px] rounded-rp-md bg-rp-surface motion-safe:animate-pulse min-[1000px]:order-2" />
           ) : null}
-          <PlanPreview className="order-4 regular:order-1" state={plan} />
-          <FeatureTiles className="order-5 regular:order-3" />
+          <PlanPreview className="order-4 min-[1000px]:order-1" state={plan} />
+          <FeatureTiles className="order-5 min-[1000px]:order-3" />
           {showSupport ? (
             <SupportCard
-              className="order-6 regular:order-4"
+              className="order-6 min-[1000px]:order-4"
               lastTen={ramadanDay !== null && ramadanDay >= LAST_TEN_FROM_DAY}
               onDismiss={onDismissSadaqah}
             />

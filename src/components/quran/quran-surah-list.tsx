@@ -291,7 +291,8 @@ export function QuranSurahList({ initialSurahs = [] }: { initialSurahs?: SurahIn
                       <span className="sr-only">{formatLocalizedNumber(surah.surahNo, locale)}. </span>
                       {showBengaliName ? surah.nameBengali || surah.nameEnglish : surah.nameEnglish}
                     </span>
-                    <span className="rp-caption block truncate text-rp-muted">
+                    {/* Wraps instead of "মাদানি · ২০০ আ…" at 320 px and large text. */}
+                    <span className="rp-caption block text-rp-muted">
                       {surah.revelationPlace === "Mecca" ? t("meccan") : t("medinan")} ·{" "}
                       {formatLocalizedNumber(surah.totalAyah, locale)} {t("ayahs")}
                     </span>

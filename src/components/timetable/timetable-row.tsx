@@ -65,7 +65,8 @@ export function TimetableRow({
         <span aria-hidden="true">{digits(day.day, locale)}</span>
       </span>
       <p className="rp-row flex min-w-0 items-center gap-2">
-        <span className="min-w-0 truncate">{formatRowDate(day, labels.weekday, locale)}</span>
+        {/* Wraps rather than truncating: at 320 px (and large text) "মঙ্গল · ৯ ফেব্রু" no longer fits one line. */}
+        <span className="min-w-0 break-words">{formatRowDate(day, labels.weekday, locale)}</span>
         {isToday ? (
           <span className="shrink-0 rounded-rp-full bg-rp-accent px-2 py-0.5 rp-caption font-semibold text-white print:hidden">{labels.today}</span>
         ) : null}
