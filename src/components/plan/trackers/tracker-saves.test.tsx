@@ -61,6 +61,20 @@ describe("SalahTracker (signed in)", () => {
     expect(fajr()).toBeEnabled();
   });
 
+  it("trackers mounted together share one load of the day's log", async () => {
+    const load = deferred<ActionResult<DailyLogDTO | null>>();
+    api.getDailyLogAction.mockReturnValue(load.promise);
+    render(
+      <>
+        <SalahTracker day={5} />
+        <SalahTracker day={5} />
+      </>,
+      { wrapper },
+    );
+    expect(api.getDailyLogAction).toHaveBeenCalledTimes(1);
+    await act(async () => load.resolve({ ok: true, data: log() }));
+  });
+
   it("rolls back a failed save and shows the error", async () => {
     api.getDailyLogAction.mockResolvedValue({ ok: true, data: log({ prayers: { isha: true } }) });
     const save = deferred<ActionResult<DailyLogDTO>>();

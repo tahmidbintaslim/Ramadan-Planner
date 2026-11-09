@@ -7,6 +7,19 @@ interface Loaded<T> {
   value: T;
 }
 
+// The Amal page mounts three trackers that read the same log: concurrent loads share one request. Dropped once it
+// settles, so a later mount (after a save) reads fresh data.
+const inFlight = new Map<string, ReturnType<typeof getDailyLogAction>>();
+function loadDailyLog(day: number, todayISO: string): ReturnType<typeof getDailyLogAction> {
+  const key = `${day}|${todayISO}`;
+  let p = inFlight.get(key);
+  if (!p) {
+    p = getDailyLogAction(day, todayISO).finally(() => inFlight.delete(key));
+    inFlight.set(key, p);
+  }
+  return p;
+}
+
 export interface ServerDailyLogField<T> {
   /** The loaded value for the current day and date; null until the first load finishes (edits must wait). */
   value: T | null;
@@ -34,7 +47,7 @@ export function useServerDailyLogField<T>(
   useEffect(() => {
     if (!enabled) return;
     let cancelled = false;
-    getDailyLogAction(day, todayISO)
+    loadDailyLog(day, todayISO)
       .then((res) => {
         if (cancelled) return;
         if (res.ok) {
