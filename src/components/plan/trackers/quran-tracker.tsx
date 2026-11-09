@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useLocale, useTranslations } from "@/i18n/use-intl";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input, fieldClass } from "@/components/ui/input";
@@ -30,6 +30,27 @@ interface LastReadSnapshot extends QuranData {
 }
 
 const LAST_READ_KEY = "rp_quran_last_read_v1";
+const subscribeNoop = () => () => {};
+
+function readStoredLastRead(): string | null {
+  try {
+    return localStorage.getItem(LAST_READ_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function parseLastRead(raw: string | null): LastReadSnapshot | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as LastReadSnapshot;
+    return parsed && typeof parsed === "object" && typeof parsed.updatedAt === "string" && typeof parsed.day === "number"
+      ? parsed
+      : null;
+  } catch {
+    return null;
+  }
+}
 const EMPTY_QURAN: QuranData = { para: "", surah: "", ayah: "", pages: "" };
 const pickQuran = (log: { quran: QuranData } | null): QuranData => log?.quran ?? EMPTY_QURAN;
 
@@ -52,25 +73,11 @@ export function QuranTracker({ day }: { day: number }) {
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">(
     "idle",
   );
-  const [lastRead, setLastRead] = useState<LastReadSnapshot | null>(() => {
-    if (typeof window === "undefined") return null;
-    try {
-      const raw = localStorage.getItem(LAST_READ_KEY);
-      if (!raw) return null;
-      const parsed = JSON.parse(raw) as LastReadSnapshot;
-      if (
-        parsed &&
-        typeof parsed === "object" &&
-        typeof parsed.updatedAt === "string" &&
-        typeof parsed.day === "number"
-      ) {
-        return parsed;
-      }
-      return null;
-    } catch {
-      return null;
-    }
-  });
+  // Read after hydration only (the server has no localStorage): reading it in a state initializer made the server
+  // and client HTML differ for anyone with saved progress (React #418).
+  const storedLastRead = useSyncExternalStore(subscribeNoop, readStoredLastRead, () => null);
+  const [savedLastRead, setLastRead] = useState<LastReadSnapshot | null>(null);
+  const lastRead = useMemo(() => savedLastRead ?? parseLastRead(storedLastRead), [savedLastRead, storedLastRead]);
   const latestRef = useRef(serverData);
   const savedStateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 

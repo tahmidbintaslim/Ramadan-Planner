@@ -78,6 +78,8 @@ export function SettingsContent() {
   const [locationLabel, setLocationLabel] = useState("ঢাকা, বাংলাদেশ");
   const [latitude, setLatitude] = useState("23.8103");
   const [longitude, setLongitude] = useState("90.4125");
+  // Save stays off until the real profile has loaded: the fields above are placeholders until then (#8).
+  const [profileLoaded, setProfileLoaded] = useState(false);
 
   const [icsLink, setIcsLink] = useState<string>("");
   // A link exists on the server but its URL cannot be shown again (only the secret's hash is stored).
@@ -104,6 +106,7 @@ export function SettingsContent() {
         return;
       }
 
+      setProfileLoaded(true);
       setDisplayName(profileRes.data.displayName);
       setTimezone(profileRes.data.timezone);
       setLocationLabel(profileRes.data.locationLabel);
@@ -410,7 +413,7 @@ export function SettingsContent() {
                 </div>
               </div>
 
-              <Button onClick={saveProfile} disabled={isPending}>{tCommon("save")}</Button>
+              <Button onClick={saveProfile} disabled={isPending || !profileLoaded}>{tCommon("save")}</Button>
         </CardContent>
       </Card>
       ) : null}

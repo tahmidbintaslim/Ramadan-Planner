@@ -2,10 +2,10 @@
 // POST server function behind `authMiddleware` (HTTP 401 when signed out). The bodies live in
 // src/server/planner-impl.ts (server-only); the Start compiler strips the handlers, and with them that
 // import, from the client bundle.
+import { callAuthed } from "@/server/call-authed";
 import { createServerFn } from "@tanstack/react-start";
 import type { z } from "zod";
 import { authMiddleware } from "@/server/auth-middleware";
-import { isUnauthorized } from "@/server/errors";
 import {
   createPlanTaskImpl,
   createPrayerGoalImpl,
@@ -52,17 +52,6 @@ export type {
   UserProfileDTO,
 } from "./planner-schemas";
 
-/** The old actions returned `{ ok: false, error: "unauthorized" }` when signed out; keep that contract. */
-async function callAuthed<T>(
-  call: () => Promise<ActionResult<T>>,
-): Promise<ActionResult<T>> {
-  try {
-    return await call();
-  } catch (error) {
-    if (isUnauthorized(error)) return { ok: false, error: "unauthorized" };
-    throw error;
-  }
-}
 
 // Server functions. The validator is the same schema the old action used; it runs on the server after
 // authMiddleware. The wrappers below check the same schema first, so invalid input still returns the old

@@ -79,7 +79,10 @@ export function usePlanItems(): PlanItemsState {
   const mounted = useSyncExternalStore(subscribeNoop, () => true, () => false);
   // While the auth client loads it is not yet known whose list this is, unless the browser has no session cookie:
   // then it is a guest's (the device list shows at once instead of after the auth client or the timeout).
-  const guest = isGuest && (!loading || authTimedOut || (mounted && !signedInFromCookie(document.cookie)));
+  // A session cookie never falls back to the device list on a slow auth client: edits made there were dropped once
+  // the account loaded. After the wait it shows the error instead.
+  const sessionCookie = mounted && signedInFromCookie(document.cookie);
+  const guest = isGuest && (!loading || (mounted && !sessionCookie));
   const goals = guest ? (mounted ? guestGoals : EMPTY_GOALS) : serverGoals;
   const tasks = guest ? (mounted ? guestTasks : EMPTY_TASKS) : serverTasks;
   const ready = mounted && (guest || (!loading && !isGuest && serverLoaded));
@@ -325,5 +328,5 @@ export function usePlanItems(): PlanItemsState {
     [guest, lock, succeed, updateGuestGoals],
   );
 
-  return { goals, tasks, isGuest: guest, ready, error, pending, addTask, addGoal, toggle, remove, updateTask, updateGoal };
+  return { goals, tasks, isGuest: guest, ready, error: error || (authTimedOut && loading && sessionCookie), pending, addTask, addGoal, toggle, remove, updateTask, updateGoal };
 }

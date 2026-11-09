@@ -29,6 +29,7 @@ export function useOnboardingGate(): GateDecision {
       : gateDecision({
           hasLocation: readStoredLocation() !== null,
           cookieSignedIn: signedInFromCookie(document.cookie),
+          cookieMissing: !/(?:^|;\s*)__client_uat=/.test(document.cookie),
           authLoading: loading,
           signedIn: user !== null,
           authTimedOut: timedOut,

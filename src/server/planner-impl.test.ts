@@ -140,27 +140,39 @@ describe("daily logs", () => {
     await expect(getDailyLogImpl(USER, 2, "2027-02-10")).resolves.toEqual({ ok: false, error: "load_failed" });
   });
 
-  it("saveDailyLog: upserts the user's row with the local log date and merges unspecified fields", async () => {
-    m.prisma.dailyLog.findUnique.mockResolvedValue(row);
+  it("saveDailyLog: an update writes only the fields it carries (concurrent saves cannot undo each other)", async () => {
+    m.prisma.dailyLog.findUnique.mockResolvedValue({ logDate: new Date("2027-02-12T00:00:00.000Z") });
     m.prisma.dailyLog.upsert.mockResolvedValue({ ...row, prayers: { fajr: true, isha: true } });
     const result = await saveDailyLogImpl(USER, { day: 3, logDate: "2027-02-12", prayers: { fajr: true, isha: true } });
     expect(result).toEqual({ ok: true, data: { ...dto, prayers: { fajr: true, isha: true } } });
     const args = m.prisma.dailyLog.upsert.mock.calls[0][0];
     expect(args.where).toEqual({ userId_ramadanYear_day: { userId: USER, ramadanYear: 1448, day: 3 } });
-    const fields = {
-      logDate: new Date("2027-02-12T00:00:00.000Z"),
-      prayers: { fajr: true, isha: true },
-      checklist: ["a", 5],
-      quranPara: 2,
-      quranSurah: "Al-Baqarah",
-      quranAyah: 10,
-      quranPages: 0,
-      journalText: "r",
-      myDua: "d",
-      dayTaskDone: true,
-    };
-    expect(args.update).toEqual(fields);
-    expect(args.create).toEqual({ userId: USER, ramadanYear: 1448, day: 3, ...fields });
+    const logDate = new Date("2027-02-12T00:00:00.000Z");
+    expect(args.update).toEqual({ prayers: { fajr: true, isha: true }, logDate });
+    expect(args.create).toEqual({
+      userId: USER, ramadanYear: 1448, day: 3, logDate, prayers: { fajr: true, isha: true },
+      checklist: [], quranPara: 0, quranSurah: "", quranAyah: 0, quranPages: 0, journalText: "", myDua: "", dayTaskDone: false,
+    });
+  });
+
+  it("saveDailyLog: outside Ramadan a row from another date starts empty (no old ticks, nothing carried into Ramadan)", async () => {
+    // Nov 2026 is outside Ramadan: every day is day 1 of 1448, the same row as Ramadan 1448 day 1.
+    m.prisma.dailyLog.findUnique.mockResolvedValue({ logDate: new Date("2026-11-08T00:00:00.000Z") });
+    m.prisma.dailyLog.upsert.mockResolvedValue(row);
+    await saveDailyLogImpl(USER, { day: 1, logDate: "2026-11-09", prayers: { fajr: true } });
+    expect(m.prisma.dailyLog.upsert.mock.calls[0][0].update).toMatchObject({
+      prayers: { fajr: true }, quranPara: 0, journalText: "", dayTaskDone: false, logDate: new Date("2026-11-09T00:00:00.000Z"),
+    });
+  });
+
+  it("getDailyLog: a row stored on another date outside Ramadan is not today's; inside Ramadan it is kept", async () => {
+    m.prisma.dailyLog.findUnique.mockResolvedValue({ ...row, logDate: new Date("2026-11-08T00:00:00.000Z") });
+    await expect(getDailyLogImpl(USER, 1, "2026-11-09")).resolves.toEqual({ ok: true, data: null });
+    // The pre-Ramadan row must not pre-fill Ramadan day 1.
+    await expect(getDailyLogImpl(USER, 1, "2027-02-09")).resolves.toEqual({ ok: true, data: null });
+    // Within Ramadan a slightly different date (a cached day number after midnight) keeps the row.
+    m.prisma.dailyLog.findUnique.mockResolvedValue({ ...row, logDate: new Date("2027-02-19T00:00:00.000Z") });
+    await expect(getDailyLogImpl(USER, 3, "2027-02-20")).resolves.toEqual({ ok: true, data: dto });
   });
 
   it("saveDailyLog: a new row parses the quran counts and trims the surah", async () => {

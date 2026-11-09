@@ -190,11 +190,16 @@ export function writeStoredLocation(loc: StoredLocation): boolean {
 
 /** Subscribe to location changes (this tab's saves and other tabs' storage writes). */
 export function subscribeStoredLocation(onChange: () => void): () => void {
+  // Only this module's keys (or a full clear, key null): any other tab's write (a tasbih count every second, the
+  // data cache) used to restart the Today load, geolocation included.
+  const onStorage = (e: StorageEvent) => {
+    if (e.key === null || e.key === LOCATION_STORAGE_KEY || e.key === HIJRI_ADJUST_KEY) onChange();
+  };
   window.addEventListener(LOCATION_EVENT, onChange);
-  window.addEventListener("storage", onChange);
+  window.addEventListener("storage", onStorage);
   return () => {
     window.removeEventListener(LOCATION_EVENT, onChange);
-    window.removeEventListener("storage", onChange);
+    window.removeEventListener("storage", onStorage);
   };
 }
 
@@ -229,9 +234,13 @@ export function gateDecision(input: {
   authLoading: boolean;
   signedIn: boolean;
   authTimedOut: boolean;
+  /** No Clerk session cookie at all (signed out), known before the auth client loads. */
+  cookieMissing?: boolean;
 }): GateDecision {
   if (input.hasLocation || input.cookieSignedIn) return "clear";
-  if (input.authLoading && !input.authTimedOut) return "wait";
+  // No session cookie is already "signed out": a first visit goes straight to onboarding instead of waiting up to
+  // 3 s for the auth client (the plan list trusts the same cookie).
+  if (input.authLoading && !input.authTimedOut && !input.cookieMissing) return "wait";
   if (!input.authLoading && input.signedIn) return "clear";
   return "onboard";
 }

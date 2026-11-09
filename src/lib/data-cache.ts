@@ -177,7 +177,9 @@ export function useCached<T>(
   }, [key, attempt]);
   return {
     data,
-    error: failed === key && data === undefined,
+    // No key yet (the server, or before the place is known) is loading, not failed: `null === null` was serving
+    // the error text in the /timetable HTML.
+    error: key !== null && failed === key && data === undefined,
     retry: () => {
       setFailed(null);
       setAttempt((n) => n + 1);
