@@ -8,7 +8,7 @@ export const Route = createFileRoute("/_auth/sign-up/$")({
   head: ({ matches }) => pageHead({ matches, title: msg(rootData(matches), "auth", "signup", "Create an account") }),
   component: () => (
     <ClerkGate mode="signUp">
-      <SignUp path="/sign-up" routing="path" signInUrl="/sign-in" forceRedirectUrl="/today" />
+      <SignUp path="/sign-up" routing="path" signInUrl="/sign-in" fallbackRedirectUrl="/today" signInFallbackRedirectUrl="/today" />
     </ClerkGate>
   ),
 });
