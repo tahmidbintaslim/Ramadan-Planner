@@ -57,11 +57,12 @@ const checkoutBody = () => {
 };
 
 describe("card donations off (the shipped default)", () => {
-  it("shows no card form or transparency card, and keeps the coming-soon card button", () => {
+  it("shows no card form, transparency card or donation form while no way to give exists", () => {
     setup({ config: { stripeEnabled: false } });
     expect(screen.queryByTestId("card-donation")).toBeNull();
     expect(screen.queryByTestId("transparency-card")).toBeNull();
-    expect(screen.getByTestId("card-button")).toBeDisabled();
+    expect(screen.queryByTestId("give-card")).toBeNull();
+    expect(screen.getByTestId("giving-later")).toBeInTheDocument();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

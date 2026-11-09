@@ -23,30 +23,14 @@ function setup(config: Partial<SupportConfig> = {}, locale: "bn" | "en" = "bn") 
 }
 
 describe("SupportPage, nothing configured", () => {
-  it("disables the wallet and card buttons with the coming-soon label", () => {
+  it("shows no donation form and no placeholder ledger until a way to give exists (Figma D13)", () => {
     setup();
-    const wallet = screen.getByTestId("wallet-button");
-    expect(wallet).toBeDisabled();
-    expect(wallet).toHaveTextContent("শিগগিরই চালু হবে");
-    const card = screen.getByTestId("card-button");
-    expect(card).toBeDisabled();
-    expect(card).toHaveTextContent("প্রবাস থেকে কার্ডে দিন");
-    expect(card).toHaveTextContent("শিগগিরই");
-  });
-
-  it("shows placeholders in the ledger and hides the receipts link", () => {
-    setup();
-    for (const k of ["server", "push", "translation"]) {
-      expect(screen.getByTestId(`cost-${k}`)).toHaveTextContent("শিগগিরই প্রকাশ করা হবে");
-    }
-    expect(screen.queryByTestId("ledger-link")).toBeNull();
-  });
-
-  it("states honestly that giving is voluntary and not tax-deductible yet", () => {
-    setup();
-    const note = screen.getByTestId("support-note");
-    expect(note).toHaveTextContent("স্বেচ্ছায়");
-    expect(note).toHaveTextContent("কর-রেয়াতযোগ্য নয়");
+    expect(screen.queryByTestId("give-card")).toBeNull();
+    expect(screen.queryByTestId("wallet-button")).toBeNull();
+    expect(screen.queryByTestId("card-button")).toBeNull();
+    expect(screen.queryByTestId("cost-ledger")).toBeNull();
+    expect(screen.queryByText("শিগগিরই প্রকাশ করা হবে")).toBeNull();
+    expect(screen.getByTestId("giving-later")).toHaveTextContent("অর্থ দিয়ে অবদান রাখার ব্যবস্থা চালু হলে এখানে দেখাবে।");
   });
 
   it("shows the intro, the repo and translation links, share, and hides the mosque row without an email", () => {
@@ -120,7 +104,8 @@ describe("SupportPage, configured", () => {
 
   it("treats a malformed number as not configured", () => {
     setup({ bkashNumber: "12345", nagadNumber: null });
-    expect(screen.getByTestId("wallet-button")).toBeDisabled();
+    expect(screen.queryByTestId("wallet-button")).toBeNull();
+    expect(screen.getByTestId("giving-later")).toBeInTheDocument();
   });
 
   it("links the card donation page and the receipts page from config", () => {
@@ -135,7 +120,7 @@ describe("SupportPage, configured", () => {
 
   it("ignores non-http card or ledger URLs", () => {
     setup({ cardUrl: "javascript:alert(1)", ledgerUrl: "ftp://x" });
-    expect(screen.getByTestId("card-button")).toBeDisabled();
+    expect(screen.queryByTestId("card-button")).toBeNull();
     expect(screen.queryByTestId("ledger-link")).toBeNull();
   });
 
@@ -147,7 +132,7 @@ describe("SupportPage, configured", () => {
   });
 
   it("only claims tax relief when the flag is set", () => {
-    setup({ taxDeductible: true });
+    setup({ taxDeductible: true, bkashNumber: "01711111111" });
     expect(screen.getByTestId("support-note")).toHaveTextContent("কর-রেয়াতের জন্য ব্যবহার করা যাবে");
     expect(screen.getByTestId("support-note")).not.toHaveTextContent("কর-রেয়াতযোগ্য নয়");
   });

@@ -21,6 +21,10 @@ test("method, Asr and Hijri adjustment are saved and sent with the timings reque
   await expect(card.getByText("Times from AlAdhan")).toBeVisible();
   // The device-zone default (Bangladesh → Karachi) must not differ between the server HTML and hydration (React #418).
   expect(appErrors()).toEqual([]);
+  // The label and the long method name never overlap (#49).
+  const label = (await card.getByRole("button", { name: /Calculation method/ }).locator("span").first().boundingBox())!;
+  const value = (await card.getByTestId("calc-method-value").boundingBox())!;
+  expect(label.x + label.width).toBeLessThanOrEqual(value.x + 1);
 
   await card.getByRole("button", { name: /Calculation method/ }).click();
   await card.getByRole("radio", { name: /Muslim World League/ }).click();

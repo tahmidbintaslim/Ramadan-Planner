@@ -33,6 +33,17 @@ for (const bad of ["/quran/999", "/quran/0", "/quran/abc"]) {
   });
 }
 
+test("an unknown path is a 404 with its own tab title (#57)", async ({ page }) => {
+  const res = await visit(page, "/nope-404");
+  expect(res?.status()).toBe(404);
+  await expect(page).toHaveTitle(/^(পাতা পাওয়া যায়নি|Page not found) — /);
+});
+
+test("/signup redirects to the one sign-up page (#57)", async ({ page }) => {
+  await visit(page, "/signup");
+  await expect(page).toHaveURL(/\/sign-up\/?$/);
+});
+
 // Hadith is switched off (src/config/features.ts): no menu links to it and its URLs show the calm coming-soon page.
 test("/hadith and its sub-routes show the coming-soon page, noindex, and nothing links to them", async ({ page }) => {
   for (const path of ["/hadith", "/hadith/bukhari", "/hadith/nope/does-not-exist-x"]) {
