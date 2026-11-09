@@ -20,6 +20,9 @@ import { Toaster } from "@/components/ui/sonner";
 
 const THEME_COLOR_SCRIPT = `try{var t=localStorage.getItem("theme");var d=t==="dark"||((!t||t==="system")&&matchMedia("(prefers-color-scheme: dark)").matches);var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute("content",d?"#0B1A17":"#F4F7F6")}catch(e){}`;
 
+// Clerk's Bengali strings, with the app's Bengali name: the Clerk application name is English ("Ramadan Planner").
+const CLERK_BN = { ...bnIN, signIn: { ...bnIN.signIn, start: { ...bnIN.signIn?.start, title: "রমজান প্ল্যানারে সাইন ইন করুন" } } };
+
 export const Route = createRootRoute({
   // ?lang=en (or bn) picks the language for this URL: each language has its own indexable address (hreflang).
   validateSearch: (search: Record<string, unknown>): { lang?: "bn" | "en" } =>
@@ -84,7 +87,7 @@ function RootDocument({ children }: { children: ReactNode }) {
       <body className="antialiased bg-background text-foreground">
         {/* Bengali sign-in and sign-up in the Bengali UI (#48; Clerk's Bengali strings), in the app's teal and type. */}
         <ClerkProvider
-          localization={locale === "bn" ? bnIN : undefined}
+          localization={locale === "bn" ? CLERK_BN : undefined}
           appearance={{ variables: { colorPrimary: "#00846c", fontFamily: "inherit", borderRadius: "0.75rem" } }}
         >
           <AppIntlProvider locale={locale} messages={messages}>
