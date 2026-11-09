@@ -102,7 +102,7 @@ export function PrayerList({
               data-state={state}
               aria-current={state === "next" ? "time" : undefined}
               className={cn(
-                "relative flex h-12 items-center gap-4 px-4 text-rp-ink medium:h-14",
+                "relative flex h-12 items-center gap-3 px-4 text-rp-ink min-[380px]:gap-4 medium:h-14",
                 "after:absolute after:right-0 after:bottom-0 after:left-14 after:h-px after:bg-rp-rule last:after:hidden",
                 state === "next" && "bg-rp-accent-tint",
               )}
@@ -114,7 +114,8 @@ export function PrayerList({
                 className={cn("shrink-0", state === "upcoming" ? "text-rp-muted" : "text-rp-icon")}
               />
               <span className={cn("rp-row min-w-0 flex-1 truncate", state === "next" && "font-semibold")}>{name}</span>
-              {state === "next" ? <Badge>{t("next")}</Badge> : null}
+              {/* Below 380 px the badge cut the name to "আ…"; the tinted, bold row (and aria-current) still mark it. */}
+              {state === "next" ? <Badge className="hidden min-[380px]:inline-flex">{t("next")}</Badge> : null}
               <span
                 className={cn("rp-headline whitespace-nowrap text-right tabular-nums", state === "past" && "text-rp-muted")}
                 suppressHydrationWarning

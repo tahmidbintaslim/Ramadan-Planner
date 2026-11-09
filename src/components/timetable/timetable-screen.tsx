@@ -35,7 +35,6 @@ type WeekdayKey = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun";
 
 export function TimetableScreen() {
   const t = useTranslations("timetablePage");
-  const tNav = useTranslations("nav");
   const locale = useLocale() as Locale;
   const calcSource = useCalcSource();
 
@@ -65,14 +64,15 @@ export function TimetableScreen() {
 
   const rowLabels = useCallback(
     (d: TimetableDay) => ({
-      weekday: tNav(`weekdays.${d.weekday}` as `weekdays.${WeekdayKey}`),
+      // Short weekdays: "বৃহস্পতি" was cut to "বৃহস্পতি · ১১ …" at 360 px.
+      weekday: t(`weekdaysShort.${d.weekday}` as `weekdaysShort.${WeekdayKey}`),
       sehri: t("sehri"),
       iftar: t("iftar"),
       today: t("today"),
       oddNight: oddNightStartingAfter(d.day) !== null ? t("oddNight", { n: digits(oddNightStartingAfter(d.day)!, locale) }) : null,
       roza: t("rozaLabel", { day: digits(d.day, locale) }),
     }),
-    [t, tNav, locale],
+    [t, locale],
   );
 
   async function share() {

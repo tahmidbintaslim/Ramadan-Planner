@@ -34,10 +34,11 @@ export function DuasPage() {
           {DUA_CATEGORIES.map((cat) => {
             const Icon = CATEGORY_ICONS[cat];
             return (
-              <li key={cat}>
+              <li key={cat} className="flex">
                 <a
                   href={`#duas-${cat}`}
-                  className="flex min-h-[96px] flex-col items-center justify-center gap-1.5 rounded-rp-md bg-rp-surface px-2 py-3 text-center text-rp-ink shadow-rp-soft outline-none transition-colors hover:bg-rp-accent-tint/60 focus-visible:ring-[3px] focus-visible:ring-ring"
+                  // h-full via flex: a two-line label ("সেহরি ও নিয়ত" at 360 px) made one card taller than its row.
+                  className="flex min-h-[96px] flex-1 flex-col items-center justify-center gap-1.5 rounded-rp-md bg-rp-surface px-2 py-3 text-center text-rp-ink shadow-rp-soft outline-none transition-colors hover:bg-rp-accent-tint/60 focus-visible:ring-[3px] focus-visible:ring-ring"
                 >
                   <span className="flex size-10 items-center justify-center rounded-rp-full bg-rp-accent-tint text-rp-accent">
                     <Icon size={22} />
