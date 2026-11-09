@@ -15,6 +15,7 @@ import {
   type PhaseTimings,
 } from "@/lib/prayer-phase";
 import { DailyAyahCard } from "./daily-ayah-card";
+import { featureOn } from "@/config/features";
 import { FeatureTiles, PhaseCard, PlanPreview, SupportCard, phaseCardKind, type PlanPreviewState } from "./home-sections";
 
 /** Ramadan day (1-30) from the Ramadan status, or null outside Ramadan. */
@@ -188,10 +189,10 @@ export function HomeOverview({
           {timings && phaseTimings ? (
             cardKind ? (
               <PhaseCard className="order-3 regular:order-2" kind={cardKind} />
-            ) : (
+            ) : featureOn("dailyContent") ? (
               <DailyAyahCard className="order-3 regular:order-2" ramadanDay={ramadanDay} />
-            )
-          ) : loading ? (
+            ) : null
+          ) : loading && featureOn("dailyContent") ? (
             // The ayah card's height (title and the fallback ayah), in its own slot: the plan preview and tiles stay put.
             <div aria-hidden="true" data-testid="ayah-skeleton" className="order-3 h-[208px] rounded-rp-md bg-rp-surface motion-safe:animate-pulse regular:order-2" />
           ) : null}

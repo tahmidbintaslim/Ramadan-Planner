@@ -2,9 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { pageHead, msg, rootData } from "@/lib/seo";
 import { TimetableScreen } from "@/components/timetable/timetable-screen";
 import { prefetchTimetable } from "@/lib/prefetch-app-data";
+import { getDefaultTimetable } from "@/actions/timetable";
 
-// Public and in the sitemap: overrides the `_app` noindex like /quran does. The timetable itself is fetched on the
-// client (/api/ramadan-timetable) for the visitor's time zone; the title and description are what crawlers index.
+// Public and in the sitemap: overrides the `_app` noindex like /quran does. The server render carries the default
+// (Dhaka) timetable, so crawlers and first paint see real times; the client then shows the visitor's own place.
 export const Route = createFileRoute("/_app/timetable")({
   head: ({ matches }) => {
     const root = rootData(matches);
@@ -16,7 +17,15 @@ export const Route = createFileRoute("/_app/timetable")({
     });
     return { ...h, meta: [...h.meta, { name: "robots", content: "index, follow" }] };
   },
-  // Warms the shared data cache on link intent (hover, touchstart, focus); never blocks navigation.
-  loader: prefetchTimetable,
-  component: TimetableScreen,
+  // Server render: the Dhaka rows. Client navigation: warm the shared data cache on link intent and never block.
+  loader: async () => {
+    if (typeof window !== "undefined") {
+      prefetchTimetable();
+      return { initial: null };
+    }
+    return { initial: await getDefaultTimetable() };
+  },
+  component: function TimetableRoute() {
+    return <TimetableScreen initial={Route.useLoaderData().initial} />;
+  },
 });

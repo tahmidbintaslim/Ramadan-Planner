@@ -13,9 +13,9 @@ import { ShareIcon } from "@/components/icons/islamic-icons";
 import { Printer } from "lucide-react";
 import { oddNightStartingAfter } from "@/lib/ramadan-nights";
 import { todayISOInZone } from "@/lib/prayer-phase";
-import { readStoredLocation, subscribeStoredLocation } from "@/lib/user-location";
+import { BD_TIME_ZONE, readStoredLocation, subscribeStoredLocation } from "@/lib/user-location";
 // The stored location's coordinates and zone, else Dhaka's (never the device zone); no geolocation on this public page.
-import { screenTimetableUrl, useCached } from "@/lib/data-cache";
+import { screenTimetableUrl, timetableUrl, useCached } from "@/lib/data-cache";
 import { districtById, districtName } from "@/lib/districts";
 import type { RamadanTimetable, TimetableDay } from "@/lib/ramadan-timetable";
 import { TIMETABLE_GRID, TimetableRow } from "./timetable-row";
@@ -33,7 +33,8 @@ import {
 
 type WeekdayKey = "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun";
 
-export function TimetableScreen() {
+/** `initial`: the Dhaka timetable from the server render (null on client navigation or when the source failed). */
+export function TimetableScreen({ initial = null }: { initial?: RamadanTimetable | null }) {
   const t = useTranslations("timetablePage");
   const locale = useLocale() as Locale;
   const calcSource = useCalcSource();
@@ -42,7 +43,9 @@ export function TimetableScreen() {
   // Shared data cache: a revisit (or a hover-preloaded visit) renders the table at once.
   const url = useSyncExternalStore(subscribeStoredLocation, screenTimetableUrl, () => null);
   const { data, error, retry } = useCached<RamadanTimetable>(url);
-  const timetable = data ?? null;
+  // The server's Dhaka rows stand in while hydrating and while a visitor with no stored place (the same request)
+  // loads; anyone with their own place sees the loading state, never Dhaka's times as theirs.
+  const timetable = data ?? (initial && (url === null || url === timetableUrl(BD_TIME_ZONE, null)) ? initial : null);
   const status: "loading" | "ready" | "error" = timetable ? "ready" : error ? "error" : "loading";
 
   // The caption names the stored district, else Dhaka (the default), in the UI language; a GPS-only location keeps

@@ -5,10 +5,10 @@
 //   public/icons/icon-512-maskable.png (icon-maskable.svg, glyph inside the safe circle)
 //   public/icons/apple-touch-icon.png (apple-touch-icon.svg)
 //   public/favicon.ico (16 from favicon-16.svg, 32/48 from favicon.svg) and public/favicon.svg
-//   public/og.png 1200x630 (og.svg, with the self-hosted Anek Bangla files from @fontsource-variable)
+//   public/og.jpg 1200x630 (og.svg, with the self-hosted Anek Bangla files from @fontsource-variable)
 // Needs the `playwright` package and a Chrome:
 //   PWCHROME=/usr/bin/google-chrome node scripts/generate-brand-assets.mjs
-// After changing the icons, bump CACHE_VERSION in public/sw.js (the icons are precached); after changing og.png,
+// After changing the icons, bump CACHE_VERSION in public/sw.js (the icons are precached); after changing og.jpg,
 // bump the ?v= of OG_IMAGE_PATH in src/lib/seo.ts.
 import { createRequire } from "node:module";
 import fs from "node:fs";
@@ -27,7 +27,7 @@ const font = (pkg, file) =>
 // Bengali and Latin subsets under one family each; unicode-range lets each glyph pick its subset.
 const BN = "U+0951-0952,U+0964-0965,U+0980-09FE,U+1CD0,U+1CD2,U+1CD5-1CD6,U+1CD8,U+1CE1,U+1CEA,U+1CED,U+1CF2,U+1CF5-1CF7,U+200C-200D,U+20B9,U+25CC,U+A8F1";
 const LATIN = "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD";
-// The app's variable face (one file per subset covers every weight): Anek Bangla for display and text. og.png and the icons were last rendered with the v2 faces; re-run to refresh them.
+// The app's variable face (one file per subset covers every weight): Anek Bangla for display and text. og.jpg and the icons were last rendered with the v2 faces; re-run to refresh them.
 const FONT_CSS = [
   ["RP Display", "anek-bangla"],
   ["RP Sans", "anek-bangla"],
@@ -40,7 +40,7 @@ const FONT_CSS = [
 
 const browser = await chromium.launch({ executablePath: process.env.PWCHROME, args: ["--no-sandbox"] });
 
-async function render(svg, width, height, { transparent = false } = {}) {
+async function render(svg, width, height, { transparent = false, jpeg = false } = {}) {
   const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 1 });
   try {
     const sized = svg.replace("<svg ", `<svg width="${width}" height="${height}" `);
@@ -51,7 +51,7 @@ async function render(svg, width, height, { transparent = false } = {}) {
       await Promise.all(["RP Display", "RP Sans"].flatMap((f) => [`400 20px "${f}"`, `600 20px "${f}"`]).map((s) => document.fonts.load(s, "অআ Aa")));
       await document.fonts.ready;
     });
-    return await page.screenshot({ omitBackground: transparent, type: "png" });
+    return await page.screenshot(jpeg ? { type: "jpeg", quality: 86 } : { omitBackground: transparent, type: "png" });
   } finally {
     await page.close();
   }
@@ -96,7 +96,8 @@ try {
   for (const size of [32, 48]) favicons.push({ size, data: await render(favicon, size, size, { transparent: true }) });
   write("favicon.ico", ico(favicons));
   write("favicon.svg", Buffer.from(favicon));
-  write("og.png", await render(read("og.svg"), 1200, 630));
+  // JPEG: the PNG was 521 KB, and WhatsApp/Messenger drop link-preview images much over ~300 KB.
+  write("og.jpg", await render(read("og.svg"), 1200, 630, { jpeg: true }));
 } finally {
   await browser.close();
 }

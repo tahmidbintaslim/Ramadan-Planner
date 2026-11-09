@@ -13,22 +13,9 @@ function oldBase(env: Record<string, string | undefined>) {
 function oldRobots(baseUrl: string) {
   return ["User-agent: *", "Allow: /", "Disallow: /api/", `Sitemap: ${baseUrl}/sitemap.xml`].join("\n") + "\n";
 }
-function oldSitemap(baseUrl: string) {
-  // /timetable and /support are new in design system v2 (Tasks 8 and 10), /duas in the Home design fixes; /hadith is
-  // switched off (src/config/features.ts) until it works.
-  const staticPages = ["/", "/quran", "/timetable", "/support", "/duas"];
-  const urls: string[] = [];
-  for (const p of staticPages) urls.push(`<url><loc>${baseUrl}${p}</loc></url>`);
-  for (let i = 1; i <= 114; i++) urls.push(`<url><loc>${baseUrl}/quran/${i}</loc></url>`);
-  return `<?xml version="1.0" encoding="UTF-8"?>
-  <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-    ${urls.join("\n")}
-  </urlset>`;
-}
-
 afterEach(() => vi.unstubAllEnvs());
 
-describe("robots.txt / sitemap.xml match the Next routes (plus the two deliberate changes)", () => {
+describe("robots.txt matches the Next route; the sitemap uses the same base URL", () => {
   it.each([
     ["https://ramadan.example", ""],
     ["", "ramadan-planner.vercel.app"],
@@ -41,7 +28,7 @@ describe("robots.txt / sitemap.xml match the Next routes (plus the two deliberat
     const expected = oldBase({ NEXT_PUBLIC_SITE_URL: pub, VERCEL_PROJECT_PRODUCTION_URL: vercel });
     expect(base).toBe(expected);
     expect(robotsTxt(base)).toBe(oldRobots(expected));
-    expect(sitemapXml(base)).toBe(oldSitemap(expected));
+    expect(sitemapXml(base)).toContain(`<loc>${expected}/quran/114</loc>`);
   });
 
   it("SITE_URL wins (canonical URLs use it) and a trailing slash is dropped", () => {
@@ -58,16 +45,18 @@ describe("sitemap content", () => {
   const xml = sitemapXml("https://x.test");
   const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1].replace("https://x.test", ""));
 
-  it("lists the public pages and surahs 1..114 exactly once", () => {
-    expect(locs).toHaveLength(5 + 114);
+  it("lists the public pages and surahs 1..114 exactly once per language (Bengali bare, English ?lang=en)", () => {
+    expect(locs).toHaveLength((6 + 114) * 2);
     expect(new Set(locs).size).toBe(locs.length);
-    expect(locs).toEqual(expect.arrayContaining(["/", "/quran", "/timetable", "/support", "/duas", "/quran/1", "/quran/114"]));
+    expect(locs).toEqual(
+      expect.arrayContaining(["/", "/quran", "/timetable", "/support", "/duas", "/zakat", "/quran/1", "/quran/114", "/zakat?lang=en", "/?lang=en"]),
+    );
     expect(locs).not.toContain("/quran/0");
     expect(locs).not.toContain("/quran/115");
   });
 
   it("never lists API, auth, admin, or other signed-in-only routes", () => {
-    const forbidden = ["/api", "/sign-in", "/sign-up", "/signup", "/login", "/forgot", "/admin", "/dashboard", "/books", "/quiz", "/hadith", "/tasbih", "/zakat"];
+    const forbidden = ["/api", "/sign-in", "/sign-up", "/signup", "/login", "/forgot", "/admin", "/dashboard", "/books", "/quiz", "/hadith", "/tasbih"];
     for (const f of forbidden) expect(locs.some((l) => l.startsWith(f))).toBe(false);
   });
 
@@ -76,6 +65,13 @@ describe("sitemap content", () => {
       expect(locs).not.toContain(p);
       expect(xml).not.toContain(`x.test${p}<`);
     }
+  });
+
+  it("gives every page its bn, en and x-default alternates", () => {
+    expect(xml).toContain('xmlns:xhtml="http://www.w3.org/1999/xhtml"');
+    expect(xml).toContain(
+      '<url><loc>https://x.test/duas</loc><xhtml:link rel="alternate" hreflang="bn" href="https://x.test/duas"/><xhtml:link rel="alternate" hreflang="en" href="https://x.test/duas?lang=en"/><xhtml:link rel="alternate" hreflang="x-default" href="https://x.test/duas"/></url>',
+    );
   });
 
   it("has an XML declaration and urlset namespace", () => {

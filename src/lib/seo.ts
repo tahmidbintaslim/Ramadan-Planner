@@ -1,6 +1,6 @@
 // Shared head() helpers. Root loader data (locale, messages, siteUrl) is read from the matches so each public
-// route sets its own unique title/description/canonical/OG tags. Locale comes from a cookie on the SAME url, so
-// there are deliberately no hreflang alternates (they would point at URLs that do not exist).
+// route sets its own unique title/description/canonical/OG tags. Each language has its own address (Bengali bare,
+// English with ?lang=en; see the root route), declared to search engines with hreflang alternates.
 
 type Messages = Record<string, Record<string, unknown> | undefined>;
 type RootData = { locale?: string; messages?: Messages; siteUrl?: string } | undefined;
@@ -16,9 +16,9 @@ export function msg(root: RootData, ns: string, key: string, fallback = ""): str
   return str(root?.messages?.[ns]?.[key], fallback);
 }
 
-// The version query busts social-network caches of the old image; bump it whenever public/og.png changes
+// The version query busts social-network caches of the old image; bump it whenever public/og.jpg changes
 // (scripts/generate-brand-assets.mjs).
-export const OG_IMAGE_PATH = "/og.png?v=4";
+export const OG_IMAGE_PATH = "/og.jpg?v=5";
 
 type PageHeadOptions = {
   matches: readonly MatchLike[];
@@ -40,7 +40,10 @@ export function pageHead({ matches, title, fullTitle: exactTitle, description, c
   const desc = description ?? msg(root, "common", "metaDescription");
   const ogDesc = description ?? msg(root, "common", "metaOgDescription", desc);
   const siteUrl = root?.siteUrl ?? "";
-  const url = canonicalPath !== undefined && siteUrl ? `${siteUrl}${canonicalPath === "/" ? "" : canonicalPath}` : "";
+  const base = canonicalPath !== undefined && siteUrl ? `${siteUrl}${canonicalPath === "/" ? "" : canonicalPath}` : "";
+  // Each language has its own address: Bengali without a parameter, English with ?lang=en (hreflang below).
+  const enUrl = base ? `${base}${base.includes("?") ? "&" : "?"}lang=en` : "";
+  const url = root?.locale === "en" ? enUrl : base;
   const meta: Record<string, string>[] = [
     { title: fullTitle },
     { name: "description", content: desc },
@@ -59,7 +62,14 @@ export function pageHead({ matches, title, fullTitle: exactTitle, description, c
   if (url) meta.push({ property: "og:url", content: url });
   return {
     meta,
-    links: url ? [{ rel: "canonical", href: url }] : [],
+    links: url
+      ? [
+          { rel: "canonical", href: url },
+          { rel: "alternate", hrefLang: "bn", href: base },
+          { rel: "alternate", hrefLang: "en", href: enUrl },
+          { rel: "alternate", hrefLang: "x-default", href: base },
+        ]
+      : [],
     ...(scripts ? { scripts } : {}),
   };
 }

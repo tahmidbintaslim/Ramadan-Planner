@@ -9,6 +9,11 @@ export const FEATURES = {
   books: false,
   /** Placeholder only. */
   quiz: false,
+  /**
+   * Today's "আজকের আয়াত" card. Off until the daily_content rows carry a scholar-reviewed status (#33, #34): the
+   * production rows are placeholder seed data, and unreviewed religious text is never shown.
+   */
+  dailyContent: false,
   duas: true,
   tasbih: true,
   zakat: true,

@@ -42,7 +42,7 @@ export function robotsTxt(baseUrl: string): string {
 // /settings; they were dropped deliberately (Task 10 fix round 1).
 // /duas joined in the Home design fixes (public, sourced duas). Features switched off in src/config/features.ts
 // (hadith today) are left out until they work.
-export const SITEMAP_STATIC_PAGES = ["/", "/quran", "/hadith", "/timetable", "/support", "/duas"].filter((p) => !isHiddenPath(p));
+export const SITEMAP_STATIC_PAGES = ["/", "/quran", "/hadith", "/timetable", "/support", "/duas", "/zakat"].filter((p) => !isHiddenPath(p));
 export const SURAH_COUNT = 114;
 
 /** Every path the sitemap lists, in order (static pages, then /quran/1..114). */
@@ -54,9 +54,19 @@ export function sitemapPaths(): string[] {
 
 export function sitemapXml(baseUrl: string): string {
   const base = xmlEscape(baseUrl);
-  const urls = sitemapPaths().map((p) => `<url><loc>${base}${p}</loc></url>`);
+  // Both language addresses of every page (Bengali bare, English ?lang=en), each listing the other as an alternate.
+  const urls = sitemapPaths().flatMap((p) => {
+    const bn = `${base}${p}`;
+    const en = `${bn}?lang=en`;
+    const alts = [
+      `<xhtml:link rel="alternate" hreflang="bn" href="${bn}"/>`,
+      `<xhtml:link rel="alternate" hreflang="en" href="${xmlEscape(en)}"/>`,
+      `<xhtml:link rel="alternate" hreflang="x-default" href="${bn}"/>`,
+    ].join("");
+    return [`<url><loc>${bn}</loc>${alts}</url>`, `<url><loc>${xmlEscape(en)}</loc>${alts}</url>`];
+  });
   return `<?xml version="1.0" encoding="UTF-8"?>
-  <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
     ${urls.join("\n")}
   </urlset>`;
 }

@@ -104,13 +104,10 @@ test.describe("mobile Home", () => {
     await mockHome(page, "13:00");
     await visit(page, "/today");
     await expect(page.locator("li[data-prayer]")).toHaveCount(5);
-    // Outside the sehri/iftar moments the one devotional card is the day's ayah, with its reference.
+    // Outside the sehri/iftar moments there is no devotional card while the daily content is unreviewed (#33):
+    // the "আজকের আয়াত" card is behind the dailyContent feature flag.
     await expect(page.getByTestId("phase-card")).toHaveCount(0);
-    const ayah = page.getByTestId("daily-ayah");
-    await expect(ayah).toHaveCount(1);
-    // The ayah is Quran text: Amiri Quran (font-quran), per the founder's type rule.
-    await expect(ayah.locator('[lang="ar"]')).toHaveClass(/font-quran/);
-    await expect(ayah).toContainText(/সূরা|Surah/);
+    await expect(page.getByTestId("daily-ayah")).toHaveCount(0);
     const main = page.locator("main");
     for (const gone of ["নামাজ ট্র্যাকার", "কুরআন খতম", "দৈনিক আমলের তালিকা", "রমজান ডায়েরি", "আজকের আমল ও ট্র্যাকার", "দিনের হাদিস"]) {
       await expect(main).not.toContainText(gone);

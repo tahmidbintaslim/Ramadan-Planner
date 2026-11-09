@@ -315,11 +315,13 @@ export function LandingPage({ serverYear = new Date().getFullYear(), initialNow 
                   <NextPrayerRow timings={phaseTimings} timeZone={timeZone} now={now} />
                 </>
               ) : (
-                <div role="status" className="flex min-h-[176px] items-end rounded-rp-lg bg-rp-surface p-6 text-rp-muted motion-safe:animate-pulse">
+                <div role="status" className="flex h-[166px] items-end rounded-rp-lg bg-rp-surface p-6 text-rp-muted motion-safe:animate-pulse">
                   <span className="rp-small">{home.status === "error" ? t("timesUnavailable") : t("timesLoading")}</span>
                 </div>
               )}
-              <p className="rp-small text-rp-muted" data-testid="landing-sample-source">
+              {/* Same height as the real content (pair 82 + gap 8 + next-prayer row 76) and a two-line source line on
+                  phones, so the times arriving do not push the page down (landing CLS was 0.16 in production). */}
+              <p className="rp-small min-h-[2lh] text-rp-muted medium:min-h-0" data-testid="landing-sample-source">
                 {source}
               </p>
             </section>

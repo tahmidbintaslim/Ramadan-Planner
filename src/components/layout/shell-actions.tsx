@@ -19,6 +19,10 @@ export function useLocaleSwitch() {
   const switchLocale = () => {
     startTransition(async () => {
       await switchLocaleAction();
+      // A ?lang= in the URL would keep forcing the old language: drop it, then reload the messages.
+      if (new URLSearchParams(window.location.search).has("lang")) {
+        await router.navigate({ to: ".", search: (prev: Record<string, unknown>) => ({ ...prev, lang: undefined }), replace: true });
+      }
       await router.invalidate();
     });
   };

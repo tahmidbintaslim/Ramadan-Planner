@@ -19,17 +19,27 @@ const get = (h: { meta: Record<string, string>[] }, key: string, val: string) =>
 
 describe("pageHead", () => {
   it("builds a unique title, canonical from SITE_URL, og:* and a static og:image", () => {
-    const h = pageHead({ matches: matches(), title: "Quran", canonicalPath: "/quran" });
+    const h = pageHead({ matches: matches("bn"), title: "Quran", canonicalPath: "/quran" });
     expect(h.meta[0]).toEqual({ title: "Quran — Ramadan Planner" });
-    expect(h.links).toEqual([{ rel: "canonical", href: "https://x.test/quran" }]);
+    expect(h.links).toEqual([
+      { rel: "canonical", href: "https://x.test/quran" },
+      { rel: "alternate", hrefLang: "bn", href: "https://x.test/quran" },
+      { rel: "alternate", hrefLang: "en", href: "https://x.test/quran?lang=en" },
+      { rel: "alternate", hrefLang: "x-default", href: "https://x.test/quran" },
+    ]);
     expect(get(h, "property", "og:url")[0].content).toBe("https://x.test/quran");
-    expect(get(h, "property", "og:image")[0].content).toBe("https://x.test/og.png?v=4");
+    expect(get(h, "property", "og:image")[0].content).toBe("https://x.test/og.jpg?v=5");
     expect(get(h, "name", "twitter:card")[0].content).toBe("summary_large_image");
   });
 
   it("canonical for the landing page is the bare origin", () => {
-    const h = pageHead({ matches: matches(), canonicalPath: "/" });
-    expect(h.links).toEqual([{ rel: "canonical", href: "https://x.test" }]);
+    const h = pageHead({ matches: matches("bn"), canonicalPath: "/" });
+    expect(h.links).toEqual([
+      { rel: "canonical", href: "https://x.test" },
+      { rel: "alternate", hrefLang: "bn", href: "https://x.test" },
+      { rel: "alternate", hrefLang: "en", href: "https://x.test?lang=en" },
+      { rel: "alternate", hrefLang: "x-default", href: "https://x.test" },
+    ]);
     expect(h.meta[0]).toEqual({ title: "Ramadan Planner" });
   });
 
@@ -42,8 +52,11 @@ describe("pageHead", () => {
     expect(new Set(keys).size).toBe(keys.length);
   });
 
-  it("has no hreflang alternates: the locale comes from a cookie on the same URL", () => {
-    expect(JSON.stringify(pageHead({ matches: matches(), canonicalPath: "/" }))).not.toMatch(/hreflang|alternate/);
+  it("an English page is canonical at its ?lang=en address, with the same alternates", () => {
+    const h = pageHead({ matches: matches("en"), title: "Quran", canonicalPath: "/quran" });
+    expect(h.links[0]).toEqual({ rel: "canonical", href: "https://x.test/quran?lang=en" });
+    expect(get(h, "property", "og:url")[0].content).toBe("https://x.test/quran?lang=en");
+    expect(h.links.filter((l) => l.rel === "alternate").map((l) => l.hrefLang)).toEqual(["bn", "en", "x-default"]);
   });
 
   it("maps locale to og:locale", () => {
@@ -75,7 +88,7 @@ describe("JSON-LD", () => {
       name: "Ramadan Planner",
       description: "Plan.",
       url: "https://x.test",
-      image: "https://x.test/og.png?v=4",
+      image: "https://x.test/og.jpg?v=5",
       inLanguage: ["bn", "en"],
     });
   });
