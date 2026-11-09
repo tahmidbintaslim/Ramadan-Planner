@@ -26,6 +26,9 @@ for (const bad of ["/quran/999", "/quran/0", "/quran/abc"]) {
     const res = await visit(page, bad);
     expect(res?.status()).toBe(404);
     await expect(page.getByText(/পাতা পাওয়া যায়নি|Page not found/).first()).toBeVisible();
+    // Inside the app shell (Figma D10): the tab bar stays, with one way back to Today.
+    await expect(page.getByRole("navigation", { name: /প্রধান নেভিগেশন|Main navigation/ }).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: /আজকের পাতায় যান|Go to Today/ })).toHaveAttribute("href", "/today");
     expect(await page.content()).not.toMatch(LEAK);
   });
 }

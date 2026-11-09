@@ -5,10 +5,24 @@ import Stripe from "stripe";
 
 let client: Stripe | undefined;
 
-/** Trimmed env value; a stray newline pasted from the dashboard must not break a key. "" when unset. */
+/** Live payments stay off until the founder sets STRIPE_ALLOW_LIVE=true (receiving entity and FD(VA) first). */
+export const stripeLiveAllowed = (): boolean => process.env.STRIPE_ALLOW_LIVE?.trim() === "true";
+
+/**
+ * Trimmed env value; a stray newline pasted from the dashboard must not break a key. "" when unset. A live
+ * secret key (sk_live_ / rk_live_) reads as unset unless live payments are allowed, so a mis-pasted live key
+ * makes donations "unavailable" (503) instead of taking real money.
+ */
 export const stripeEnv = (
   name: "STRIPE_SECRET_KEY" | "STRIPE_WEBHOOK_SECRET" | "STRIPE_DONATION_PRODUCT_ID",
-): string => process.env[name]?.trim() ?? "";
+): string => {
+  const value = process.env[name]?.trim() ?? "";
+  if (name === "STRIPE_SECRET_KEY" && /^(sk|rk)_live_/.test(value) && !stripeLiveAllowed()) {
+    console.error("[stripe] a live secret key is set but STRIPE_ALLOW_LIVE is not true; treating Stripe as off");
+    return "";
+  }
+  return value;
+};
 
 /** The shared Stripe client. Throws when STRIPE_SECRET_KEY is unset, so callers answer 503 instead of guessing. */
 export function getStripe(): Stripe {

@@ -44,7 +44,7 @@ test.describe("timetable (mobile)", () => {
     const today = page.locator('[data-decade-panel="maghfirah"] li[aria-current="date"]');
     await expect(today).toHaveCount(1);
     await expect(today).toHaveAttribute("data-state", "today");
-    await expect(today).toHaveClass(/bg-rp-live/);
+    await expect(today).toHaveClass(/bg-rp-accent-tint/);
 
     // Past rows are muted, odd nights sit in the last decade.
     await expect(page.locator('[data-decade-panel="maghfirah"] li[data-state="past"]').first()).toHaveClass(/text-rp-muted/);

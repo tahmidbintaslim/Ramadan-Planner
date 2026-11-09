@@ -6,10 +6,10 @@ import { Input, fieldClass } from "@/components/ui/input";
 import { Chip } from "@/components/ui/chip";
 import { formatLocalizedNumber, parseLocalizedNumber } from "@/lib/locale-number";
 import { cn } from "@/lib/utils";
-import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { DIVIDER } from "@/components/settings/location-prayer-card";
 import { pruneLocalHistory } from "@/lib/local-history";
 import { migrateUtcDayKey } from "@/lib/local-day";
 import { useLocalTodayISO } from "@/hooks/use-local-day";
@@ -190,116 +190,109 @@ export function TasbihContent() {
   const reached = count >= target && target > 0;
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-5">
       <div className="space-y-1">
-        <h1 className="rp-h1 text-rp-ink">{tNav("tasbih")}</h1>
+        <h1 className="rp-large-title text-rp-ink">{tNav("tasbih")}</h1>
         <p className="rp-small text-rp-muted">{tLanding("featureTasbihDesc")}</p>
       </div>
 
-      <Card className="items-center gap-4 px-5 text-center" data-testid="tasbih-counter">
-        <p className="rp-overline text-rp-muted">{tTasbih("currentCount")}</p>
-        <p className="rp-time-xl tabular-nums text-rp-ink" aria-live="polite">
-          {num(count)}
-        </p>
-        <p className="rp-small text-rp-muted">{tTasbih("targetLabel", { target: num(target) })}</p>
-        <Progress value={percent} className="h-2 w-full" aria-label={tTasbih("currentCount")} />
-        <p className="rp-caption text-rp-muted">{tTasbih("percentComplete", { percent: num(percent) })}</p>
-        {reached ? <p className="rp-row text-rp-accent">{tTasbih("targetReached")}</p> : null}
-        <div className="grid w-full grid-cols-[2fr_1fr] gap-2">
-          <Button type="button" size="lg" onClick={() => incrementCount()}>
-            +{num(1)}
-          </Button>
-          <Button
-            type="button"
-            size="lg"
-            variant="outline"
-            onClick={() => setCount((c) => Math.max(0, c - 1))}
+      {/* Target presets above the counter (Figma page 12, D8). */}
+      <div role="group" aria-label={tTasbih("targetTitle")} className="flex flex-wrap gap-2">
+        {TASBIH_PRESETS.map((preset) => (
+          <Chip
+            key={preset}
+            selected={target === preset}
+            className="h-11 min-w-14"
+            onClick={() => {
+              setTarget(preset);
+              setTargetInput(num(preset));
+            }}
           >
-            -{num(1)}
-          </Button>
-        </div>
+            {num(preset)}
+          </Chip>
+        ))}
+      </div>
+
+      {/* The whole card counts: one big target for the thumb, no aiming at a small button. */}
+      <button
+        type="button"
+        onClick={() => incrementCount()}
+        aria-label={tTasbih("tapToCount", { count: num(count), target: num(target) })}
+        data-testid="tasbih-counter"
+        className="rp-pressable flex w-full select-none flex-col items-center gap-3 rounded-rp-xl bg-rp-surface px-6 py-8 text-center shadow-rp-soft outline-none focus-visible:ring-2 focus-visible:ring-rp-focus"
+      >
+        <span className="rp-overline text-rp-muted">{tTasbih("currentCount")}</span>
+        <span className="rp-display-l tabular-nums text-rp-accent" aria-live="polite">
+          {num(count)}
+        </span>
+        <Progress value={percent} className="h-2 w-full" aria-hidden />
+        <span className="rp-small text-rp-muted">
+          {tTasbih("targetLabel", { target: num(target) })} · {tTasbih("percentComplete", { percent: num(percent) })}
+        </span>
+        {reached ? <span className="rp-row text-rp-accent">{tTasbih("targetReached")}</span> : null}
+        <span className="rp-caption text-rp-muted">{tTasbih("tapHint")}</span>
+      </button>
+
+      <div className="flex justify-center gap-2">
+        <Button type="button" variant="quiet" onClick={() => setCount((c) => Math.max(0, c - 1))}>
+          -{num(1)}
+        </Button>
         <Button type="button" variant="quiet" onClick={resetAll}>
           {tTasbih("reset")}
         </Button>
-      </Card>
+      </div>
 
-      <Card className="px-5">
-        <h2 className="rp-h2 text-rp-ink">{tTasbih("targetTitle")}</h2>
-        <div role="group" aria-label={tTasbih("targetTitle")} className="flex flex-wrap gap-2">
-          {TASBIH_PRESETS.map((preset) => (
-            <Chip
-              key={preset}
-              selected={target === preset}
-              className="h-12 min-w-16"
-              onClick={() => {
-                setTarget(preset);
-                setTargetInput(num(preset));
-              }}
-            >
-              {num(preset)}
-            </Chip>
-          ))}
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="tasbih-target" className="rp-small text-rp-ink">
-            {tTasbih("setCustomTarget")}
-          </Label>
-          <div className="flex flex-wrap items-center gap-2">
+      <section aria-labelledby="tasbih-settings" className="space-y-2">
+        <h2 id="tasbih-settings" className="rp-caption px-4 text-rp-muted">
+          {tTasbih("targetTitle")}
+        </h2>
+        <ul className="overflow-hidden rounded-rp-md bg-rp-surface">
+          <li className={cn(DIVIDER, "flex flex-wrap items-center gap-3 px-4 py-2")}>
+            <label htmlFor="tasbih-target" className="rp-row basis-full text-rp-ink sm:basis-auto sm:flex-1">
+              {tTasbih("setCustomTarget")}
+            </label>
             <Input
               id="tasbih-target"
               inputMode="numeric"
               autoComplete="off"
               value={targetInput}
               onChange={(e) => setTargetInput(e.target.value)}
-              className={cn(fieldClass, "w-40")}
+              className={cn(fieldClass, "h-11 min-w-0 flex-1 text-end sm:w-24 sm:flex-none")}
             />
             <Button type="button" variant="soft" onClick={applyTargetInput}>
               {tTasbih("applyTarget")}
             </Button>
-          </div>
-        </div>
-      </Card>
+          </li>
+          <li className={cn(DIVIDER, "flex items-center gap-3 px-4 py-2")}>
+            <span className="min-w-0 flex-1">
+              <span className="rp-row block text-rp-ink">{tTasbih("autoCount")}</span>
+              <span className="rp-caption block text-rp-muted">{tTasbih("autoCountHint")}</span>
+            </span>
+            <Switch
+              checked={autoEnabled}
+              disabled={reached && !autoEnabled}
+              onCheckedChange={setAutoEnabled}
+              aria-label={tTasbih("autoCount")}
+            />
+          </li>
+        </ul>
+      </section>
 
-      <Card className="px-5">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="rp-h2 text-rp-ink">{tTasbih("autoCount")}</h2>
-          <p className="rp-caption text-rp-muted">{tTasbih("autoCountHint")}</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant={autoEnabled ? "soft" : "default"}
-            onClick={() => setAutoEnabled((v) => !v)}
-            disabled={reached}
-          >
-            {autoEnabled ? tTasbih("pauseAuto") : tTasbih("startAuto")}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              setCount(0);
-              setAutoEnabled(true);
-            }}
-          >
-            {tTasbih("restartAuto")}
-          </Button>
-        </div>
-      </Card>
-
-      <Card className="px-5">
-        <h2 className="rp-h2 text-rp-ink">{tTasbih("todayTracking")}</h2>
-        <dl className="grid grid-cols-2 gap-3">
-          <div className="rounded-rp-md bg-rp-accent-tint p-4">
-            <dt className="rp-caption text-rp-muted">{tTasbih("totalIncrements")}</dt>
-            <dd className="rp-time-l tabular-nums text-rp-ink">{num(totalIncrements)}</dd>
+      <section aria-labelledby="tasbih-today" className="space-y-2">
+        <h2 id="tasbih-today" className="rp-caption px-4 text-rp-muted">
+          {tTasbih("todayTracking")}
+        </h2>
+        <dl className="overflow-hidden rounded-rp-md bg-rp-surface">
+          <div className={cn(DIVIDER, "flex min-h-[52px] items-center justify-between gap-4 px-4")}>
+            <dt className="rp-row text-rp-ink">{tTasbih("totalIncrements")}</dt>
+            <dd className="rp-row tabular-nums text-rp-ink">{num(totalIncrements)}</dd>
           </div>
-          <div className="rounded-rp-md bg-rp-accent-tint p-4">
-            <dt className="rp-caption text-rp-muted">{tTasbih("cyclesCompleted")}</dt>
-            <dd className="rp-time-l tabular-nums text-rp-ink">{num(completedCycles)}</dd>
+          <div className={cn(DIVIDER, "flex min-h-[52px] items-center justify-between gap-4 px-4")}>
+            <dt className="rp-row text-rp-ink">{tTasbih("cyclesCompleted")}</dt>
+            <dd className="rp-row tabular-nums text-rp-ink">{num(completedCycles)}</dd>
           </div>
         </dl>
-      </Card>
+      </section>
     </div>
   );
 }

@@ -2,7 +2,9 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useLocale, useTranslations } from "@/i18n/use-intl";
-import { Plus } from "lucide-react";
+import { BellOff, Plus } from "lucide-react";
+import { Link } from "@/components/shared/link";
+import { hasPushSubscription, pushSupported, subscribeToPush } from "@/lib/push-subscribe";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { DIVIDER, ROW } from "@/components/settings/location-prayer-card";
@@ -45,6 +47,7 @@ export function RemindersContent() {
   const tCommon = useTranslations("common");
   const tSalah = useTranslations("salah");
   const tNav = useTranslations("nav");
+  const tAuth = useTranslations("auth");
   const locale = useLocale();
   const num = (n: number) => formatLocalizedNumber(n, locale);
   const { isGuest, loading, user } = useAuth();
@@ -56,6 +59,20 @@ export function RemindersContent() {
 
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  // This browser's push state for the banner: unknown until checked; "denied" means only the browser can undo it.
+  const [pushState, setPushState] = useState<"unknown" | "on" | "off" | "denied" | "unsupported">("unknown");
+  useEffect(() => {
+    if (loading || isGuest) return;
+    void hasPushSubscription().then((on) =>
+      setPushState(!pushSupported() ? "unsupported" : on ? "on" : Notification.permission === "denied" ? "denied" : "off"),
+    );
+  }, [loading, isGuest]);
+  const turnOnPush = () =>
+    startTransition(async () => {
+      const result = await subscribeToPush();
+      setPushState(result === "ok" ? "on" : result === "denied" ? "denied" : "off");
+      if (result === "error" || result === "missing-key") setError(t("genericError"));
+    });
   const rules = isGuest ? guestRules : serverRules;
   const notifyTrackerUpdate = () => {
     if (typeof window !== "undefined") {
@@ -232,8 +249,29 @@ export function RemindersContent() {
       <h1 className="rp-large-title text-rp-ink">{tNav("remindersShort")}</h1>
 
       {!loading && isGuest && (
-        <p className="rp-small rounded-rp-md bg-rp-accent-tint px-4 py-3 text-rp-ink">{t("guestLocalNotice")}</p>
+        <p className="rp-small rounded-rp-md bg-rp-accent-tint px-4 py-3 text-rp-ink" data-testid="reminder-guest-note">
+          {t("guestLocalNotice")}{" "}
+          <Link href="/sign-in" className="inline-flex min-h-11 items-center font-semibold text-rp-accent underline-offset-4 hover:underline">
+            {tAuth("login")}
+          </Link>
+        </p>
       )}
+
+      {/* Figma D7: signed in but this browser is not subscribed, so nothing would arrive. */}
+      {!loading && !isGuest && pushState !== "on" && pushState !== "unknown" ? (
+        <div className="flex items-center gap-3 rounded-rp-md bg-rp-surface px-4 py-3" data-testid="reminder-push-banner">
+          <BellOff size={24} strokeWidth={LUCIDE_STROKE} aria-hidden className="shrink-0 text-destructive" />
+          <div className="min-w-0 flex-1">
+            <p className="rp-row text-rp-ink">{t("pushOffTitle")}</p>
+            <p className="rp-small text-rp-muted">{pushState === "denied" ? t("pushOffDenied") : t("pushOffBody")}</p>
+          </div>
+          {pushState === "off" ? (
+            <Button variant="soft" size="sm" onClick={turnOnPush} disabled={isPending}>
+              {t("pushTurnOn")}
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
 
       {error && !draft && (
         <p role="alert" className="rp-small rounded-rp-md bg-destructive/10 px-4 py-3 text-destructive">
@@ -261,7 +299,7 @@ export function RemindersContent() {
                     <span className={cn("rp-row truncate", rule.enabled ? "text-rp-ink" : "text-rp-muted")}>
                       {rule.label || typeLabel(rule.type)}
                     </span>
-                    <span className="rp-footnote truncate text-rp-muted">{ruleSummary(rule)}</span>
+                    <span className="rp-small truncate text-rp-muted">{ruleSummary(rule)}</span>
                   </button>
                   <Switch
                     checked={rule.enabled}

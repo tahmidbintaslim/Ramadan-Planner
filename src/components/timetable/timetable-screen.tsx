@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { useLocale, useTranslations } from "@/i18n/use-intl";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Chip } from "@/components/ui/chip";
+import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ShareIcon } from "@/components/icons/islamic-icons";
 import { Printer } from "lucide-react";
@@ -17,7 +17,7 @@ import { readStoredLocation, subscribeStoredLocation } from "@/lib/user-location
 import { screenTimetableUrl, useCached } from "@/lib/data-cache";
 import { districtById, districtName } from "@/lib/districts";
 import type { RamadanTimetable, TimetableDay } from "@/lib/ramadan-timetable";
-import { TimetableRow } from "./timetable-row";
+import { TIMETABLE_GRID, TimetableRow } from "./timetable-row";
 import {
   DECADES,
   type Locale,
@@ -93,7 +93,7 @@ export function TimetableScreen() {
   return (
     <div data-timetable-print className="mx-auto w-full max-w-2xl space-y-4 print:max-w-none print:text-black">
       <div className="space-y-1">
-        <h1 className="rp-h1 text-rp-ink print:text-black">{t("title")}</h1>
+        <h1 className="rp-large-title text-rp-ink print:text-black">{t("title")}</h1>
         {timetable && range ? (
           <p className="rp-small text-rp-muted print:text-black" data-testid="timetable-caption">
             {t("caption", { location: placeLabel ?? timetable.location, range: formatRange(range, locale) })}
@@ -125,17 +125,37 @@ export function TimetableScreen() {
 
       {status === "ready" && timetable ? (
         <>
-          <div role="group" aria-label={t("decades")} className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 print:hidden">
+          {/* HIG segmented control (Figma page 12, D4): the visible label is the short name, the accessible name the
+              full one (it starts with the visible text). */}
+          <div role="group" aria-label={t("decades")} className="grid h-9 grid-cols-3 rounded-rp-input bg-rp-accent-tint p-0.5 print:hidden">
             {DECADES.map((d, i) => (
-              <Chip key={d.id} selected={activeDecade === i} onClick={() => setDecade(i)} data-decade={d.id}>
-                {t(d.id)}
-              </Chip>
+              <button
+                key={d.id}
+                type="button"
+                aria-pressed={activeDecade === i}
+                aria-label={t(d.id)}
+                onClick={() => setDecade(i)}
+                data-decade={d.id}
+                className={cn(
+                  "rp-small min-w-0 truncate rounded-[7px] px-2 font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rp-focus",
+                  activeDecade === i ? "bg-rp-surface text-rp-ink shadow-sm" : "text-rp-muted hover:text-rp-ink",
+                )}
+              >
+                {t(`${d.id}Short`)}
+              </button>
             ))}
-            {/* End gutter: a flex scroll container ignores its end padding. */}
-            <span aria-hidden="true" className="w-2 shrink-0" />
           </div>
 
           <Card className="gap-0 overflow-hidden rounded-rp-lg py-0 print:rounded-none print:shadow-none">
+            <div
+              aria-hidden="true"
+              className={cn(TIMETABLE_GRID, "rp-caption grid gap-x-3 border-b border-rp-rule px-4 py-2 text-rp-muted print:text-black")}
+            >
+              <span>{t("rozaShort")}</span>
+              <span>{t("date")}</span>
+              <span className="text-end">{t("sehri")}</span>
+              <span className="text-end">{t("iftar")}</span>
+            </div>
             {DECADES.map((d, i) => (
               <section
                 key={d.id}
@@ -154,6 +174,7 @@ export function TimetableScreen() {
           </Card>
 
           <p className="rp-caption text-rp-muted print:text-black">
+            {t("tableNote")}{" "}
             {t("source", { source: calcSource(timetable?.calc) ?? calcSource({ method: 1, school: 1 })! })}
           </p>
 

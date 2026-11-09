@@ -25,13 +25,14 @@ async function answerLocally(page: Page) {
 
 const SYLHET = { v: 1, kind: "district", districtId: "sylhet", lat: 24.9, lng: 91.87, tz: "Asia/Dhaka", savedAt: "2027-01-01T00:00:00.000Z" };
 
-/** The first row's sehri time in 24-hour minutes, from the English 12-hour text ("Sehri 4:57 AM"). */
+/** The first row's sehri time in minutes after midnight, from the English 12-hour text ("Sehri 4:57"; the table has
+ *  no AM/PM and sehri is always before noon, so a UTC-shifted 22:57 would read 10:57 and fail the range check). */
 async function firstSehriMinutes(page: Page): Promise<number> {
   const row = page.locator("[data-decade-panel] li").first();
   await expect(row).toBeVisible({ timeout: 30_000 });
-  const m = /Sehri\s*(\d{1,2}):(\d{2})\s*(AM|PM)/.exec(await row.innerText());
+  const m = /Sehri\s*(\d{1,2}):(\d{2})/.exec(await row.innerText());
   expect(m, await row.innerText()).not.toBeNull();
-  const h = (Number(m![1]) % 12) + (m![3] === "PM" ? 12 : 0);
+  const h = Number(m![1]) % 12;
   return h * 60 + Number(m![2]);
 }
 

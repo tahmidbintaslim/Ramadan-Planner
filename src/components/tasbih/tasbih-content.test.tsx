@@ -19,16 +19,16 @@ describe("tasbih custom target", () => {
   it("accepts either digit set", () => {
     render(<WithIntl><TasbihContent /></WithIntl>);
     setTarget("৫০");
-    expect(screen.getByText("লক্ষ্য: ৫০")).toBeInTheDocument();
+    expect(screen.getByText(/^লক্ষ্য: ৫০ ·/)).toBeInTheDocument();
     setTarget("70");
-    expect(screen.getByText("লক্ষ্য: ৭০")).toBeInTheDocument();
+    expect(screen.getByText(/^লক্ষ্য: ৭০ ·/)).toBeInTheDocument();
   });
 
   it("rejects a target below one (0.5 would floor to 0 and auto count would never stop)", () => {
     render(<WithIntl><TasbihContent /></WithIntl>);
     for (const bad of ["০.৫", "0.5", "0", "-3"]) {
       setTarget(bad);
-      expect(screen.getByText("লক্ষ্য: ৩৩")).toBeInTheDocument();
+      expect(screen.getByText(/^লক্ষ্য: ৩৩ ·/)).toBeInTheDocument();
     }
   });
 });
