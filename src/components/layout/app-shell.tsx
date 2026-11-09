@@ -7,6 +7,14 @@ import { AppHeader } from "@/components/layout/app-header";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { useTranslations } from "@/i18n/use-intl";
 import { prefetchAppData } from "@/lib/prefetch-app-data";
+import { useGuestLocalReminders } from "@/components/reminders/use-guest-local-reminders";
+
+/** Renders nothing: guest reminders as browser notifications while the app is open (own component, so rule
+ *  changes do not re-render the shell). */
+function GuestLocalReminders() {
+  useGuestLocalReminders();
+  return null;
+}
 
 // HIG margins: 16 compact (<=430), 24 medium, 48 regular (>=835, beside the 264 sidebar); content max 1200.
 // Below 835px the bottom padding clears the tab bar (56 + the safe-area inset) plus 24. Keep it in step with MobileNav.
@@ -42,6 +50,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </main>
       </div>
       <MobileNav />
+      <GuestLocalReminders />
     </div>
   );
 }

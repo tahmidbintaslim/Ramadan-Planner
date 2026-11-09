@@ -30,7 +30,8 @@ Environment variables on the deployment:
 
 Scheduler:
 
-- Use a scheduler that keeps a 5-minute interval and sends the Bearer header: cron-job.org, Upstash QStash, Supabase `pg_cron` or a Vercel Pro cron.
+- **Production scheduler (live since 2026-11-09):** Supabase `pg_cron` job `push-dispatch-every-5-min` calls `GET /api/push/dispatch` every 5 minutes through `pg_net`, with `Authorization: Bearer` read from the vault secret `cron_secret` (same value as the Vercel `CRON_SECRET`, production + preview). See `supabase/migrations/010_*` and `011_*`. Check runs with `select status_code, content, created from net._http_response order by created desc limit 5;`.
+- **Guests** have no server push: while the app is open in a browser that allowed notifications, `useGuestLocalReminders` (in the app shell) shows today's rules as browser notifications; the Reminders page asks guests to create an account for reminders while the app is closed.
 - `.github/workflows/reminders-cron.yml` asks for a run every 5 minutes, but GitHub schedules are best effort: on this repository the 19 scheduled runs between 23 and 26 October 2026 started 2 to 5.5 hours apart, so it would send only a few percent of reminders on its own. It can run alongside a real scheduler (the delivery log stops double sends) once you add the repository secrets `PUSH_DISPATCH_URL` (full URL of `/api/push/dispatch`) and `CRON_SECRET`; without them the job exits without calling the app. GitHub also disables schedules after 60 days without repository activity.
 - `vercel.json` also schedules a daily call at 00:00 UTC; on the Hobby plan Vercel crons cannot run more often. Vercel sends `CRON_SECRET` automatically when it is set.
 
