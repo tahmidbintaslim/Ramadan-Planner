@@ -318,7 +318,24 @@
         "nightsError": "সময়সূচি আনা যায়নি। পরে আবার চেষ্টা করুন।",
         "editSheetTitle": "আমল সম্পাদনা",
         "save": "সংরক্ষণ করুন",
-        "deleteItem": "আমলটি মুছুন",
+        "deleteItem": "আমল মুছুন",
+        "editShort": "সম্পাদনা",
+        "deleteShort": "মুছুন",
+        "deleteItemNamed": "{title} মুছুন",
+        "deleteConfirmTitle": "“{title}” মুছবেন?",
+        "deleteConfirmBody": "আজকের তালিকা থেকে সরে যাবে। এটি ফেরানো যাবে না।",
+        "cancel": "বাতিল",
+        "hoverHint": "সারির ওপর মাউস রাখলে সম্পাদনা ও মুছে ফেলার অপশন আসে।",
+        "swipeHint": "সারি বাঁ দিকে টানলে সম্পাদনা ও মুছে ফেলার অপশন আসে।",
+        "timesUnit": "বার",
+        "noTarget": "লক্ষ্য নেই",
+        "targetLess": "লক্ষ্য কমান",
+        "targetMore": "লক্ষ্য বাড়ান",
+        "windowsShort": {
+          "sehriToDhuhr": "সেহরি",
+          "dhuhrToIftar": "দিনে",
+          "afterIftar": "ইফতার ও রাত"
+        },
         "editItem": "{title} সম্পাদনা করুন"
     },
     "reminders": {

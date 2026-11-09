@@ -66,8 +66,8 @@ test.describe("day plan (mobile)", () => {
     await expect(page.getByTestId("plan-progress-empty")).toBeVisible();
 
     await page.getByRole("button", { name: "প্রস্তাবিত আমল যোগ করুন" }).click();
-    for (const overline of ["সেহরি থেকে যোহর", "যোহর থেকে ইফতার", "ইফতারের পর"]) {
-      await expect(page.getByRole("heading", { level: 3, name: overline })).toBeVisible();
+    for (const overline of ["সেহরি", "দিনে", "ইফতার ও রাত"]) {
+      await expect(page.getByRole("heading", { level: 3, name: overline, exact: true })).toBeVisible();
     }
     await expect(page.getByTestId("plan-item")).toHaveCount(5);
     await expect(page.locator('[data-window="sehriToDhuhr"] [data-testid="plan-item"]')).toHaveCount(2);
@@ -82,21 +82,21 @@ test.describe("day plan (mobile)", () => {
     await expect(page.getByTestId("plan-progress-copy")).toHaveText("আলহামদুলিল্লাহ, ভালো চলছে");
 
     // The add sheet puts a new deed in the chosen window.
-    await page.getByRole("button", { name: "+ নতুন আমল যোগ করুন" }).click();
+    await page.getByRole("button", { name: "নতুন আমল যোগ করুন" }).click();
     const sheet = page.getByRole("dialog");
     await sheet.getByLabel("আমলের নাম").fill("পরিবারের সাথে দোয়া");
-    const after = sheet.getByRole("button", { name: "ইফতারের পর" });
+    const after = sheet.getByRole("radio", { name: "ইফতার ও রাত" });
     await after.click();
-    await expect(after).toHaveAttribute("aria-pressed", "true");
+    await expect(after).toHaveAttribute("aria-checked", "true");
     await sheet.getByRole("button", { name: "যোগ করুন", exact: true }).click();
     await expect(sheet).toBeHidden();
     await expect(page.locator('[data-window="afterIftar"]')).toContainText("পরিবারের সাথে দোয়া");
     await expect(progress.getByRole("img")).toHaveText("১/৬");
 
     // A goal template from the sheet keeps its target.
-    await page.getByRole("button", { name: "+ নতুন আমল যোগ করুন" }).click();
+    await page.getByRole("button", { name: "নতুন আমল যোগ করুন" }).click();
     await sheet.getByRole("button", { name: "দৈনিক যিকর" }).click();
-    await expect(sheet.getByLabel("লক্ষ্যমাত্রা (ঐচ্ছিক)")).toHaveValue("100");
+    await expect(sheet.getByLabel("লক্ষ্যমাত্রা (ঐচ্ছিক)")).toHaveValue("১০০");
     await sheet.getByRole("button", { name: "যোগ করুন", exact: true }).click();
     await expect(sheet).toBeHidden();
     // Goals (a target count) live in "আমার লক্ষ্য", not in the day checklist.
@@ -104,16 +104,22 @@ test.describe("day plan (mobile)", () => {
     await expect(page.getByTestId("plan-today-amal")).not.toContainText("দৈনিক যিকর");
 
     // Edit: rename and move a deed, then delete another.
+    // Row actions (mouse device): shown on hover or keyboard focus. The touch swipe is tested below.
+    await expect(page.getByText("সারির ওপর মাউস রাখলে সম্পাদনা ও মুছে ফেলার অপশন আসে।")).toBeVisible();
+    await page.getByRole("checkbox", { name: /^পরিবারের সাথে দোয়া/ }).hover();
     await page.getByRole("button", { name: "পরিবারের সাথে দোয়া সম্পাদনা করুন" }).click();
     await expect(sheet.getByRole("heading", { name: "আমল সম্পাদনা" })).toBeVisible();
     await sheet.getByLabel("আমলের নাম").fill("পরিবারের সাথে ইফতারের দোয়া");
-    await sheet.getByRole("button", { name: "যোহর থেকে ইফতার" }).click();
+    await sheet.getByRole("radio", { name: "দিনে" }).click();
     await sheet.getByRole("button", { name: "সংরক্ষণ করুন" }).click();
     await expect(sheet).toBeHidden();
     await expect(page.locator('[data-window="dhuhrToIftar"]')).toContainText("পরিবারের সাথে ইফতারের দোয়া");
-    await page.getByRole("button", { name: "তারাবি সম্পাদনা করুন" }).click();
-    await sheet.getByRole("button", { name: "আমলটি মুছুন" }).click();
-    await expect(sheet).toBeHidden();
+    const del = page.getByRole("button", { name: "তারাবি মুছুন" });
+    await del.focus();
+    await del.click();
+    const confirm = page.getByRole("dialog", { name: /তারাবি.*মুছবেন/ });
+    await confirm.getByRole("button", { name: "আমল মুছুন" }).click();
+    await expect(confirm).toBeHidden();
     await expect(page.getByRole("checkbox", { name: /^তারাবি/ })).toHaveCount(0);
     await expect(progress.getByRole("img")).toHaveText("১/৬");
 
@@ -233,6 +239,30 @@ test.describe("Home plan preview matches /plan", () => {
     await expect(preview.getByRole("checkbox")).toHaveCount(0);
     await expect(preview.getByTestId("plan-preview-next")).toHaveText("এরপর: সকালের যিকির");
     await expect(preview.getByRole("link")).toHaveAttribute("href", "/plan");
+    expect(appErrors()).toEqual([]);
+  });
+});
+
+test.describe("amal row swipe (touch)", () => {
+  test.use({ viewport: { width: 390, height: 844 }, appLocale: "bn", timezoneId: TZ, hasTouch: true, isMobile: true });
+
+  test("a left swipe reveals edit and delete without ticking the row", async ({ page, appErrors }) => {
+    await mockRamadan(page, 12, dhakaToday(12));
+    await visit(page, "/plan");
+    await page.getByRole("button", { name: "প্রস্তাবিত আমল যোগ করুন" }).click();
+    await expect(page.getByText("সারি বাঁ দিকে টানলে সম্পাদনা ও মুছে ফেলার অপশন আসে।")).toBeVisible();
+    const row = page.getByRole("checkbox", { name: /^তারাবি/ });
+    const box = (await row.boundingBox())!;
+    await page.mouse.move(box.x + box.width - 20, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width - 200, box.y + box.height / 2, { steps: 10 });
+    await page.mouse.up();
+    await expect(page.locator("li[data-open]")).toHaveCount(1);
+    await expect(row).toHaveAttribute("aria-checked", "false");
+    // A tap while open only closes the row.
+    await row.click();
+    await expect(page.locator("li[data-open]")).toHaveCount(0);
+    await expect(row).toHaveAttribute("aria-checked", "false");
     expect(appErrors()).toEqual([]);
   });
 });
