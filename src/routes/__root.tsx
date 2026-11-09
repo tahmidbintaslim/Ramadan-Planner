@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from "react";
-import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router";
+import { HeadContent, Scripts, createRootRoute, useRouter } from "@tanstack/react-router";
 import { ClerkProvider } from "@clerk/tanstack-react-start";
 import { bnIN } from "@clerk/localizations";
 import { Analytics } from "@vercel/analytics/react";
@@ -74,6 +74,22 @@ function ServiceWorkerRegistration() {
   return null;
 }
 
+/**
+ * Back/forward can restore a page from the browser's page cache as it was when left: in the old language after a
+ * language switch, or signed in after signing out. Reload the loaders (messages follow the cookie) when that happens.
+ */
+function PageCacheRefresh() {
+  const router = useRouter();
+  useEffect(() => {
+    const onShow = (e: PageTransitionEvent) => {
+      if (e.persisted) void router.invalidate();
+    };
+    window.addEventListener("pageshow", onShow);
+    return () => window.removeEventListener("pageshow", onShow);
+  }, [router]);
+  return null;
+}
+
 function RootDocument({ children }: { children: ReactNode }) {
   const { locale, messages } = Route.useLoaderData();
   return (
@@ -99,6 +115,7 @@ function RootDocument({ children }: { children: ReactNode }) {
           </AppIntlProvider>
         </ClerkProvider>
         <ServiceWorkerRegistration />
+        <PageCacheRefresh />
         <Analytics />
         <Scripts />
       </body>

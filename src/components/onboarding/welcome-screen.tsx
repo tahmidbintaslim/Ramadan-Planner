@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import { track } from "@/lib/track";
-import { useRouter } from "@tanstack/react-router";
+import { getRouteApi, useRouter } from "@tanstack/react-router";
 import { ChevronLeft } from "lucide-react";
 import { useTranslations } from "@/i18n/use-intl";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,8 @@ import { Walkthrough } from "./walkthrough";
 import { walkthroughSeen } from "./walkthrough-state";
 
 type Step = "intro" | "language" | "location";
+
+const route = getRouteApi("/welcome");
 
 const subscribeNoop = () => () => {};
 
@@ -36,8 +38,9 @@ export function WelcomeScreen() {
   // The server and the hydrating render show the launch screen; after mount a device that has seen the
   // walkthrough goes straight to the language step.
   const seen = useSyncExternalStore(subscribeNoop, walkthroughSeen, () => false);
-  const [chosen, setStep] = useState<Step>("intro");
+  const chosen: Step = route.useSearch().step ?? "intro";
   const step = chosen === "intro" && seen ? "language" : chosen;
+  const setStep = (next: Exclude<Step, "intro">) => void router.navigate({ to: "/welcome", search: { step: next } });
   const { home, phaseTimings, timeZone } = useLiveTimes();
   const heading = useRef<HTMLHeadingElement>(null);
   const focusHeading = useRef(false);
@@ -51,7 +54,8 @@ export function WelcomeScreen() {
     track("location_set");
     writeStoredLocation(loc);
     markOnboardingDone();
-    void router.navigate({ to: "/today" });
+    // Replace the step entry: back from Today must not land inside a finished onboarding.
+    void router.navigate({ to: "/today", replace: true });
   }
   const picker = useLocationPicker({ onSubmit: finish });
 
@@ -86,7 +90,10 @@ export function WelcomeScreen() {
               <ChevronLeft size={24} strokeWidth={LUCIDE_STROKE} aria-hidden />
             </Link>
           ) : (
-            <button type="button" onClick={() => setStep("language")} aria-label={tCommon("back")} className={backClass}>
+            <button
+              type="button"
+              onClick={() => (router.history.canGoBack() ? router.history.back() : setStep("language"))}
+              aria-label={tCommon("back")} className={backClass}>
               <ChevronLeft size={24} strokeWidth={LUCIDE_STROKE} aria-hidden />
             </button>
           )}
@@ -123,7 +130,9 @@ export function WelcomeScreen() {
               <p className="rp-body text-rp-muted">{t("subtitle")}</p>
             </div>
             <LocationPickerFields picker={picker} />
-            <div className="sticky bottom-0 mt-auto flex flex-col gap-2 bg-rp-page pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+            {/* Scrolls with the list: in the sticky bar it hid most of the districts on a phone. */}
+            <p className="rp-caption pt-3 text-center text-rp-muted">{t("privacyNote")}</p>
+            <div className="sticky bottom-0 mt-auto flex flex-col gap-1 bg-rp-page pt-3 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
               <Button size="lg" className="w-full" onClick={confirm}>
                 {t("start")}
               </Button>
@@ -134,7 +143,6 @@ export function WelcomeScreen() {
               >
                 {t("later")}
               </Button>
-              <p className="rp-caption text-center text-rp-muted">{t("privacyNote")}</p>
             </div>
           </>
         )}

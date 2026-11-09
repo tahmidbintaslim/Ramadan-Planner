@@ -121,6 +121,22 @@ test.describe("first run", () => {
     expect(await page.evaluate(() => localStorage.getItem("rp_walkthrough_seen"))).toBe("1");
   });
 
+  test("browser back and forward move between steps; back from Today never reopens onboarding", async ({ page }) => {
+    await mockApis(page);
+    await visit(page, "/");
+    await visit(page, "/welcome");
+    await toLocationStep(page);
+    await expect(page).toHaveURL(/\?step=location$/);
+    await page.goBack();
+    await expect(page.getByRole("heading", { level: 1, name: "ভাষা বেছে নিন" })).toBeVisible();
+    await page.goForward();
+    await expect(page.getByRole("heading", { level: 1, name: "আপনার জেলা বেছে নিন" })).toBeVisible();
+    await page.getByRole("button", { name: /পরে করব.*ঢাকা/ }).click();
+    await expect(page).toHaveURL(/\/today$/);
+    await page.goBack();
+    await expect(page).not.toHaveURL(/\/welcome/);
+  });
+
   test("type a district (old spelling), choose it from the list", async ({ page }) => {
     await mockApis(page);
     await visit(page, "/welcome");
@@ -177,7 +193,7 @@ test.describe("first run", () => {
     await toLocationStep(page);
     await page.getByRole("combobox", { name: /জেলা/ }).fill("Atlantis");
     await page.getByRole("button", { name: CONFIRM }).click();
-    await expect(page).toHaveURL(/\/welcome$/);
+    await expect(page).toHaveURL(/\/welcome\?step=location$/);
     await expect(page.getByText(/কোনো স্থান পাওয়া যায়নি/)).toBeVisible();
 
     await page.getByRole("button", { name: /পরে করব.*ঢাকা/ }).click();
