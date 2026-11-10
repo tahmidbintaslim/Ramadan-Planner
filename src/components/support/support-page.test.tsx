@@ -34,7 +34,7 @@ describe("SupportPage, nothing configured", () => {
   });
 
   it("shows the intro, the repo and translation links, share, and hides the mosque row without an email", () => {
-    setup();
+    setup({ contactEmail: null });
     expect(screen.getByRole("heading", { name: "সবার জন্য বিনামূল্যে থাকুক" })).toBeInTheDocument();
     expect(screen.getByText(/সব ফিচার সবার জন্য বিনামূল্যে/)).toBeInTheDocument();
     const repo = screen.getByTestId("repo-link");

@@ -38,7 +38,7 @@ export const SUPPORT_CONFIG: SupportConfig = {
   cardUrl: null,
   ledgerUrl: null,
   repoUrl: "https://github.com/tahmidbintaslim/Ramadan-Planner",
-  contactEmail: null,
+  contactEmail: "contact@tahmid.space",
   taxDeductible: false,
   costs: { server: null, push: null, translation: null },
 };
