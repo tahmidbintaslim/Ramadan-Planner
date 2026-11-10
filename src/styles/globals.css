@@ -527,6 +527,69 @@
     animation: sway-slow 3.6s ease-in-out infinite;
   }
 
+  /* Landing hero scene (src/components/landing/hero-art.tsx): one vector, both themes. */
+  .rp-hero-art {
+    --hero-sky-0: #0b5f53;
+    --hero-sky-1: #0e7c6b;
+    --hero-sky-2: #5fb9a6;
+    --hero-sky-3: #cfe9e1;
+    --hero-horizon: #f3e3bf;
+    --hero-ink: #0a3d35;
+    --hero-ink-far: #2c8676;
+    --hero-frame: #c9a45c;
+    --hero-gold: #e9c46a;
+    --hero-star: #ffffff;
+  }
+  .dark .rp-hero-art {
+    --hero-sky-0: #06110f;
+    --hero-sky-1: #0b2a25;
+    --hero-sky-2: #0e5a4e;
+    --hero-sky-3: #2e7f6f;
+    --hero-horizon: #e0c27a;
+    --hero-ink: #041512;
+    --hero-ink-far: #0b3a32;
+    --hero-frame: #e0c27a;
+    --hero-star: #e6fff9;
+  }
+  .rp-hero-layer {
+    transition: transform 500ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .rp-hero-sway {
+    transform-box: view-box;
+    animation: rp-hero-sway 5.2s ease-in-out infinite;
+  }
+  .rp-hero-float {
+    animation: float-slow 7s ease-in-out infinite;
+  }
+  .rp-hero-phone {
+    animation: float-slow 6s ease-in-out -2s infinite;
+  }
+  .rp-hero-twinkle {
+    animation: rp-hero-twinkle 3.6s ease-in-out infinite;
+  }
+  .rp-hero-glow {
+    animation: rp-hero-glow 4.8s ease-in-out infinite;
+  }
+  @keyframes rp-hero-sway {
+    0%, 100% { transform: rotate(-2.2deg); }
+    50% { transform: rotate(2.2deg); }
+  }
+  @keyframes rp-hero-twinkle {
+    0%, 100% { opacity: 0.9; }
+    50% { opacity: 0.25; }
+  }
+  @keyframes rp-hero-glow {
+    0%, 100% { opacity: 0.75; }
+    50% { opacity: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .rp-hero-layer, .rp-hero-sway, .rp-hero-float, .rp-hero-phone, .rp-hero-twinkle, .rp-hero-glow {
+      animation: none;
+      transition: none;
+      transform: none !important;
+    }
+  }
+
   /* Route progress bar (router pending state): a teal sweep; a still bar under reduced motion. */
   @keyframes rp-progress {
     from {

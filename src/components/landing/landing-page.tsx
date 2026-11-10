@@ -15,6 +15,7 @@ import {
   TasbihIcon,
   type IconProps,
 } from "@/components/icons/islamic-icons";
+import { HeroShowcase } from "./hero-art";
 import { BrandLockup, SiteHeader } from "@/components/layout/site-header";
 import { useAuth } from "@/components/providers/auth-provider";
 import { heroLabel, heroLines, heroResult } from "@/components/prayer/prayer-hero";
@@ -105,9 +106,8 @@ function ArchLines({ className }: { className?: string }) {
 }
 
 /** A real app screenshot (390×844 CSS px, served at 2x) in a plain phone frame; bn has a dark capture, en does not. */
-function Phone({ screen, alt, className, eager }: { screen: string; alt: string; className?: string; eager?: boolean }) {
+function Phone({ screen, alt, className }: { screen: string; alt: string; className?: string }) {
   const locale = useLocale() === "en" ? "en" : "bn";
-  const loading = eager ? "eager" : "lazy";
   return (
     <div className={cn("rounded-[44px] border-[10px] border-[#17211F] bg-[#17211F] shadow-[0_24px_60px_-20px_rgba(16,48,43,0.45)]", className)}>
       <div className="overflow-hidden rounded-[34px]">
@@ -116,7 +116,7 @@ function Phone({ screen, alt, className, eager }: { screen: string; alt: string;
           alt={alt}
           width={390}
           height={844}
-          loading={loading}
+          loading="lazy"
           decoding="async"
           className={cn("block h-auto w-full", locale === "bn" && "dark:hidden")}
         />
@@ -335,12 +335,7 @@ export function LandingPage({ serverYear = new Date().getFullYear(), initialNow 
             </ul>
           </div>
 
-          {/* The real Today screen over the vector arch art: the logo crescent and star in the open sky, Hugeicons lanterns. */}
-          <div className="relative mx-auto w-full max-w-[560px]">
-            <img src="/home/hero-art-light.svg" alt="" width={640} height={660} className="block h-auto w-full dark:hidden" />
-            <img src="/home/hero-art-dark.svg" alt="" width={640} height={660} className="hidden h-auto w-full dark:block" />
-            <Phone screen="today" alt={t("heroArtLabel")} eager className="absolute left-[57%] top-[19%] w-[44%] -translate-x-1/2" />
-          </div>
+          <HeroShowcase alt={t("heroArtLabel")} className="mx-auto w-full max-w-[560px]" />
         </section>
 
         {/* 02 How it works */}

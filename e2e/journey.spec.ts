@@ -58,3 +58,14 @@ test("guest amal: suggested items, a tick and an own item survive a reload", asy
   await expect(items.first()).toHaveAttribute("data-done", "true");
   expect(appErrors()).toEqual([]);
 });
+
+test("landing hero: the chips switch the phone's screen, and the scene stays inside the page", async ({ page, appErrors }) => {
+  await visit(page, "/");
+  const phone = page.locator(".rp-hero-phone");
+  await expect(phone.locator("[data-active] img").first()).toHaveAttribute("src", /-today\.webp$/);
+  await page.getByRole("button", { name: "আমল", exact: true }).click();
+  await expect(phone.locator("[data-active] img").first()).toHaveAttribute("src", /-plan\.webp$/);
+  await expect(page.getByRole("button", { name: "আমল", exact: true })).toHaveAttribute("aria-pressed", "true");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+  expect(appErrors()).toEqual([]);
+});
