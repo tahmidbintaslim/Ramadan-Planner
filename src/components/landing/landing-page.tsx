@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore, type ComponentType, type ReactNode } from "react";
+import { useState, type ComponentType, type ReactNode } from "react";
 import { useCalcSource } from "@/components/prayer/use-calc-source";
 import { ArrowRight, CalendarClock, ListChecks, MapPin, Monitor, Smartphone } from "lucide-react";
 import { useLocale, useTranslations } from "@/i18n/use-intl";
@@ -16,8 +16,7 @@ import {
   type IconProps,
 } from "@/components/icons/islamic-icons";
 import { HeroShowcase } from "./hero-art";
-import { BrandLockup, SiteHeader } from "@/components/layout/site-header";
-import { useAuth } from "@/components/providers/auth-provider";
+import { MarketingShell, marketingSection, useStartHref } from "./marketing-shell";
 import { heroLabel, heroLines, heroResult } from "@/components/prayer/prayer-hero";
 import { SehriIftarPair } from "@/components/prayer/sehri-iftar-pair";
 import { formatPrayerClock, formatRemaining } from "@/components/prayer/use-prayer-phase";
@@ -28,7 +27,6 @@ import { districtOf, hijriLabelOf } from "@/components/today/home-overview";
 import { useClockFormat } from "@/hooks/use-clock-format";
 import { useStoredLocation } from "@/hooks/use-stored-location";
 import { getPrayerPhase, type PhaseTimings } from "@/lib/prayer-phase";
-import { needsOnboarding, subscribeStoredLocation } from "@/lib/user-location";
 import { cn } from "@/lib/utils";
 import { DEFAULT_DISTRICT_ID, districtById, districtName } from "@/lib/districts";
 import { SUPPORT_CONFIG } from "@/config/support";
@@ -36,32 +34,8 @@ import { SUPPORT_CONFIG } from "@/config/support";
 type Icon = ComponentType<IconProps> | ComponentType<{ size?: number; strokeWidth?: number; className?: string }>;
 type T = ReturnType<typeof useTranslations<"landing">>;
 
-/**
- * Where "Get started" leads: onboarding for a first-time guest, straight to Today otherwise. The server (and
- * the hydrating render) link to onboarding; the device's choice is read after mount and followed on every save.
- */
-function useStartHref(): string {
-  const { user } = useAuth();
-  const onboard = useSyncExternalStore(
-    subscribeStoredLocation,
-    () => needsOnboarding(user !== null),
-    () => true,
-  );
-  return onboard ? "/welcome" : "/today";
-}
-
-const noSubscribe = () => () => {};
-
-/**
- * The copyright year: the server's year (from the route loader, so the hydrating render matches the HTML), then
- * the device's year after mount.
- */
-export function useFooterYear(serverYear: number): number {
-  return useSyncExternalStore(noSubscribe, () => new Date().getFullYear(), () => serverYear);
-}
-
 /** The tinted 44 icon tile used by steps, feature tags, trust and install cards. */
-function IconTile({ Icon, className }: { Icon: Icon; className?: string }) {
+export function IconTile({ Icon, className }: { Icon: Icon; className?: string }) {
   return (
     <span aria-hidden="true" className={cn("flex size-11 shrink-0 items-center justify-center rounded-rp-input bg-rp-accent-tint text-rp-icon", className)}>
       <Icon size={24} />
@@ -69,7 +43,7 @@ function IconTile({ Icon, className }: { Icon: Icon; className?: string }) {
   );
 }
 
-function Ticks({ items, className }: { items: string[]; className?: string }) {
+export function Ticks({ items, className }: { items: string[]; className?: string }) {
   return (
     <ul className={cn("flex flex-col gap-2", className)}>
       {items.map((item) => (
@@ -83,9 +57,9 @@ function Ticks({ items, className }: { items: string[]; className?: string }) {
 }
 
 /** Section heading: eyebrow, title, optional subtitle, centred. */
-function SectionHead({ id, eyebrow, title, sub }: { id: string; eyebrow: string; title: string; sub?: string }) {
+export function SectionHead({ id, eyebrow, title, sub }: { id: string; eyebrow: string; title: string; sub?: string }) {
   return (
-    <div className="mx-auto mb-10 flex max-w-[720px] flex-col gap-2 text-center regular:mb-14">
+    <div className="rp-reveal mx-auto mb-10 flex max-w-[720px] flex-col gap-2 text-center regular:mb-14">
       <p className="rp-callout font-semibold text-rp-accent">{eyebrow}</p>
       <h2 id={id} className="rp-h1 text-rp-ink">
         {title}
@@ -96,7 +70,7 @@ function SectionHead({ id, eyebrow, title, sub }: { id: string; eyebrow: string;
 }
 
 /** Two concentric arch lines (the page's one motif), drawn in the current colour. */
-function ArchLines({ className }: { className?: string }) {
+export function ArchLines({ className }: { className?: string }) {
   return (
     <svg aria-hidden="true" viewBox="0 0 400 480" fill="none" preserveAspectRatio="xMidYMax meet" className={className}>
       <path d="M20 480V200C20 104 110 42 200 20C290 42 380 104 380 200V480" stroke="currentColor" strokeWidth="1.5" />
@@ -159,7 +133,7 @@ function NextPrayerRow({ timings, timeZone, now }: { timings: PhaseTimings; time
   );
 }
 
-const FEATURES = [
+export const FEATURES = [
   { key: "Today", screen: "today", Icon: SalahTimeIcon },
   { key: "Amal", screen: "plan", Icon: ListChecks },
   { key: "Quran", screen: "quran-1", Icon: QuranIcon },
@@ -167,10 +141,10 @@ const FEATURES = [
   { key: "Dua", screen: "duas", Icon: TasbihIcon },
 ] as const;
 
-function FeatureRow({ f, index, t }: { f: (typeof FEATURES)[number]; index: number; t: T }) {
+export function FeatureRow({ f, index, t }: { f: (typeof FEATURES)[number]; index: number; t: T }) {
   const tag = t(`f${f.key}Tag`);
   return (
-    <li className="grid grid-cols-[minmax(0,1fr)] items-center gap-8 regular:grid-cols-2 regular:gap-16">
+    <li className="rp-reveal grid grid-cols-[minmax(0,1fr)] items-center gap-8 regular:grid-cols-2 regular:gap-16">
       <div className={cn("flex flex-col gap-4", index % 2 === 1 && "regular:order-2")}>
         <p className="flex items-center gap-3">
           <IconTile Icon={f.Icon} />
@@ -190,7 +164,7 @@ function FeatureRow({ f, index, t }: { f: (typeof FEATURES)[number]; index: numb
 
 function InstallCard({ Icon, title, body, live, t, children }: { Icon: Icon; title: string; body: string; live?: boolean; t: T; children?: ReactNode }) {
   return (
-    <li className="flex flex-col gap-3 rounded-rp-xl bg-rp-page p-6">
+    <li className="rp-reveal flex flex-col gap-3 rounded-rp-xl bg-rp-page p-6">
       <div className="flex items-center justify-between gap-2">
         <IconTile Icon={Icon} />
         <span
@@ -214,15 +188,15 @@ function InstallCard({ Icon, title, body, live, t, children }: { Icon: Icon; tit
  * Today screen in a phone over the vector arch art, then how it works, five feature demos (real screenshots), a
  * 30-second screen recording, trust, install, support and the footer. Every time is live from /api/timings.
  */
+export { useFooterYear } from "./marketing-shell";
+
 export function LandingPage({ serverYear = new Date().getFullYear(), initialNow }: { serverYear?: number; initialNow?: Date }) {
   const t = useTranslations("landing");
-  const tCommon = useTranslations("common");
   const tHome = useTranslations("home");
   const tPrayer = useTranslations("prayer");
   const locale = useLocale();
   const lang = locale === "en" ? "en" : "bn";
   const startHref = useStartHref();
-  const year = useFooterYear(serverYear);
   const [sheetOpen, setSheetOpen] = useState(false);
   const { home, phaseTimings, timeZone, now } = useLiveTimes(initialNow);
   const calcSource = useCalcSource();
@@ -250,33 +224,10 @@ export function LandingPage({ serverYear = new Date().getFullYear(), initialNow 
   })();
   const dateLine = [weekday, hijri, place].filter(Boolean).join(" · ");
   const repo = SUPPORT_CONFIG.repoUrl;
-  const anchors = [
-    ["#how", "navHow"],
-    ["#features", "navFeatures"],
-    ["#install", "navInstall"],
-    ["#support", "navSupport"],
-  ] as const;
-  const section = "mx-auto w-full max-w-[1296px] px-4 py-16 medium:px-6 regular:px-12 regular:py-24";
+  const section = marketingSection;
 
   return (
-    <div className="flex min-h-dvh flex-col bg-rp-page">
-      <a
-        href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-rp-sm focus:bg-rp-surface focus:px-3 focus:py-2 focus:shadow"
-      >
-        {t("skipToContent")}
-      </a>
-      <SiteHeader>
-        <nav aria-label={t("pageNav")} className="me-2 hidden regular:flex">
-          {anchors.map(([href, key]) => (
-            <a key={href} href={href} className="rp-callout inline-flex min-h-11 items-center rounded-rp-input px-3 text-rp-ink hover:text-rp-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rp-focus">
-              {t(key)}
-            </a>
-          ))}
-        </nav>
-      </SiteHeader>
-
-      <main id="main-content" tabIndex={-1} className="flex-1 focus:outline-none">
+    <MarketingShell serverYear={serverYear}>
         {/* 01 Hero */}
         <section
           aria-labelledby="hero-title"
@@ -343,7 +294,7 @@ export function LandingPage({ serverYear = new Date().getFullYear(), initialNow 
           <SectionHead id="how-title" eyebrow={t("howEyebrow")} title={t("howTitle")} sub={t("howSub")} />
           <ol className="grid grid-cols-[minmax(0,1fr)] gap-4 regular:grid-cols-3 regular:gap-6">
             {([GlobeIcon, MapPin, SalahTimeIcon] as const).map((Icon, i) => (
-              <li key={i} className="flex flex-col gap-3 rounded-rp-xl bg-rp-surface p-6 regular:p-8">
+              <li key={i} className="rp-reveal flex flex-col gap-3 rounded-rp-xl bg-rp-surface p-6 regular:p-8">
                 <IconTile Icon={Icon} className="size-14" />
                 <p className="rp-small font-medium text-rp-accent">{t("step", { n: formatLocalizedNumber(i + 1, locale) })}</p>
                 <h3 className="rp-h2 text-rp-ink">{t(`step${i + 1}Title` as "step1Title")}</h3>
@@ -402,7 +353,7 @@ export function LandingPage({ serverYear = new Date().getFullYear(), initialNow 
                 [null, 4],
               ] as const
             ).map(([Icon, n]) => (
-              <li key={n} className="flex flex-col gap-3 rounded-rp-xl bg-rp-surface p-6">
+              <li key={n} className="rp-reveal flex flex-col gap-3 rounded-rp-xl bg-rp-surface p-6">
                 {Icon ? (
                   <IconTile Icon={Icon} />
                 ) : (
@@ -463,55 +414,7 @@ export function LandingPage({ serverYear = new Date().getFullYear(), initialNow 
             </div>
           </div>
         </section>
-      </main>
-
-      {/* 08 Footer */}
-      <footer className="border-t border-rp-rule bg-rp-surface">
-        <div className="mx-auto grid max-w-[1296px] grid-cols-[minmax(0,1fr)] gap-8 px-4 py-12 medium:px-6 regular:grid-cols-[1fr_auto_auto] regular:gap-24 regular:px-12">
-          <div className="flex flex-col gap-2">
-            <BrandLockup />
-            <p className="rp-small text-rp-muted">{t("footerTagline")}</p>
-          </div>
-          <nav aria-label={t("footerNav")} className="grid grid-cols-2 gap-8 regular:contents">
-            <div className="flex flex-col">
-              <p className="rp-small mb-1 text-rp-muted">{t("footerApp")}</p>
-              {(
-                [
-                  ["/today", "footerToday"],
-                  ["/timetable", "footerTimetable"],
-                  ["/plan", "footerAmal"],
-                  ["/quran", "footerQuran"],
-                  ["/duas", "footerDuas"],
-                ] as const
-              ).map(([href, key]) => (
-                <Link key={href} href={href} className="rp-body inline-flex min-h-11 items-center text-rp-ink hover:text-rp-accent">
-                  {t(key)}
-                </Link>
-              ))}
-            </div>
-            <div className="flex flex-col">
-              <p className="rp-small mb-1 text-rp-muted">{t("footerProject")}</p>
-              <Link href="/support" className="rp-body inline-flex min-h-11 items-center text-rp-ink hover:text-rp-accent">
-                {t("footerSupport")}
-              </Link>
-              <a href={repo} rel="noopener noreferrer" target="_blank" className="rp-body inline-flex min-h-11 items-center text-rp-ink hover:text-rp-accent">
-                {t("footerSource")}
-              </a>
-              <a href={`${repo}/issues`} rel="noopener noreferrer" target="_blank" className="rp-body inline-flex min-h-11 items-center text-rp-ink hover:text-rp-accent">
-                {t("footerReport")}
-              </a>
-            </div>
-          </nav>
-        </div>
-        <div className="mx-auto flex max-w-[1296px] flex-col gap-2 border-t border-rp-rule px-4 py-6 medium:px-6 regular:flex-row regular:justify-between regular:px-12">
-          <p className="rp-small text-rp-muted">{t("footerTimesSource")}</p>
-          <p className="rp-small text-rp-muted">
-            {t("footerPromise")} · &copy; {formatLocalizedNumber(year, locale)} {tCommon("appName")}
-          </p>
-        </div>
-      </footer>
-
       <LocationSheet open={sheetOpen} onOpenChange={setSheetOpen} />
-    </div>
+    </MarketingShell>
   );
 }

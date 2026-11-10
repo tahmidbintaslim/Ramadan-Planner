@@ -42,7 +42,7 @@ export function robotsTxt(baseUrl: string): string {
 // /settings; they were dropped deliberately (Task 10 fix round 1).
 // /duas joined in the Home design fixes (public, sourced duas). Features switched off in src/config/features.ts
 // (hadith today) are left out until they work.
-export const SITEMAP_STATIC_PAGES = ["/", "/quran", "/hadith", "/timetable", "/support", "/duas", "/zakat"].filter((p) => !isHiddenPath(p));
+export const SITEMAP_STATIC_PAGES = ["/", "/features", "/pricing", "/contact", "/quran", "/hadith", "/timetable", "/support", "/duas", "/zakat"].filter((p) => !isHiddenPath(p));
 export const SURAH_COUNT = 114;
 
 /** Every path the sitemap lists, in order (static pages, then /quran/1..114). */
