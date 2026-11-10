@@ -69,3 +69,21 @@ test("landing hero: the chips switch the phone's screen, and the scene stays ins
   expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
   expect(appErrors()).toEqual([]);
 });
+
+test("site nav: features, pricing and contact are reachable from the header (or the menu on a phone)", async ({ page, appErrors }) => {
+  await visit(page, "/");
+  const phone = (page.viewportSize()?.width ?? 0) < 1000;
+  for (const [name, path, h1] of [
+    ["ফিচার", "/features", "রমজানের প্রতিটি দিনের জন্য"],
+    ["মূল্য", "/pricing", "সবার জন্য বিনামূল্যে"],
+    ["যোগাযোগ", "/contact", "যোগাযোগ"],
+  ] as const) {
+    if (phone) await page.getByRole("button", { name: "মেনু" }).click();
+    const nav = phone ? page.getByRole("dialog") : page.getByRole("banner");
+    await nav.getByRole("link", { name, exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`${path}$`));
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(h1);
+    await expect(page.locator('meta[name="robots"][content*="noindex"]')).toHaveCount(0);
+  }
+  expect(appErrors()).toEqual([]);
+});

@@ -15,11 +15,11 @@ test("sitemap.xml lists the public pages and 114 surahs", async ({ request }) =>
   expect(res.headers()["content-type"]).toMatch(/^application\/xml/);
   const urls = [...(await res.text()).matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1].replace(/&amp;/g, "&")));
   // Each page twice: Bengali (bare) and English (?lang=en).
-  expect(urls).toHaveLength((6 + 114) * 2);
+  expect(urls).toHaveLength((9 + 114) * 2);
   const bn = urls.filter((u) => !u.search).map((u) => u.pathname);
   // /hadith is switched off (src/config/features.ts) until it works; /duas and /zakat are public.
-  expect(bn.slice(0, 6)).toEqual(["/", "/quran", "/timetable", "/support", "/duas", "/zakat"]);
-  expect(urls.filter((u) => u.search === "?lang=en")).toHaveLength(120);
+  expect(bn.slice(0, 9)).toEqual(["/", "/features", "/pricing", "/contact", "/quran", "/timetable", "/support", "/duas", "/zakat"]);
+  expect(urls.filter((u) => u.search === "?lang=en")).toHaveLength(123);
 });
 
 test("favicon is served from public/", async ({ request }) => {

@@ -46,10 +46,10 @@ describe("sitemap content", () => {
   const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1].replace("https://x.test", ""));
 
   it("lists the public pages and surahs 1..114 exactly once per language (Bengali bare, English ?lang=en)", () => {
-    expect(locs).toHaveLength((6 + 114) * 2);
+    expect(locs).toHaveLength((9 + 114) * 2);
     expect(new Set(locs).size).toBe(locs.length);
     expect(locs).toEqual(
-      expect.arrayContaining(["/", "/quran", "/timetable", "/support", "/duas", "/zakat", "/quran/1", "/quran/114", "/zakat?lang=en", "/?lang=en"]),
+      expect.arrayContaining(["/", "/features", "/pricing", "/contact", "/quran", "/timetable", "/support", "/duas", "/zakat", "/quran/1", "/quran/114", "/zakat?lang=en", "/?lang=en"]),
     );
     expect(locs).not.toContain("/quran/0");
     expect(locs).not.toContain("/quran/115");

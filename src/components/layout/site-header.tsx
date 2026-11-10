@@ -30,17 +30,19 @@ export function BrandLockup({ className }: { className?: string }) {
 /**
  * The web homepage header (medium and regular, v4): brand lockup, the language segmented control (বাংলা | English)
  * and Text & Theme, in the 1200 content column with a hairline rule. `children` (page anchors) sit before the
- * language control; compact keeps only the brand and Text & Theme.
+ * language control and `actions` (sign in, start, the menu button) after Text & Theme; compact keeps the brand,
+ * Text & Theme and the actions.
  */
-export function SiteHeader({ className, children }: { className?: string; children?: ReactNode }) {
+export function SiteHeader({ className, children, actions }: { className?: string; children?: ReactNode; actions?: ReactNode }) {
   return (
     <header className={cn("sticky top-0 z-40 border-b border-rp-rule bg-rp-page", className)}>
-      <div className="mx-auto flex h-16 max-w-[1296px] items-center justify-between gap-4 px-6 regular:px-12">
+      <div className="mx-auto flex h-16 max-w-[1296px] items-center justify-between gap-2 px-4 medium:px-6 regular:px-12">
         <BrandLockup />
         <div className="flex items-center gap-2">
           {children}
           <LanguageSegmented className="hidden medium:inline-grid" />
           <TextThemeButton />
+          {actions}
         </div>
       </div>
     </header>
