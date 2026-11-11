@@ -56,6 +56,21 @@ function SheetContent({
   showCloseButton?: boolean
 }) {
   const tCommon = useTranslations("common")
+  const backClose = React.useRef<HTMLButtonElement>(null)
+  // Android's back button or gesture closes the open sheet instead of leaving the page (CloseWatcher: Chrome
+  // and Android WebView; elsewhere back navigates as before). This component is mounted only while open.
+  React.useEffect(() => {
+    const Watcher = (window as { CloseWatcher?: new () => { onclose: (() => void) | null; destroy(): void } }).CloseWatcher
+    if (!Watcher) return
+    let watcher: InstanceType<typeof Watcher>
+    try {
+      watcher = new Watcher()
+    } catch {
+      return // not allowed without a user activation
+    }
+    watcher.onclose = () => backClose.current?.click()
+    return () => watcher.destroy()
+  }, [])
 
   return (
     <SheetPortal>
@@ -77,6 +92,7 @@ function SheetContent({
         {...props}
       >
         {children}
+        <SheetPrimitive.Close ref={backClose} tabIndex={-1} aria-hidden="true" className="hidden" />
         {showCloseButton && (
           <SheetPrimitive.Close className="ring-offset-background focus:ring-ring data-[state=open]:bg-secondary absolute top-2 right-2 flex size-12 items-center justify-center rounded-full opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none">
             <XIcon className="size-4" />

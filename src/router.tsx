@@ -15,6 +15,8 @@ export function getRouter() {
     defaultPendingMs: 150,
     defaultPendingMinMs: 0,
     defaultErrorComponent: RouteError,
+    // Pages cross-fade (200 ms, see globals.css) where the browser supports view transitions; others swap as before.
+    defaultViewTransition: true,
   });
 }
 
