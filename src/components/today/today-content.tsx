@@ -8,6 +8,7 @@ import { readStoredLocation } from "@/lib/user-location";
 import { usePrayerPhase } from "@/components/prayer/use-prayer-phase";
 import { timingsFromPrayerTimes, todayISOInZone } from "@/lib/prayer-phase";
 import { HomeOverview, ramadanDayOf } from "./home-overview";
+import { WelcomeCard } from "@/components/onboarding/welcome-card";
 import { useSadaqahDismissal } from "./sadaqah-dismissal";
 import { useTodayPlan } from "@/components/plan/use-today-plan";
 import { nightEveningISO } from "@/components/plan/plan-logic";
@@ -88,6 +89,7 @@ export function TodayContent({ initialNow }: { initialNow?: Date }) {
 
   return (
     <div className="mx-auto flex w-full max-w-[1200px] flex-col">
+      <WelcomeCard />
       <HomeOverview
         status={home.status}
         timings={home.timings}

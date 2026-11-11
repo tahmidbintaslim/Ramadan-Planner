@@ -139,7 +139,6 @@ test.describe("accessibility panel", () => {
     });
 
     test("onboarding has one labelled text & theme button in the nav bar, off the language line", async ({ page }) => {
-      await page.addInitScript(() => localStorage.setItem("rp_walkthrough_seen", "1")); // the language step
       await visit(page, "/welcome");
       const entries = page.getByRole("button", { name: A11Y });
       await expect(entries).toHaveCount(1);

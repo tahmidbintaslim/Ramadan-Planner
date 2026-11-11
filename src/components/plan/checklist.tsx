@@ -224,7 +224,7 @@ function SwipeRow({
               item.done ? "border-rp-done bg-rp-done text-rp-surface" : "border-rp-input",
             )}
           >
-            {item.done ? <CheckIcon size={16} /> : null}
+            {item.done ? <CheckIcon size={16} className="rp-pop" /> : null}
           </span>
         </span>
         <span className="flex min-w-0 flex-col py-1">

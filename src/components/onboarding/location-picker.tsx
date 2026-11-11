@@ -40,9 +40,10 @@ function inputErrorFor(query: string): Exclude<InputError, null> {
 /**
  * The district choice (search, device position, popular districts), shared by the welcome flow's location step and
  * the location sheet. `resolve()` returns the location to save, or null after showing why it cannot be used.
- * `onSubmit` runs on Enter with a usable choice.
+ * `onSubmit` runs on Enter with a usable choice, and on a tap of a popular district when `submitOnRowTap` is set
+ * (onboarding: the tap finishes the step).
  */
-export function useLocationPicker({ onSubmit }: { onSubmit?: (loc: StoredLocation) => void } = {}) {
+export function useLocationPicker({ onSubmit, submitOnRowTap }: { onSubmit?: (loc: StoredLocation) => void; submitOnRowTap?: boolean } = {}) {
   const locale = useLocale();
   const [choice, setChoice] = useState<StoredLocation | null>(null);
   const [query, setQuery] = useState("");
@@ -120,6 +121,7 @@ export function useLocationPicker({ onSubmit }: { onSubmit?: (loc: StoredLocatio
   }
 
   function pick(d: District, fromList = false) {
+    if (fromList && submitOnRowTap) return onSubmit?.(locationFromDistrict(d));
     setChoice(locationFromDistrict(d));
     // A row tap leaves the field as it was (the row shows the check); a suggestion fills the field.
     if (!fromList) setQuery(nameOf(d));
