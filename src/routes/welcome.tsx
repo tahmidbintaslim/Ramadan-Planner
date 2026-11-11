@@ -5,12 +5,12 @@ import { WelcomeScreen } from "@/components/onboarding/welcome-screen";
 
 // First-run onboarding (district picker, no sign-up). Outside the app shell; a per-device step, so noindex and
 // not in the sitemap. /today sends first-time guests here (see needsOnboarding).
-export type WelcomeStep = "language" | "location";
+export type WelcomeStep = "location";
 
 export const Route = createFileRoute("/welcome")({
   // Each step is its own history entry, so the browser's back and forward move between steps.
   validateSearch: (search: Record<string, unknown>): { step?: WelcomeStep } =>
-    search.step === "language" || search.step === "location" ? { step: search.step } : {},
+    search.step === "location" ? { step: "location" } : {},
   // A device that has finished onboarding never re-enters it (e.g. pressing back from Today).
   beforeLoad: () => {
     if (typeof window !== "undefined" && readStoredLocation() !== null) throw redirect({ to: "/today", replace: true });

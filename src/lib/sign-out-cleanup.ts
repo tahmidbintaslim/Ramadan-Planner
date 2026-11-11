@@ -4,10 +4,9 @@ import { KNOWN_TIMINGS_KEY } from "@/lib/auto-night";
 import { LOCAL_DAY_MIGRATION_KEY } from "@/lib/local-day";
 import { LOCATION_STORAGE_KEY } from "@/lib/user-location";
 import { DATA_CACHE_KEY } from "@/lib/data-cache";
-import { WALKTHROUGH_SEEN_KEY } from "@/components/onboarding/walkthrough-state";
 
 /**
- * Device settings that stay (place, clock, cached public data, the seen walkthrough); every other rp_* key is personal
+ * Device settings that stay (place, clock, cached public data); every other rp_* key is personal
  * and goes.
  */
 const KEEP = new Set([
@@ -16,7 +15,6 @@ const KEEP = new Set([
   KNOWN_TIMINGS_KEY,
   LOCAL_DAY_MIGRATION_KEY,
   DATA_CACHE_KEY,
-  WALKTHROUGH_SEEN_KEY,
 ]);
 
 export function personalStorageKeys(keys: string[]): string[] {
