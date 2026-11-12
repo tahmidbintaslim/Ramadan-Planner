@@ -1,5 +1,5 @@
 import type { ComponentType, ReactNode } from "react";
-import { ArrowRight, Languages, Mail } from "lucide-react";
+import { ArrowRight, Languages } from "lucide-react";
 import { useTranslations } from "@/i18n/use-intl";
 import { Link } from "@/components/shared/link";
 import { buttonVariants } from "@/components/ui/button";
@@ -142,21 +142,27 @@ export function PricingPage({ serverYear }: { serverYear: number }) {
   );
 }
 
-/** /contact: where to report a problem, suggest something or write (the mail card shows only when an address is set). */
+/** /contact: where to report a problem, suggest something or write (by email when an address is set, else on GitHub). */
 export function ContactPage({ serverYear }: { serverYear: number }) {
   const tM = useTranslations("marketing");
   const repo = SUPPORT_CONFIG.repoUrl;
-  const mail = mailtoHref(SUPPORT_CONFIG.contactEmail, tM("contactTitle"));
+  const mail = mailtoHref(SUPPORT_CONFIG.contactEmail, tM("mailSubject"));
   return (
     <MarketingShell serverYear={serverYear}>
       <PageIntro title={tM("contactTitle")} sub={tM("contactSub")} />
       <section aria-label={tM("navContact")} className={marketingSection}>
         <ul className="mx-auto grid max-w-[960px] grid-cols-[minmax(0,1fr)] gap-4 medium:grid-cols-2 regular:gap-6">
           <Card Icon={AlertIcon} title={tM("issueTitle")} body={tM("issueBody")}>
-            <a href={`${repo}/issues/new`} {...external} className={textLink}>
-              {tM("issueCta")}
-              <ArrowRight size={20} aria-hidden="true" />
-            </a>
+            {mail ? (
+              <a href={mail} className={textLink}>
+                {SUPPORT_CONFIG.contactEmail}
+              </a>
+            ) : (
+              <a href={`${repo}/issues/new`} {...external} className={textLink}>
+                {tM("issueCta")}
+                <ArrowRight size={20} aria-hidden="true" />
+              </a>
+            )}
           </Card>
           <Card Icon={CodeIcon} title={tM("ideaTitle")} body={tM("ideaBody")}>
             <a href={repo} {...external} className={textLink}>
@@ -164,13 +170,6 @@ export function ContactPage({ serverYear }: { serverYear: number }) {
               <ArrowRight size={20} aria-hidden="true" />
             </a>
           </Card>
-          {mail && SUPPORT_CONFIG.contactEmail ? (
-            <Card Icon={Mail} title={tM("emailTitle")} body={tM("emailBody")}>
-              <a href={mail} className={textLink}>
-                {SUPPORT_CONFIG.contactEmail}
-              </a>
-            </Card>
-          ) : null}
           <Card Icon={HeartIcon} title={tM("helpTitle")} body={tM("helpBody")}>
             <Link href="/support" className={textLink}>
               {tM("helpCta")}

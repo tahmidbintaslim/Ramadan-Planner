@@ -471,9 +471,11 @@ export function SettingsContent() {
             <Button variant="outline" onClick={generateIcsLink} disabled={isPending || isGuest} aria-describedby={showSignInNote ? "calendar-signin-reason" : undefined}>
               {t("generateIcs")}
             </Button>
-            <Button variant="destructive" onClick={revokeIcsLink} disabled={isPending || isGuest || (!icsLink && !icsActive)} aria-describedby={showSignInNote ? "calendar-signin-reason" : undefined}>
-              {t("revokeIcs")}
-            </Button>
+            {icsLink || icsActive ? (
+              <Button variant="destructive" onClick={revokeIcsLink} disabled={isPending || isGuest}>
+                {t("revokeIcs")}
+              </Button>
+            ) : null}
           </div>
           {icsLink && <Input value={icsLink} readOnly />}
         </CardContent>

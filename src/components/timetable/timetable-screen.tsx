@@ -132,7 +132,7 @@ export function TimetableScreen({ initial = null }: { initial?: RamadanTimetable
         <>
           {/* HIG segmented control (Figma page 12, D4): the visible label is the short name, the accessible name the
               full one (it starts with the visible text). */}
-          <div role="group" aria-label={t("decades")} className="grid h-9 grid-cols-3 rounded-rp-input bg-rp-accent-tint p-0.5 print:hidden">
+          <div role="group" aria-label={t("decades")} className="grid h-11 grid-cols-3 rounded-rp-input bg-rp-accent-tint p-0.5 print:hidden">
             {DECADES.map((d, i) => (
               <button
                 key={d.id}

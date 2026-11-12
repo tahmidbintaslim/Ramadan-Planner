@@ -157,7 +157,8 @@ function SwipeRow({
             "flex",
             hover
               ? "order-last opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 motion-reduce:transition-none"
-              : "absolute inset-y-0 right-0",
+              : // Transparent until revealed: the red otherwise fringes the card's rounded corners.
+                cn("absolute inset-y-0 right-0", !open && drag === null && "opacity-0"),
           )}
           onFocus={() => !hover && setOpen(true)}
         >

@@ -1180,11 +1180,7 @@
         "startEn": "Continue in English",
         "welcomeNote": "No sign-up needed · change the language later in Settings",
         "tapHint": "Tap a district and you're done",
-        "cardTitle": "Welcome! Three places to start",
-        "cardAmal": "Today's short list, at your pace",
-        "cardQuran": "Pick up where you stopped",
-        "cardRemind": "Before sehri ends and each prayer",
-        "cardOk": "Got it"
+        "cardTitle": "Welcome! Start here:"
     },
     "comingSoon": {
         "label": "Coming soon",
@@ -1285,16 +1281,15 @@
         "contactMetaDescription": "Report a problem, a suggestion or a wrong prayer time in the app.",
         "contactTitle": "Contact",
         "contactSub": "A problem, a suggestion or a wrong prayer time: tell us and we'll try to fix it.",
-        "issueTitle": "Report a problem",
-        "issueBody": "If something doesn't work or a time looks wrong, write on GitHub. Mentioning your district and the date helps us find it faster.",
-        "issueCta": "Write an issue",
-        "ideaTitle": "Ideas and contributions",
-        "ideaBody": "New ideas, translation or code are all welcome.",
+        "issueTitle": "A wrong time or a problem?",
+        "issueBody": "If a sehri, iftar or prayer time looks wrong, or something doesn't work, email us. Your district and the date help us find it faster.",
+        "issueCta": "Send an email",
+        "ideaTitle": "For developers",
+        "ideaBody": "Code, translation or new ideas: open an issue or read the code on GitHub.",
         "ideaCta": "View on GitHub",
-        "emailTitle": "Email",
-        "emailBody": "To write directly:",
         "helpTitle": "Support & Contribute",
         "helpBody": "Every way to take part in the project, on one page.",
-        "helpCta": "See the page"
+        "helpCta": "See the page",
+        "mailSubject": "A wrong time or a problem"
     }
 }

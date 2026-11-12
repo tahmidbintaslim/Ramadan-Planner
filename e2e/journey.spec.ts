@@ -90,7 +90,7 @@ test("site nav: features, pricing and contact are reachable from the header (or 
 
 test("contact shows the mail address; pricing says the app is always free", async ({ page }) => {
   await visit(page, "/contact");
-  await expect(page.getByRole("link", { name: "contact@tahmid.space" })).toHaveAttribute("href", /^mailto:contact@tahmid\.space/);
+  await expect(page.getByRole("link", { name: "contact@tahmid.space" }).first()).toHaveAttribute("href", /^mailto:contact@tahmid\.space/);
   await visit(page, "/pricing");
   await expect(page.getByText("সব সময় বিনামূল্যে", { exact: true })).toBeVisible();
 });
