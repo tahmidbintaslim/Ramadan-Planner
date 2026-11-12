@@ -526,11 +526,11 @@ export function QuranReader({ surahNumber, initialText = null }: QuranReaderProp
                 if (el) ayahRefs.current.set(ayah.ayahNo, el);
               }}
               className={cn(
-                "transition-all duration-300",
+                "gap-0 py-3 transition-all duration-300",
                 isActive && "ring-2 ring-primary bg-accent/50",
               )}
             >
-              <CardHeader className="pb-2">
+              <CardHeader className="pb-0">
                 <div className="flex items-center justify-between">
                   <Badge variant="secondary" className="text-xs">
                     {formatLocalizedNumber(ayah.ayahNo, locale)}
@@ -540,7 +540,7 @@ export function QuranReader({ surahNumber, initialText = null }: QuranReaderProp
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7"
+                      className="size-11"
                       onClick={() => toggleAyahPlayback(ayah)}
                       aria-label={t("playAyah")}
                     >

@@ -78,7 +78,7 @@ export function FeatureTiles({ className }: { className?: string }) {
           <li key={key}>
             <Link
               href={href}
-              className="flex min-h-[100px] flex-col items-center justify-center gap-2 rounded-rp-md bg-rp-surface px-1 py-4 text-rp-ink transition-colors outline-none hover:bg-rp-accent-tint/60 focus-visible:ring-[3px] focus-visible:ring-ring"
+              className="flex h-full min-h-[100px] flex-col items-center justify-center gap-2 rounded-rp-md bg-rp-surface px-1 py-4 text-rp-ink transition-colors outline-none hover:bg-rp-accent-tint/60 focus-visible:ring-[3px] focus-visible:ring-ring"
             >
               <span className="flex size-11 items-center justify-center rounded-rp-full bg-rp-accent-tint text-rp-accent">
                 <Icon size={24} />

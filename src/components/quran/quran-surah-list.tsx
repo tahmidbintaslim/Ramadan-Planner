@@ -225,7 +225,7 @@ export function QuranSurahList({ initialSurahs = [] }: { initialSurahs?: SurahIn
   return (
     <div className="mx-auto w-full max-w-2xl space-y-4">
       <div className="space-y-1">
-        <h1 className="rp-h1 text-rp-ink">{t("listTitle")}</h1>
+        <h1 className="rp-large-title text-rp-ink">{t("listTitle")}</h1>
         <p className="rp-small text-rp-muted">
           {t("listCaption", { count: formatLocalizedNumber(surahs.length, locale) })}
         </p>

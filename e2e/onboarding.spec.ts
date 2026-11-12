@@ -57,10 +57,10 @@ test.describe("first run", () => {
 
     await expect(page).toHaveURL(/\/today$/);
     await expect(place(page)).toHaveText("সিলেট");
-    // Today greets a new visitor once; "Got it" removes the card for good.
+    // Today greets a new visitor once; closing the line removes it for good.
     const card = page.getByTestId("welcome-card");
     await expect(card).toContainText("স্বাগতম");
-    await card.getByRole("button", { name: "বুঝেছি" }).click();
+    await card.getByRole("button", { name: "বন্ধ করুন" }).click();
     await expect(card).toHaveCount(0);
     // Sylhet's coordinates (2 decimals) and Bangladesh's zone, without a geolocation prompt.
     await expect.poll(() => timingUrls.some((u) => /lat=24\.90&lng=91\.87/.test(u) && /tz=Asia%2FDhaka/.test(u))).toBe(true);
