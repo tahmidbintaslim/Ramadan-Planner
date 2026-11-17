@@ -22,5 +22,5 @@ export const authMiddleware = createMiddleware({ type: "function" }).server(asyn
   }
   // Personal data (journal, location, reminders): never stored by shared or browser caches.
   setResponseHeader("Cache-Control", "private, no-store");
-  return next({ context: { userId: user.id } });
+  return next({ context: { userId: user.id, clerkId: user.clerkId } });
 });

@@ -442,7 +442,15 @@
         "announcementEnd": "End at",
         "announcementRequired": "Please fill required announcement fields.",
         "genericError": "Something went wrong. Please try again.",
-        "signInRequired": "These features save to your account, so you'll need to sign in."
+        "signInRequired": "These features save to your account, so you'll need to sign in.",
+        "privacy": "Privacy",
+        "exportData": "Download my data",
+        "exportFailed": "Couldn't prepare your data. Please try again.",
+        "deleteAccount": "Delete account",
+        "deleteAccountTitle": "Delete your account?",
+        "deleteAccountBody": "This permanently deletes your account and everything saved with it: your amal plan, prayer and Quran tracking, journal, reminders and calendar links. It can't be undone. Download your data first if you want a copy.",
+        "deleteAccountConfirm": "Delete permanently",
+        "deleteFailed": "Your account couldn't be fully deleted. Please try again, or email us."
     },
     "announcements": {
         "title": "Announcements"
@@ -728,7 +736,8 @@
         "footerSource": "Source code",
         "footerReport": "Report a problem",
         "footerTimesSource": "Times: AlAdhan · Karachi method · Hanafi Asr · calibrated to the Islamic Foundation timetable",
-        "footerPromise": "Free · Ad-free · Open source"
+        "footerPromise": "Free · Ad-free · Open source",
+        "footerPrivacy": "Privacy"
     },
     "tasbih": {
         "currentCount": "Count",
@@ -1291,5 +1300,25 @@
         "helpBody": "Every way to take part in the project, on one page.",
         "helpCta": "See the page",
         "mailSubject": "A wrong time or a problem"
+    },
+    "privacy": {
+        "title": "Privacy",
+        "metaDescription": "What this Ramadan companion stores, where, and how to download or delete it.",
+        "updated": "Last updated: {date}",
+        "intro": "We keep as little about you as we can. You can use the whole app as a guest without an account, and nothing is sold or used for ads.",
+        "guestTitle": "As a guest",
+        "guestBody": "Your plan, tracking, journal, location and settings stay in this browser on your device. Daily history older than 45 days is removed automatically. Clearing the site's data in your browser removes all of it.",
+        "accountTitle": "With an account",
+        "accountBody": "If you sign in, we store your profile (name, time zone and an approximate location), your amal plan and goals, daily prayer, Quran and journal entries, reminder rules, notification subscriptions and calendar connections, so they follow you to other devices.",
+        "locationTitle": "Location",
+        "locationBody": "Your location is used only to work out prayer, sehri and iftar times. It is rounded to about 1 km before it is saved or sent anywhere.",
+        "usageTitle": "Usage statistics",
+        "usageBody": "We count a few anonymous events, such as a page opening or a sign-up, to see what helps people. They hold no IP address and no device details, use no cookies, and are not recorded at all if your browser sends Do Not Track or Global Privacy Control. We also use Vercel Web Analytics, which is cookieless.",
+        "processorsTitle": "Services we use",
+        "processorsBody": "Clerk (sign-in), Supabase (database), Vercel (hosting and analytics), Resend (reminder emails), Stripe (donations, on the website only), AlAdhan (prayer-time calculation, which receives your rounded location) and Google Calendar (only if you connect it).",
+        "rightsTitle": "Your data, your choice",
+        "rightsBody": "Signed in, go to Settings to download everything we hold about you as a file, or to delete your account. Deleting removes your data and your account permanently.",
+        "contactTitle": "Contact",
+        "contactBody": "Questions or requests: {email}"
     }
 }

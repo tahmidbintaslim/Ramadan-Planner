@@ -181,6 +181,9 @@ export function MarketingShell({ serverYear, children }: { serverYear: number; c
               <Link href="/support" className={footLink}>
                 {t("footerSupport")}
               </Link>
+              <Link href="/privacy" className={footLink}>
+                {t("footerPrivacy")}
+              </Link>
               <a href={repo} rel="noopener noreferrer" target="_blank" className={footLink}>
                 {t("footerSource")}
               </a>
