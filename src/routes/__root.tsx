@@ -18,7 +18,12 @@ import { AccessibilitySidebar } from "@/components/shared/accessibility-sidebar"
 import { NotFound } from "@/components/shared/not-found";
 import { Toaster } from "@/components/ui/sonner";
 
-const THEME_COLOR_SCRIPT = `try{var t=localStorage.getItem("theme");var d=t==="dark"||((!t||t==="system")&&matchMedia("(prefers-color-scheme: dark)").matches);var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute("content",d?"#0B1A17":"#F4F7F6")}catch(e){}`;
+// Runs before paint. Sets the theme-color meta, and marks the store apps on <html data-app="android|ios"> so
+// donation links and cards (.rp-web-only, links to /support and /pricing) never show there: store rules require
+// in-app purchase for tips to a developer. The Android app opens /today?app=android (remembered for the session);
+// the iOS shell adds "RamadanPlannerApp/ios" to its user agent. Changing this text changes its CSP hash
+// (vercel.json, scripts/csp-inline-hashes.mjs).
+const THEME_COLOR_SCRIPT = `try{var t=localStorage.getItem("theme");var d=t==="dark"||((!t||t==="system")&&matchMedia("(prefers-color-scheme: dark)").matches);var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute("content",d?"#0B1A17":"#F4F7F6")}catch(e){}try{var q=new URLSearchParams(location.search).get("app");var a=q==="android"||q==="ios"?q:sessionStorage.getItem("rp_app")||((/RamadanPlannerApp.(ios|android)/.exec(navigator.userAgent)||[])[1])||(document.referrer.indexOf("android-app://")===0?"android":"");if(a){sessionStorage.setItem("rp_app",a);document.documentElement.setAttribute("data-app",a)}}catch(e){}`;
 
 // Clerk's Bengali strings, with the app's Bengali name: the Clerk application name is English ("Ramadan Planner").
 const CLERK_BN = { ...bnIN, signIn: { ...bnIN.signIn, start: { ...bnIN.signIn?.start, title: "রমজান প্ল্যানারে সাইন ইন করুন" } } };

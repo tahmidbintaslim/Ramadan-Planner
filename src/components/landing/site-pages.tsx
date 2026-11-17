@@ -110,7 +110,7 @@ export function PricingPage({ serverYear }: { serverYear: number }) {
           </Link>
           <p className="rp-small text-rp-muted">{[t("tickFree"), t("tickNoAds"), t("tickNoSignup")].join(" · ")}</p>
         </div>
-        <div className="rp-reveal flex flex-col gap-3 rounded-[32px] bg-rp-gold-tint p-8 regular:p-10">
+        <div className="rp-web-only rp-reveal flex flex-col gap-3 rounded-[32px] bg-rp-gold-tint p-8 regular:p-10">
           <span aria-hidden="true" className="flex size-11 items-center justify-center rounded-rp-input bg-rp-surface text-rp-gold-text">
             <HeartIcon size={24} />
           </span>

@@ -208,3 +208,27 @@ test.describe("Support page, card donations (flag on)", () => {
     await expect(page.getByTestId("donation-success")).toHaveCount(0);
   });
 });
+
+test("inside the store apps (?app=android, or the iOS user agent) no donation entry point shows, for the whole session", async ({ page }) => {
+  await visit(page, "/settings");
+  const supportRow = page.locator('main a[href="/support"]');
+  await expect(supportRow.first()).toBeVisible();
+
+  await visit(page, "/settings?app=android");
+  await expect(page.locator("html")).toHaveAttribute("data-app", "android");
+  await expect(supportRow.first()).toBeHidden();
+  // Remembered for the session: a later page without the parameter is still the app.
+  await visit(page, "/settings");
+  await expect(page.locator("html")).toHaveAttribute("data-app", "android");
+  await expect(supportRow.first()).toBeHidden();
+  await expect(page.getByRole("link", { name: "গোপনীয়তা" }).first()).toBeVisible();
+});
+
+test.describe("iOS shell user agent", () => {
+  test.use({ userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 RamadanPlannerApp/ios" });
+  test("marks the page as the iOS app and hides the support link", async ({ page }) => {
+    await visit(page, "/settings");
+    await expect(page.locator("html")).toHaveAttribute("data-app", "ios");
+    await expect(page.locator('main a[href="/support"]').first()).toBeHidden();
+  });
+});

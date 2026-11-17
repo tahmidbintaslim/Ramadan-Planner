@@ -386,7 +386,7 @@ export function LandingPage({ serverYear = new Date().getFullYear(), initialNow 
         </section>
 
         {/* 07 Support & contribute */}
-        <section id="support" aria-labelledby="support-title" className={section}>
+        <section id="support" aria-labelledby="support-title" className={cn("rp-web-only", section)}>
           <div className="relative flex flex-col gap-6 overflow-hidden rounded-[32px] bg-rp-live p-8 text-rp-on-live regular:flex-row regular:items-center regular:p-12">
             <ArchLines className="pointer-events-none absolute -right-16 bottom-0 hidden h-[110%] text-rp-on-live/50 regular:block" />
             <div className="relative flex flex-1 flex-col gap-4">

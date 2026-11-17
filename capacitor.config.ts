@@ -17,6 +17,9 @@ const config: CapacitorConfig = {
       "checkout.stripe.com",
     ],
   },
+  // Marks the app for the site (see the pre-paint script in src/routes/__root.tsx): donation links stay hidden.
+  ios: { appendUserAgent: "RamadanPlannerApp/ios" },
+  android: { appendUserAgent: "RamadanPlannerApp/android" },
   plugins: {
     // Light status bar icons over the teal bar set in android/app/src/main/res/values/styles.xml.
     SystemBars: { style: "DARK", insetsHandling: "native" },
