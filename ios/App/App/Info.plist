@@ -49,7 +49,7 @@
 	<string>Main</string>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
-		<string>armv7</string>
+		<string>arm64</string>
 	</array>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
@@ -66,5 +66,21 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<!-- Only standard HTTPS: no export-compliance documents needed in App Store Connect. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>bn</string>
+		<string>en</string>
+	</array>
+	<!-- App-bound domains (with limitsNavigationsToAppBoundDomains in capacitor.config.ts): WKWebView then runs the
+	     site's service worker, so pages cached on an earlier visit open offline. At most 10 entries. -->
+	<key>WKAppBoundDomains</key>
+	<array>
+		<string>ramadanplanner.tahmid.space</string>
+		<string>clerk.ramadanplanner.tahmid.space</string>
+		<string>accounts.ramadanplanner.tahmid.space</string>
+	</array>
 </dict>
 </plist>
