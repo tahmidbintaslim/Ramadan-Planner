@@ -22,6 +22,7 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as WelcomeRouteImport } from './routes/welcome'
+import { Route as DotwellKnownAssetlinksDotjsonRouteImport } from './routes/[.]well-known.assetlinks[.]json'
 import { Route as AppBooksRouteImport } from './routes/_app.books'
 import { Route as AppDuasRouteImport } from './routes/_app.duas'
 import { Route as AppPlanRouteImport } from './routes/_app.plan'
@@ -125,6 +126,12 @@ const WelcomeRoute = WelcomeRouteImport.update({
   path: '/welcome',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DotwellKnownAssetlinksDotjsonRoute =
+  DotwellKnownAssetlinksDotjsonRouteImport.update({
+    id: '/.well-known/assetlinks.json',
+    path: '/.well-known/assetlinks.json',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AppBooksRoute = AppBooksRouteImport.update({
   id: '/books',
   path: '/books',
@@ -335,6 +342,7 @@ export interface FileRoutesByFullPath {
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/welcome': typeof WelcomeRoute
+  '/.well-known/assetlinks.json': typeof DotwellKnownAssetlinksDotjsonRoute
   '/books': typeof AppBooksRoute
   '/duas': typeof AppDuasRoute
   '/plan': typeof AppPlanRoute
@@ -387,6 +395,7 @@ export interface FileRoutesByTo {
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/welcome': typeof WelcomeRoute
+  '/.well-known/assetlinks.json': typeof DotwellKnownAssetlinksDotjsonRoute
   '/books': typeof AppBooksRoute
   '/duas': typeof AppDuasRoute
   '/plan': typeof AppPlanRoute
@@ -442,6 +451,7 @@ export interface FileRoutesById {
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/welcome': typeof WelcomeRoute
+  '/.well-known/assetlinks.json': typeof DotwellKnownAssetlinksDotjsonRoute
   '/_app/books': typeof AppBooksRoute
   '/_app/duas': typeof AppDuasRoute
   '/_app/plan': typeof AppPlanRoute
@@ -496,6 +506,7 @@ export interface FileRouteTypes {
     | '/robots.txt'
     | '/sitemap.xml'
     | '/welcome'
+    | '/.well-known/assetlinks.json'
     | '/books'
     | '/duas'
     | '/plan'
@@ -548,6 +559,7 @@ export interface FileRouteTypes {
     | '/robots.txt'
     | '/sitemap.xml'
     | '/welcome'
+    | '/.well-known/assetlinks.json'
     | '/books'
     | '/duas'
     | '/plan'
@@ -602,6 +614,7 @@ export interface FileRouteTypes {
     | '/robots.txt'
     | '/sitemap.xml'
     | '/welcome'
+    | '/.well-known/assetlinks.json'
     | '/_app/books'
     | '/_app/duas'
     | '/_app/plan'
@@ -657,6 +670,7 @@ export interface RootRouteChildren {
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   WelcomeRoute: typeof WelcomeRoute
+  DotwellKnownAssetlinksDotjsonRoute: typeof DotwellKnownAssetlinksDotjsonRoute
   ApiDailyContentRoute: typeof ApiDailyContentRoute
   ApiEventsRoute: typeof ApiEventsRoute
   ApiQuranRoute: typeof ApiQuranRoute
@@ -768,6 +782,13 @@ declare module '@tanstack/react-router' {
       path: '/welcome'
       fullPath: '/welcome'
       preLoaderRoute: typeof WelcomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.well-known/assetlinks.json': {
+      id: '/.well-known/assetlinks.json'
+      path: '/.well-known/assetlinks.json'
+      fullPath: '/.well-known/assetlinks.json'
+      preLoaderRoute: typeof DotwellKnownAssetlinksDotjsonRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/books': {
@@ -1118,6 +1139,7 @@ const rootRouteChildren: RootRouteChildren = {
   RobotsDottxtRoute: RobotsDottxtRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   WelcomeRoute: WelcomeRoute,
+  DotwellKnownAssetlinksDotjsonRoute: DotwellKnownAssetlinksDotjsonRoute,
   ApiDailyContentRoute: ApiDailyContentRoute,
   ApiEventsRoute: ApiEventsRoute,
   ApiQuranRoute: ApiQuranRoute,

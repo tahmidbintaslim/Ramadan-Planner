@@ -1,6 +1,6 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
-// Thin native shell: the app loads the deployed site. native/www only holds the offline fallback page.
+// iOS shell (Android is a Trusted Web Activity in android/, see docs/apps.md): the app loads the deployed site. native/www only holds the offline fallback page.
 const config: CapacitorConfig = {
   appId: "space.tahmid.ramadanplanner",
   appName: "Ramadan Planner",
@@ -19,7 +19,6 @@ const config: CapacitorConfig = {
   },
   // Marks the app for the site (see the pre-paint script in src/routes/__root.tsx): donation links stay hidden.
   ios: { appendUserAgent: "RamadanPlannerApp/ios" },
-  android: { appendUserAgent: "RamadanPlannerApp/android" },
   plugins: {
     // Light status bar icons over the teal bar set in android/app/src/main/res/values/styles.xml.
     SystemBars: { style: "DARK", insetsHandling: "native" },
