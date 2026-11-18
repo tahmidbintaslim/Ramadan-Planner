@@ -56,7 +56,9 @@ export function AccountDataRows({ signedIn }: { signedIn: boolean }) {
         return;
       }
       await clearPersonalDeviceData();
-      await signOut({ redirectUrl: "/?deleted=1" });
+      // Deleting the account already ended its session, so Clerk's sign-out can fail; leave for Home either way.
+      await signOut({ redirectUrl: "/?deleted=1" }).catch(() => {});
+      window.location.assign("/?deleted=1");
     });
   };
 

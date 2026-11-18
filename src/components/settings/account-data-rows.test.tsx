@@ -28,8 +28,13 @@ vi.mock("@/lib/sign-out-cleanup", () => ({ clearPersonalDeviceData: m.clearPerso
 import { AccountDataRows } from "./account-data-rows";
 
 window.scrollTo = (() => {}) as typeof window.scrollTo;
+const assign = vi.fn();
+Object.defineProperty(window, "location", { value: { ...window.location, assign }, writable: true });
 afterEach(cleanup);
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  m.signOut.mockResolvedValue(undefined);
+});
 
 async function renderRows(signedIn: boolean) {
   const root = createRootRoute({ component: Outlet });
@@ -73,6 +78,16 @@ describe("AccountDataRows", () => {
     await waitFor(() => expect(m.signOut).toHaveBeenCalledWith({ redirectUrl: "/?deleted=1" }));
     expect(m.deleteAccountAction).toHaveBeenCalledTimes(1);
     expect(m.clearPersonalDeviceData).toHaveBeenCalled();
+    expect(assign).toHaveBeenCalledWith("/?deleted=1");
+  });
+
+  it("still leaves for Home when sign-out fails because the deleted account's session is gone", async () => {
+    m.deleteAccountAction.mockResolvedValue({ ok: true, data: null });
+    m.signOut.mockRejectedValue(new Error("session not found"));
+    await renderRows(true);
+    fireEvent.click(screen.getByTestId("delete-account"));
+    fireEvent.click(await screen.findByTestId("delete-account-confirm"));
+    await waitFor(() => expect(assign).toHaveBeenCalledWith("/?deleted=1"));
   });
 
   it("a failed deletion stays signed in and says so", async () => {
