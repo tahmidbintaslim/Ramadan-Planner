@@ -1,6 +1,6 @@
 import type { ComponentType, ReactNode } from "react";
 import { ArrowRight, Languages } from "lucide-react";
-import { useTranslations } from "@/i18n/use-intl";
+import { useLocale, useTranslations } from "@/i18n/use-intl";
 import { Link } from "@/components/shared/link";
 import { buttonVariants } from "@/components/ui/button";
 import { BellIcon, CodeIcon, HeartIcon, TasbihIcon, ZakatIcon, AlertIcon, type IconProps } from "@/components/icons/islamic-icons";
@@ -110,7 +110,7 @@ export function PricingPage({ serverYear }: { serverYear: number }) {
           </Link>
           <p className="rp-small text-rp-muted">{[t("tickFree"), t("tickNoAds"), t("tickNoSignup")].join(" · ")}</p>
         </div>
-        <div className="rp-reveal flex flex-col gap-3 rounded-[32px] bg-rp-gold-tint p-8 regular:p-10">
+        <div className="rp-web-only rp-reveal flex flex-col gap-3 rounded-[32px] bg-rp-gold-tint p-8 regular:p-10">
           <span aria-hidden="true" className="flex size-11 items-center justify-center rounded-rp-input bg-rp-surface text-rp-gold-text">
             <HeartIcon size={24} />
           </span>
@@ -177,6 +177,47 @@ export function ContactPage({ serverYear }: { serverYear: number }) {
             </Link>
           </Card>
         </ul>
+      </section>
+    </MarketingShell>
+  );
+}
+
+// The policy text is in messages (privacy.*). Change PRIVACY_UPDATED whenever it changes.
+const PRIVACY_UPDATED = "2026-11-17";
+const PRIVACY_SECTIONS = ["guest", "account", "location", "usage", "processors", "rights", "contact"] as const;
+
+/** /privacy (#52): what is stored, where, and how to download or delete it. Linked from Settings and the footer. */
+export function PrivacyPage({ serverYear }: { serverYear: number }) {
+  const t = useTranslations("privacy");
+  const locale = useLocale();
+  const email = SUPPORT_CONFIG.contactEmail ?? "";
+  const date = new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "bn-BD", { dateStyle: "long", timeZone: "UTC" }).format(
+    new Date(`${PRIVACY_UPDATED}T00:00:00Z`),
+  );
+  return (
+    <MarketingShell serverYear={serverYear}>
+      <PageIntro title={t("title")} sub={t("intro")} />
+      <section aria-label={t("title")} className={marketingSection}>
+        <div className="mx-auto flex max-w-[760px] flex-col gap-8">
+          {PRIVACY_SECTIONS.map((key) => (
+            <div key={key} className="flex flex-col gap-2">
+              <h2 className="rp-headline text-rp-ink">{t(`${key}Title`)}</h2>
+              <p className="rp-body text-rp-muted">
+                {key === "contact" ? (
+                  <>
+                    {t("contactBody", { email: "" })}
+                    <a href={`mailto:${email}`} className="text-rp-accent underline-offset-4 hover:underline">
+                      {email}
+                    </a>
+                  </>
+                ) : (
+                  t(`${key}Body`)
+                )}
+              </p>
+            </div>
+          ))}
+          <p className="rp-small text-rp-muted">{t("updated", { date })}</p>
+        </div>
       </section>
     </MarketingShell>
   );

@@ -1,6 +1,6 @@
 {
   "name": "ramadan-planner",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -22,12 +22,12 @@
     "check:csrf": "node scripts/check-csrf.mjs",
     "vapid:generate": "node ./scripts/generateVapidKeys.mjs",
     "cap:sync": "cap sync",
-    "cap:android": "cap sync android && cap open android",
+    "android:bundle": "cd android && ./gradlew bundleRelease",
+    "cap:ios": "cap sync ios && cap open ios",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build"
   },
   "dependencies": {
-    "@capacitor/android": "^8.6.0",
     "@capacitor/core": "^8.6.0",
     "@capacitor/ios": "^8.6.0",
     "@clerk/localizations": "4.24.4",

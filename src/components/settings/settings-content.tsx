@@ -33,6 +33,7 @@ import { CLOCK_FORMATS } from "@/lib/clock-format";
 import { formatLocalizedNumber } from "@/lib/locale-number";
 import { subscribeToPush } from "@/lib/push-subscribe";
 import { DIVIDER, LocationPrayerCard, ROW } from "./location-prayer-card";
+import { AccountDataRows } from "./account-data-rows";
 
 /** 12-hour (default) or 24-hour clock, kept on this device; every time on every screen follows it. */
 function ClockFormatRow() {
@@ -370,6 +371,8 @@ export function SettingsContent() {
           {isGuest ? <p className="rp-small px-4 text-rp-muted">{t("guestNote")}</p> : null}
         </section>
       ) : null}
+
+      {!loading ? <AccountDataRows signedIn={!isGuest} /> : null}
 
       <ul className="overflow-hidden rounded-rp-md bg-rp-surface">
         <li className={DIVIDER}>

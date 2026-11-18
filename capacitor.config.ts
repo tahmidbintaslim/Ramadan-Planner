@@ -1,6 +1,7 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
-// Thin native shell: the app loads the deployed site. native/www only holds the offline fallback page.
+// iOS shell: the app loads the deployed site; native/www only holds the offline fallback page. Android is a
+// Trusted Web Activity in android/ (docs/apps.md).
 const config: CapacitorConfig = {
   appId: "space.tahmid.ramadanplanner",
   appName: "Ramadan Planner",
@@ -9,16 +10,24 @@ const config: CapacitorConfig = {
   server: {
     url: "https://ramadanplanner.tahmid.space",
     errorPath: "index.html",
-    // Same hosts as the Clerk and Stripe entries in the vercel.json CSP; anything else opens in the system browser.
+    // The site and Clerk's sign-in hosts; anything else opens in the system browser. No Stripe: the apps show no
+    // donation links.
     allowNavigation: [
       "ramadanplanner.tahmid.space",
-      "*.clerk.accounts.dev",
       "clerk.ramadanplanner.tahmid.space",
-      "checkout.stripe.com",
+      "accounts.ramadanplanner.tahmid.space",
+      "*.clerk.accounts.dev",
     ],
   },
+  // Marks the app for the site (see the pre-paint script in src/routes/__root.tsx): donation links stay hidden.
+  ios: {
+    appendUserAgent: "RamadanPlannerApp/ios",
+    // Service worker (offline pages) in WKWebView; the domains are WKAppBoundDomains in ios/App/App/Info.plist.
+    // Sign-in then needs Clerk's production hosts (clerk./accounts.ramadanplanner.tahmid.space), not the dev host.
+    limitsNavigationsToAppBoundDomains: true,
+  },
   plugins: {
-    // Light status bar icons over the teal bar set in android/app/src/main/res/values/styles.xml.
+    // Light status bar icons over the teal bar.
     SystemBars: { style: "DARK", insetsHandling: "native" },
   },
 };

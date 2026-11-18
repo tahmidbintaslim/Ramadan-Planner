@@ -700,3 +700,10 @@
     animation: none !important;
   }
 }
+
+/* Store apps (<html data-app>, set by the pre-paint script in __root.tsx): no donation entry points. */
+html[data-app] .rp-web-only,
+html[data-app] :is(a[href="/support"], a[href^="/support?"], a[href="/pricing"]),
+html[data-app] li:has(> :is(a[href="/support"], a[href="/pricing"])) {
+  display: none !important;
+}

@@ -3,7 +3,7 @@ import { test, expect, visit, HYDRATION, LEAK } from "./fixtures";
 // Every page renders for a guest with the placeholder database: HTTP 200, a visible heading, no app console
 // errors and no hydration warnings. (Promoted from the old scripts/smoke.mjs.)
 const ROUTES = [
-  "/", "/features", "/pricing", "/contact", "/today", "/plan", "/timetable", "/support", "/quran", "/reminders", "/duas", "/books", "/quiz",
+  "/", "/features", "/pricing", "/contact", "/privacy", "/today", "/plan", "/timetable", "/support", "/quran", "/reminders", "/duas", "/books", "/quiz",
   "/tasbih", "/zakat", "/settings", "/admin", "/admin/announcements", "/welcome",
 ];
 
@@ -87,4 +87,16 @@ test("guest plan data persists across a reload (localStorage)", async ({ page })
   await page.reload({ waitUntil: "load" });
   const fajr2 = page.getByRole("group", { name: /নামাজ ট্র্যাকার|Salah Tracker/ }).getByRole("button", { name: /^(ফজর|Fajr)$/ });
   await expect(fajr2).toHaveAttribute("aria-pressed", String(!before));
+});
+
+test("privacy is two taps from Settings: the row opens /privacy with its sections and contact email (#52)", async ({ page }) => {
+  await visit(page, "/settings");
+  await page.getByRole("link", { name: "গোপনীয়তা" }).first().click();
+  await expect(page).toHaveURL(/\/privacy$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("গোপনীয়তা");
+  await expect(page.getByRole("heading", { level: 2 })).toHaveCount(7);
+  await expect(page.locator('a[href^="mailto:"]').first()).toBeVisible();
+  // A guest has no account to export or delete.
+  await page.goBack();
+  await expect(page.getByTestId("delete-account")).toHaveCount(0);
 });

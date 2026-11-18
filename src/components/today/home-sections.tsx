@@ -223,7 +223,7 @@ export function SupportCard({
     <section
       aria-labelledby="home-support"
       data-testid="support-card"
-      className={cn("flex items-start gap-4 rounded-rp-lg bg-rp-gold-tint p-5 text-rp-ink shadow-rp-soft", className)}
+      className={cn("rp-web-only flex items-start gap-4 rounded-rp-lg bg-rp-gold-tint p-5 text-rp-ink shadow-rp-soft", className)}
     >
       <span className="flex size-11 shrink-0 items-center justify-center rounded-rp-full bg-rp-surface text-rp-gold-text">
         <HeartIcon size={24} />

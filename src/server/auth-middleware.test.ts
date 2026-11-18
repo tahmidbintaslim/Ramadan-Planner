@@ -39,7 +39,7 @@ describe("authMiddleware", () => {
     auth.mockResolvedValue({ isAuthenticated: true, userId: "user_123" });
     const next = vi.fn().mockResolvedValue("handler-result");
     await expect(run(next)).resolves.toBe("handler-result");
-    expect(next).toHaveBeenCalledWith({ context: { userId: "db99edd8-fa85-5bc2-95ec-a499147bb210" } });
+    expect(next).toHaveBeenCalledWith({ context: { userId: "db99edd8-fa85-5bc2-95ec-a499147bb210", clerkId: expect.any(String) } });
     expect(upsert).toHaveBeenCalledTimes(1);
     expect(setResponseStatus).not.toHaveBeenCalled();
     expect(setResponseHeader).toHaveBeenCalledWith("Cache-Control", "private, no-store");
