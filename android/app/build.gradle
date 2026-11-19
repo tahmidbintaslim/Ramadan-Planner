@@ -26,8 +26,8 @@ android {
         applicationId 'space.tahmid.ramadanplanner'
         minSdk 24
         targetSdk 36
-        // Raise versionCode by one for every upload to Google Play.
-        versionCode 1
+        // Must rise with every upload to Google Play: CI passes its run number; a local build is 1 unless set.
+        versionCode Integer.parseInt(System.getenv('ANDROID_VERSION_CODE') ?: '1')
         versionName '1.0.0'
 
         resValue 'string', 'hostName', site.host

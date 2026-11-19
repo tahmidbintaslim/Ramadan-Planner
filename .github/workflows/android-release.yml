@@ -1,0 +1,55 @@
+# Builds the signed Google Play bundle (.aab) for a release tag (v1.0.0, ...) or on demand (Actions → Android
+# release → Run workflow). Upload the "ramadan-planner-aab" artifact in Play Console. Needs four repository
+# secrets (Settings → Secrets and variables → Actions), see docs/apps.md:
+#   ANDROID_KEYSTORE_BASE64   base64 of the upload keystore (.jks)
+#   ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
+name: Android release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bundle:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Write the signing config from secrets
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ] || [ -z "$STORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
+            echo "::error::Add the four ANDROID_* repository secrets first (docs/apps.md)."
+            exit 1
+          fi
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          printf 'storeFile=%s\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+            "$RUNNER_TEMP/upload.jks" "$STORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" > android/keystore.properties
+
+      # The runner image ships JDK 17 and the Android SDK; Gradle fetches anything else it needs.
+      - name: Build the release bundle
+        working-directory: android
+        env:
+          # Play needs a higher versionCode on every upload; the run number only goes up.
+          ANDROID_VERSION_CODE: ${{ github.run_number }}
+        run: JAVA_HOME="$JAVA_HOME_17_X64" ./gradlew --no-daemon bundleRelease
+
+      - name: Remove the signing files
+        if: always()
+        run: rm -f "$RUNNER_TEMP/upload.jks" android/keystore.properties
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ramadan-planner-aab
+          path: android/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 30
+          if-no-files-found: error
