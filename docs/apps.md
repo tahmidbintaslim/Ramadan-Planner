@@ -36,8 +36,13 @@ Google sign-in and offline caching work as on the website, and Chrome's reminder
    `keytool -genkey -v -keystore ~/ramadan-upload.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload`.
    Write `android/keystore.properties` (gitignored) with `storeFile`, `storePassword`, `keyAlias` and
    `keyPassword`, then run `npm run android:bundle`. Upload `app/build/outputs/bundle/release/app-release.aab`.
-4. Raise `versionCode` in `android/app/build.gradle` for every upload.
-5. **Asset links** (once, after the first upload): copy the SHA-256 fingerprint of the *app signing key*
+4. `versionCode` must rise with every upload. A local build is 1 unless `ANDROID_VERSION_CODE` is set.
+5. **Or let GitHub build it** (no Android Studio): add four repository secrets (Settings → Secrets and variables
+   → Actions): `ANDROID_KEYSTORE_BASE64` (the output of `base64 -w0 ~/ramadan-upload.jks`, or on macOS
+   `base64 -i ~/ramadan-upload.jks`), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` (`upload`) and
+   `ANDROID_KEY_PASSWORD`. Then run Actions → **Android release** → Run workflow, or push a `v*` tag. Download the
+   `ramadan-planner-aab` artifact and upload it to Play. The run number becomes the `versionCode`.
+6. **Asset links** (once, after the first upload): copy the SHA-256 fingerprint of the *app signing key*
    (Play Console → Test and release → App integrity), plus your upload key's (`keytool -list -v -keystore
    ~/ramadan-upload.jks`), into the Vercel variable `ANDROID_CERT_SHA256`, comma separated, and redeploy.
    `/.well-known/assetlinks.json` then lists them. Without it Chrome shows its address bar inside the app.
