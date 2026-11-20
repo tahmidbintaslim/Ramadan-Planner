@@ -41,7 +41,7 @@ script-src 'self'
 style-src 'self' 'unsafe-inline';                 Clerk and Radix inject inline styles at runtime
 img-src 'self' data: blob: https://img.clerk.com;
 font-src 'self' data:;                            fonts are self-hosted (@fontsource)
-connect-src 'self' https://geocoding-api.open-meteo.com https://*.clerk.accounts.dev https://clerk.ramadanplanner.tahmid.space
+connect-src 'self' https://geocoding-api.open-meteo.com https://nbsbfhtsnitkchclxlwx.supabase.co https://*.clerk.accounts.dev https://clerk.ramadanplanner.tahmid.space
   https://clerk-telemetry.com https://api.stripe.com;
 media-src 'self' https://*.mp3quran.net https://everyayah.com https://the-quran-project.github.io
   https://github.com https://raw.githubusercontent.com;      Quran audio URLs returned by /api/quran
@@ -56,6 +56,7 @@ How the hosts were found:
 - **Clerk**: a publishable key is `pk_(test|live)_` plus base64 of `<frontend-api-host>$`. Development instances use `<slug>.clerk.accounts.dev` (hence the wildcard). The production instance will use `clerk.ramadanplanner.tahmid.space`. Once production runs on the production instance, drop `*.clerk.accounts.dev`.
 - **Quran audio**: `/api/quran?surah=N` returns `audio[].originalUrl` on `serverN.mp3quran.net` (the reader plays `originalUrl` first) and `audio[].url` on `github.com`, which redirects to `raw.githubusercontent.com`. Ayah audio in the source data uses `everyayah.com` and `the-quran-project.github.io`.
 - **Vercel Analytics**: production loads `/_vercel/insights/script.js` and posts to `/_vercel/insights/*` (same origin). `va.vercel-scripts.com` is the debug/dev script.
+- **Peace AI search**: /ask posts the question from the browser to the public `peace-api` edge function on `nbsbfhtsnitkchclxlwx.supabase.co` (URL in `src/config/peace-api.ts`).
 - **Stripe**: Checkout is a top-level redirect to `checkout.stripe.com`. Stripe.js and its frames are on `js.stripe.com`, and its API is `api.stripe.com`.
 
 #### Inline scripts: hashes now, nonces before enforcing
