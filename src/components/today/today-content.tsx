@@ -14,6 +14,7 @@ import { useTodayPlan } from "@/components/plan/use-today-plan";
 import { nightEveningISO } from "@/components/plan/plan-logic";
 import { deviceTimeZone, nextDayISO, useHomeTimings } from "./use-home-timings";
 import { usePrayerReminders } from "./use-prayer-reminders";
+import { AnnouncementsStrip } from "@/components/shared/announcements-strip";
 
 const subscribeNoop = () => () => {};
 
@@ -90,6 +91,7 @@ export function TodayContent({ initialNow }: { initialNow?: Date }) {
   return (
     <div className="mx-auto flex w-full max-w-[1200px] flex-col">
       <WelcomeCard />
+      <AnnouncementsStrip />
       <HomeOverview
         status={home.status}
         timings={home.timings}

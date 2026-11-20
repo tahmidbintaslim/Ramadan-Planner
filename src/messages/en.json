@@ -77,7 +77,8 @@
         "remindersShort": "Reminders",
         "duasShort": "Duas",
         "zakatShort": "Zakat",
-        "tasbihShort": "Tasbih"
+        "tasbihShort": "Tasbih",
+        "announcements": "Announcements"
     },
     "auth": {
         "login": "Sign in",
@@ -453,7 +454,9 @@
         "deleteFailed": "Your account couldn't be fully deleted. Please try again, or email us."
     },
     "announcements": {
-        "title": "Announcements"
+        "title": "Announcements",
+        "empty": "No announcements right now.",
+        "loadError": "Couldn't load announcements. Please try again later."
     },
     "admin": {
         "title": "Admin Announcements",
