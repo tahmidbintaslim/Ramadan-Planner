@@ -77,7 +77,8 @@
         "remindersShort": "Reminders",
         "duasShort": "Duas",
         "zakatShort": "Zakat",
-        "tasbihShort": "Tasbih"
+        "tasbihShort": "Tasbih",
+        "announcements": "Announcements"
     },
     "auth": {
         "login": "Sign in",
@@ -453,7 +454,9 @@
         "deleteFailed": "Your account couldn't be fully deleted. Please try again, or email us."
     },
     "announcements": {
-        "title": "Announcements"
+        "title": "Announcements",
+        "empty": "No announcements right now.",
+        "loadError": "Couldn't load announcements. Please try again later."
     },
     "admin": {
         "title": "Admin Announcements",
@@ -921,7 +924,10 @@
         "locationChange": "Location: {district} · change district",
         "seeAll": "See all",
         "nextPrayerEyebrow": "Next prayer",
-        "upNext": "Up next"
+        "upNext": "Up next",
+        "reportTime": "Wrong time? Tell us",
+        "reportSubject": "Prayer time report: {place} · {date}",
+        "reportBody": "Which time looks wrong, and what does your local mosque or the Islamic Foundation timetable say?"
     },
     "timetablePage": {
         "weekdaysShort": {
