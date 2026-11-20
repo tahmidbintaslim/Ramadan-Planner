@@ -921,7 +921,10 @@
         "locationChange": "অবস্থান: {district} · জেলা বদলান",
         "seeAll": "সব দেখুন",
         "nextPrayerEyebrow": "পরবর্তী নামাজ",
-        "upNext": "এরপর"
+        "upNext": "এরপর",
+        "reportTime": "সময় ভুল? জানান",
+        "reportSubject": "নামাজের সময়ের রিপোর্ট: {place} · {date}",
+        "reportBody": "কোন সময়টি ভুল মনে হচ্ছে, আর আপনার এলাকার মসজিদ বা ইসলামিক ফাউন্ডেশনের সময়সূচিতে কত লেখা আছে?"
     },
     "timetablePage": {
         "weekdaysShort": {
