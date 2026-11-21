@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import { BookOpenText, CalendarClock, LayoutGrid, ListChecks, Megaphone, Settings, ShieldCheck, SunMedium } from "lucide-react";
+import { BookOpenText, CalendarClock, LayoutGrid, ListChecks, Megaphone, Search, Settings, ShieldCheck, SunMedium } from "lucide-react";
 import { isHiddenPath } from "@/config/features";
 import { BellIcon, DuaIcon, HadithIcon, HeartIcon, TasbihIcon, ZakatIcon } from "@/components/icons/islamic-icons";
 
@@ -24,6 +24,7 @@ export type NavLabelKey =
   | "zakat"
   | "zakatShort"
   | "hadith"
+  | "ask"
   | "books"
   | "quiz"
   | "reminders"
@@ -72,6 +73,7 @@ export const SECONDARY_NAV: NavItem[] = ([] as NavItem[]).concat([
   { href: "/tasbih", icon: TasbihIcon, labelKey: "tasbih", shortKey: "tasbihShort" },
   { href: "/zakat", icon: ZakatIcon, labelKey: "zakat", shortKey: "zakatShort" },
   { href: "/hadith", icon: HadithIcon, labelKey: "hadith" },
+  { href: "/ask", icon: Search, labelKey: "ask" },
   { href: "/reminders", icon: BellIcon, labelKey: "reminders", shortKey: "remindersShort" },
   { href: "/announcements", icon: Megaphone, labelKey: "announcements" },
   { href: "/support", icon: HeartIcon, labelKey: "support" },

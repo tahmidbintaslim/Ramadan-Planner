@@ -24,6 +24,7 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as WelcomeRouteImport } from './routes/welcome'
 import { Route as DotwellKnownAssetlinksDotjsonRouteImport } from './routes/[.]well-known.assetlinks[.]json'
 import { Route as AppAnnouncementsRouteImport } from './routes/_app.announcements'
+import { Route as AppAskRouteImport } from './routes/_app.ask'
 import { Route as AppBooksRouteImport } from './routes/_app.books'
 import { Route as AppDuasRouteImport } from './routes/_app.duas'
 import { Route as AppPlanRouteImport } from './routes/_app.plan'
@@ -136,6 +137,11 @@ const DotwellKnownAssetlinksDotjsonRoute =
 const AppAnnouncementsRoute = AppAnnouncementsRouteImport.update({
   id: '/announcements',
   path: '/announcements',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAskRoute = AppAskRouteImport.update({
+  id: '/ask',
+  path: '/ask',
   getParentRoute: () => AppRoute,
 } as any)
 const AppBooksRoute = AppBooksRouteImport.update({
@@ -350,6 +356,7 @@ export interface FileRoutesByFullPath {
   '/welcome': typeof WelcomeRoute
   '/.well-known/assetlinks.json': typeof DotwellKnownAssetlinksDotjsonRoute
   '/announcements': typeof AppAnnouncementsRoute
+  '/ask': typeof AppAskRoute
   '/books': typeof AppBooksRoute
   '/duas': typeof AppDuasRoute
   '/plan': typeof AppPlanRoute
@@ -404,6 +411,7 @@ export interface FileRoutesByTo {
   '/welcome': typeof WelcomeRoute
   '/.well-known/assetlinks.json': typeof DotwellKnownAssetlinksDotjsonRoute
   '/announcements': typeof AppAnnouncementsRoute
+  '/ask': typeof AppAskRoute
   '/books': typeof AppBooksRoute
   '/duas': typeof AppDuasRoute
   '/plan': typeof AppPlanRoute
@@ -461,6 +469,7 @@ export interface FileRoutesById {
   '/welcome': typeof WelcomeRoute
   '/.well-known/assetlinks.json': typeof DotwellKnownAssetlinksDotjsonRoute
   '/_app/announcements': typeof AppAnnouncementsRoute
+  '/_app/ask': typeof AppAskRoute
   '/_app/books': typeof AppBooksRoute
   '/_app/duas': typeof AppDuasRoute
   '/_app/plan': typeof AppPlanRoute
@@ -517,6 +526,7 @@ export interface FileRouteTypes {
     | '/welcome'
     | '/.well-known/assetlinks.json'
     | '/announcements'
+    | '/ask'
     | '/books'
     | '/duas'
     | '/plan'
@@ -571,6 +581,7 @@ export interface FileRouteTypes {
     | '/welcome'
     | '/.well-known/assetlinks.json'
     | '/announcements'
+    | '/ask'
     | '/books'
     | '/duas'
     | '/plan'
@@ -627,6 +638,7 @@ export interface FileRouteTypes {
     | '/welcome'
     | '/.well-known/assetlinks.json'
     | '/_app/announcements'
+    | '/_app/ask'
     | '/_app/books'
     | '/_app/duas'
     | '/_app/plan'
@@ -808,6 +820,13 @@ declare module '@tanstack/react-router' {
       path: '/announcements'
       fullPath: '/announcements'
       preLoaderRoute: typeof AppAnnouncementsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/ask': {
+      id: '/_app/ask'
+      path: '/ask'
+      fullPath: '/ask'
+      preLoaderRoute: typeof AppAskRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/books': {
@@ -1088,6 +1107,7 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteChildren {
   AppAnnouncementsRoute: typeof AppAnnouncementsRoute
+  AppAskRoute: typeof AppAskRoute
   AppBooksRoute: typeof AppBooksRoute
   AppDuasRoute: typeof AppDuasRoute
   AppPlanRoute: typeof AppPlanRoute
@@ -1110,6 +1130,7 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppAnnouncementsRoute: AppAnnouncementsRoute,
+  AppAskRoute: AppAskRoute,
   AppBooksRoute: AppBooksRoute,
   AppDuasRoute: AppDuasRoute,
   AppPlanRoute: AppPlanRoute,

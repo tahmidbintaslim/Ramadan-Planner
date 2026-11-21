@@ -78,6 +78,7 @@
         "duasShort": "Duas",
         "zakatShort": "Zakat",
         "tasbihShort": "Tasbih",
+        "ask": "Ask",
         "announcements": "Announcements"
     },
     "auth": {
@@ -1326,5 +1327,33 @@
         "rightsBody": "Signed in, go to Settings to download everything we hold about you as a file, or to delete your account. Deleting removes your data and your account permanently.",
         "contactTitle": "Contact",
         "contactBody": "Questions or requests: {email}"
+    },
+    "ask": {
+        "title": "Ask",
+        "metaTitle": "Ask: search the Quran and hadith",
+        "metaDescription": "Find ayat and hadith that match your question by meaning.",
+        "intro": "Find ayat and hadith that match your question by meaning.",
+        "label": "Your question",
+        "placeholder": "Type your question… e.g. What does the Quran say about patience?",
+        "submit": "Search",
+        "filterLabel": "Where to search",
+        "filter": {
+            "all": "All",
+            "quran": "Quran",
+            "hadith": "Hadith"
+        },
+        "results": "Results",
+        "notice": "These are stored texts found by meaning, not a fatwa. For a ruling, ask a scholar.",
+        "empty": "Nothing found. Try wording your question differently.",
+        "error": {
+            "network": "Could not search. Check your connection and try again.",
+            "rateLimited": "Too many questions right now, please try again in a little while."
+        },
+        "kind": {
+            "quran": "Quran",
+            "hadith": "Hadith"
+        },
+        "grade": "Grade: {grade}",
+        "gradeMissing": "Grade: not stated in the source"
     }
 }
