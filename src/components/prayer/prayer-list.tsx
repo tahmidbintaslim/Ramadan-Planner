@@ -1,4 +1,5 @@
 import { Bell, Circle, CircleCheck } from "lucide-react";
+import { ReportTimeLink } from "./report-time-link";
 import { useLocale, useTranslations } from "@/i18n/use-intl";
 import { SectionHeader } from "@/components/design/section-header";
 import { Link } from "@/components/shared/link";
@@ -143,7 +144,7 @@ export function PrayerList({
       </ul>
       {source ? (
         <p data-testid="hero-source" className="rp-caption text-rp-muted">
-          {source}
+          {source} · <ReportTimeLink source={source} />
         </p>
       ) : null}
     </section>

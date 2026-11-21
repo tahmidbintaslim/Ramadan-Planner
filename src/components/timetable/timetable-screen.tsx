@@ -1,5 +1,6 @@
 "use client";
 
+import { ReportTimeLink } from "@/components/prayer/report-time-link";
 import { track } from "@/lib/track";
 import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 import { useCalcSource } from "@/components/prayer/use-calc-source";
@@ -181,6 +182,8 @@ export function TimetableScreen({ initial = null }: { initial?: RamadanTimetable
           <p className="rp-caption text-rp-muted print:text-black">
             {t("tableNote")}{" "}
             {t("source", { source: calcSource(timetable?.calc) ?? calcSource({ method: 1, school: 1 })! })}
+            <span className="print:hidden"> · </span>
+            <ReportTimeLink source={calcSource(timetable?.calc) ?? calcSource({ method: 1, school: 1 })!} />
           </p>
 
           <div className="flex gap-3 print:hidden">
